@@ -1,0 +1,163 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Qooma Auth & Identity — schema
+// =============================================================================
+//
+// Canonical spec: docs/spec/01-auth-identity.md §3 + docs/spec/MVP-AUTH-FIRST.md §3
+// FE handover ratifications (Q-CONTRACT-22/23/24, Q-OPS-01 RESOLVED H11 2026-06-27).
+//
+// Konvensi (ADR-0001..0007):
+// - Snake_case di DB (pakai @map), camelCase di model Prisma
+// - PK: UUID v4 default
+// - Timestamp: TIMESTAMPTZ UTC
+// - Soft delete: kolom `is_active` atau `deleted_at` per kasus
+// - Cross-service FK BUKAN Postgres REFERENCES; opaque UUID (ADR-0008)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Tier catalog — Q-CONTRACT-23. Seeded via migration; 4 rows fixed.
+// -----------------------------------------------------------------------------
+model Tier {
+  id                     String   @id @default(uuid()) @db.Uuid
+  name                   String   @unique @db.VarChar(20) // 'lite' | 'professional' | 'luxury' | 'enterprise'
+  displayName            String   @map("display_name") @db.VarChar(50)
+  outboundQuotaMonthly   Int      @map("outbound_quota_monthly") // 2000 / 4000 / 8000 / -1
+  agentCap               Int      @map("agent_cap")              // 1 / 3 / 5 / -1
+  agentMinimum           Int      @default(3) @map("agent_minimum")
+  userCap                Int      @map("user_cap")               // 2 / 4 / 6 / -1
+  departmentCap          Int      @map("department_cap")         // 1 / 3 / 5 / -1
+  features               Json     @default("{}")                 // per-feature unlock map (JSONB)
+  isCustom               Boolean  @default(false) @map("is_custom")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  hotels                 Hotel[]
+
+  @@map("tiers")
+}
+
+// -----------------------------------------------------------------------------
+// Hotel tenant entity — MOVED to Auth per H11 PO ruling (Q-CONTRACT-22).
+// -----------------------------------------------------------------------------
+model Hotel {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(20)  // platform-wide unique (e.g. 'ABR-001')
+  name        String   @db.VarChar(100)
+  tierId      String   @map("tier_id") @db.Uuid
+  status      String   @default("active") @db.VarChar(20) // 'active' | 'suspended' (no hard-delete in MVP)
+  timezone    String   @default("Asia/Jakarta") @db.VarChar(50)
+  branding    Json?    // logo url, primary color (Q-CONTRACT-10)
+  dnd         Json?    // DND windows + exceptions (Q-CONTRACT-10)
+  gmContact   Json     @map("gm_contact")               // { name, email, phone } informational; real FK = users.hotel_id
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tier        Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  users       User[]
+
+  @@map("hotels")
+  @@index([status])
+  @@index([tierId])
+}
+
+// -----------------------------------------------------------------------------
+// Users — Auth-owned, all 4 roles (super_admin | gm_admin | dept_head | staff).
+// `dept_id` cross-references Hotel Core's departments table — opaque UUID per ADR-0008
+// (Hotel Core ships departments table later; for MVP this column is nullable + unenforced).
+// -----------------------------------------------------------------------------
+model User {
+  id                   String    @id @default(uuid()) @db.Uuid
+  hotelId              String?   @map("hotel_id") @db.Uuid  // NULL only for super_admin
+  deptId               String?   @map("dept_id") @db.Uuid   // opaque UUID; FK enforced after Hotel Core ships dept
+  email                String    @db.VarChar(255)
+  passwordHash         String    @map("password_hash") @db.VarChar(255)
+  name                 String    @db.VarChar(100)
+  role                 String    @db.VarChar(20) // 'super_admin' | 'gm_admin' | 'dept_head' | 'staff'
+  language             String    @default("id") @db.VarChar(2) // 'id' | 'en'
+  isActive             Boolean   @default(true) @map("is_active")
+  mustRotatePassword   Boolean   @default(false) @map("must_rotate_password")
+  lastLoginAt          DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  hotel                Hotel?    @relation(fields: [hotelId], references: [id], onDelete: Restrict)
+  sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
+
+  @@unique([hotelId, email], map: "users_hotel_id_email_unique")
+  @@map("users")
+  @@index([role])
+  @@index([hotelId, isActive])
+}
+
+// -----------------------------------------------------------------------------
+// Sessions — refresh + csrf tokens. Revoked on suspend cascade (Q-22 ratification).
+// -----------------------------------------------------------------------------
+model Session {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  refreshToken  String    @map("refresh_token") @db.VarChar(512)
+  csrfToken     String    @map("csrf_token") @db.VarChar(255)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz
+  userAgent     String?   @map("user_agent") @db.VarChar(500)
+  ipAddress     String?   @map("ip_address") @db.Inet
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+// -----------------------------------------------------------------------------
+// Password reset tokens — optional in MVP (no SMTP wired). Kept for future use.
+// -----------------------------------------------------------------------------
+model PasswordResetToken {
+  token       String    @id @db.VarChar(255)
+  userId      String    @map("user_id") @db.Uuid
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+}
+
+// =============================================================================
+// CHECK constraints — applied via raw SQL in initial migration:
+//
+//   ALTER TABLE tiers ADD CONSTRAINT tiers_name_check
+//     CHECK (name IN ('lite', 'professional', 'luxury', 'enterprise'));
+//
+//   ALTER TABLE hotels ADD CONSTRAINT hotels_status_check
+//     CHECK (status IN ('active', 'suspended'));
+//
+//   ALTER TABLE users ADD CONSTRAINT users_role_check
+//     CHECK (role IN ('super_admin', 'gm_admin', 'dept_head', 'staff'));
+//
+//   ALTER TABLE users ADD CONSTRAINT users_role_hotel_mutual_exclusion
+//     CHECK (
+//       (role = 'super_admin' AND hotel_id IS NULL)
+//       OR (role <> 'super_admin' AND hotel_id IS NOT NULL)
+//     );
+//
+//   ALTER TABLE users ADD CONSTRAINT users_language_check
+//     CHECK (language IN ('id', 'en'));
+//
+// Prisma 5 tidak punya first-class CHECK constraint declaration — append via
+// migration SQL atau `prisma migrate dev --create-only` lalu edit migration file.
+// =============================================================================
