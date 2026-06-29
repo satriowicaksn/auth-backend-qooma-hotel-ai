@@ -28,11 +28,7 @@ import type { AuthRepository } from '@modules/auth/auth.repository.js';
 
 // Allow-list verbatim per spec §4.2. Matched against `req.routerPath` (Fastify's
 // normalized route pattern) with a URL fallback for unmatched routes.
-const ALLOWLIST = new Set<string>([
-  '/api/auth/me',
-  '/api/auth/me/password',
-  '/api/auth/logout',
-]);
+const ALLOWLIST = new Set<string>(['/api/auth/me', '/api/auth/me/password', '/api/auth/logout']);
 
 export interface MustRotatePasswordGateDeps {
   readonly repo: AuthRepository;
@@ -79,10 +75,9 @@ export function registerMustRotatePasswordGate(
     }
 
     if (user.mustRotatePassword) {
-      throw new PasswordRotationRequiredError(
-        'Password rotation required before further access',
-        { userId: user.id },
-      );
+      throw new PasswordRotationRequiredError('Password rotation required before further access', {
+        userId: user.id,
+      });
     }
   });
 }

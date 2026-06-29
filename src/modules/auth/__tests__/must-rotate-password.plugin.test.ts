@@ -17,7 +17,9 @@ interface Harness {
   verify: jest.Mock;
 }
 
-async function buildApp(overrides: { user?: UserRow | null; verify?: () => JwtClaims } = {}): Promise<Harness> {
+async function buildApp(
+  overrides: { user?: UserRow | null; verify?: () => JwtClaims } = {},
+): Promise<Harness> {
   const fastify = Fastify({ logger: false });
 
   const findUserById = jest.fn();

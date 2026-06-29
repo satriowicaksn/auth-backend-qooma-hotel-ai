@@ -20,4 +20,14 @@ describe('AuthRepository (integration — DEFERRED until T02 ships)', () => {
   it.todo('should rotate session atomically (revoke old + create new) in a single transaction');
   it.todo('should set last_login_at when touchUserLastLogin is called');
   it.todo('should enforce UNIQUE(hotel_id, email) on user create paths exercised here');
+
+  // T06 additions (re-opened together with T05 after T02 ships):
+  it.todo('should return UserRow when findUserById hits an existing user (active or not)');
+  it.todo('should return null when findUserById misses');
+  it.todo('should atomically set passwordHash AND clear mustRotatePassword in updateUserPassword');
+  it.todo('should set language and return updated UserRow in updateUserLanguage');
+  it.todo('should overwrite csrfToken in-place on rotateCsrfToken');
+  it.todo(
+    'should revoke unrelated active sessions but leave the current one alive in revokeAllOtherSessions',
+  );
 });

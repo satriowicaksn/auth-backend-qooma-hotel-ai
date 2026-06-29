@@ -85,7 +85,9 @@ export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     if (!parsed.success) {
       // 422 when current-password verification ends up failing belongs to AuthError
       // (mapped by service). Here we only return 400 for shape/policy failures.
-      throw new ValidationError('Invalid password rotation payload', { issues: parsed.error.issues });
+      throw new ValidationError('Invalid password rotation payload', {
+        issues: parsed.error.issues,
+      });
     }
     const result = await fastify.services.auth.rotatePassword(
       claims,

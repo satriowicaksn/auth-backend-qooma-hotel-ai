@@ -73,13 +73,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const authRepo = new AuthRepository(prisma);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
 
-  const authService = new AuthService(
-    authRepo,
-    new Argon2Hasher(),
-    tokenIssuer,
-    config,
-    logger,
-  );
+  const authService = new AuthService(authRepo, new Argon2Hasher(), tokenIssuer, config, logger);
 
   fastify.decorate('tokenIssuer', tokenIssuer);
   fastify.decorate('services', { auth: authService });

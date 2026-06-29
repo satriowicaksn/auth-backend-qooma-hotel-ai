@@ -22,6 +22,7 @@
   },
   "collectCoverageFrom": [
     "src/modules/auth/**/*.ts",
+    "src/plugins/**/*.ts",
     "!src/modules/auth/**/index.ts",
     "!src/modules/auth/**/__tests__/**",
     "!src/modules/auth/auth.repository.ts"

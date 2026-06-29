@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import type { Logger } from 'winston';
 
 import type { AppConfig } from '@core/config/env.js';
-import { AuthError } from '@core/errors/app-errors.js';
+import { AuthError, ValidationError } from '@core/errors/app-errors.js';
 
 import { hashToken } from '@shared/utils/crypto.js';
 
@@ -28,26 +28,37 @@ const ctx: SessionContext = {
 interface Mocks {
   findActiveUserByEmail: jest.Mock;
   findActiveUserById: jest.Mock;
+  findUserById: jest.Mock;
   createSession: jest.Mock;
   findActiveSessionByRefreshHash: jest.Mock;
   revokeSession: jest.Mock;
   rotateSession: jest.Mock;
   touchUserLastLogin: jest.Mock;
+  updateUserPassword: jest.Mock;
+  updateUserLanguage: jest.Mock;
+  rotateCsrfToken: jest.Mock;
+  revokeAllOtherSessions: jest.Mock;
   hash: jest.Mock;
   verify: jest.Mock;
   sign: jest.Mock;
   verifyToken: jest.Mock;
+  logger: Logger;
   service: AuthService;
 }
 
 function buildService(): Mocks {
   const findActiveUserByEmail = jest.fn();
   const findActiveUserById = jest.fn();
+  const findUserById = jest.fn();
   const createSession = jest.fn();
   const findActiveSessionByRefreshHash = jest.fn();
   const revokeSession = jest.fn();
   const rotateSession = jest.fn();
   const touchUserLastLogin = jest.fn();
+  const updateUserPassword = jest.fn();
+  const updateUserLanguage = jest.fn();
+  const rotateCsrfToken = jest.fn();
+  const revokeAllOtherSessions = jest.fn();
 
   const hash = jest.fn();
   const verify = jest.fn();
@@ -58,11 +69,16 @@ function buildService(): Mocks {
   const repo = {
     findActiveUserByEmail,
     findActiveUserById,
+    findUserById,
     createSession,
     findActiveSessionByRefreshHash,
     revokeSession,
     rotateSession,
     touchUserLastLogin,
+    updateUserPassword,
+    updateUserLanguage,
+    rotateCsrfToken,
+    revokeAllOtherSessions,
   } as unknown as AuthRepository;
 
   const hasher = { hash, verify } as unknown as PasswordHasherPort;
@@ -84,18 +100,32 @@ function buildService(): Mocks {
   return {
     findActiveUserByEmail,
     findActiveUserById,
+    findUserById,
     createSession,
     findActiveSessionByRefreshHash,
     revokeSession,
     rotateSession,
     touchUserLastLogin,
+    updateUserPassword,
+    updateUserLanguage,
+    rotateCsrfToken,
+    revokeAllOtherSessions,
     hash,
     verify,
     sign,
     verifyToken,
+    logger,
     service,
   };
 }
+
+const SAMPLE_CLAIMS: JwtClaims = {
+  sub: '11111111-1111-1111-1111-111111111111',
+  sid: '33333333-3333-3333-3333-333333333333',
+  role: 'gm_admin',
+  hotelId: '22222222-2222-2222-2222-222222222222',
+  deptId: null,
+};
 
 describe('AuthService.login', () => {
   let m: Mocks;
@@ -260,5 +290,162 @@ describe('AuthService.refresh', () => {
     m.findActiveSessionByRefreshHash.mockResolvedValue(aSession());
     m.findActiveUserById.mockResolvedValue(null);
     await expect(m.service.refresh('opaque-value', ctx)).rejects.toThrow(AuthError);
+  });
+});
+
+describe('AuthService.getMe', () => {
+  let m: Mocks;
+
+  beforeEach(() => {
+    m = buildService();
+  });
+
+  it('should return spec-shaped user + fresh csrfToken when session valid', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.rotateCsrfToken.mockResolvedValue(undefined);
+
+    const result = await m.service.getMe(SAMPLE_CLAIMS);
+
+    expect(result.user).toEqual({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      hotel_id: user.hotelId,
+      dept_id: user.deptId,
+      language: user.language,
+    });
+    expect(result.csrfToken).toHaveLength(64);
+    expect(m.rotateCsrfToken).toHaveBeenCalledWith(SAMPLE_CLAIMS.sid, result.csrfToken);
+  });
+
+  it('should throw AuthError when user no longer exists', async () => {
+    m.findUserById.mockResolvedValue(null);
+    await expect(m.service.getMe(SAMPLE_CLAIMS)).rejects.toThrow(AuthError);
+    expect(m.rotateCsrfToken).not.toHaveBeenCalled();
+  });
+
+  it('should throw AuthError when user has been deactivated', async () => {
+    m.findUserById.mockResolvedValue(aUser({ isActive: false }));
+    await expect(m.service.getMe(SAMPLE_CLAIMS)).rejects.toThrow(AuthError);
+    expect(m.rotateCsrfToken).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthService.updateMeLanguage', () => {
+  let m: Mocks;
+
+  beforeEach(() => {
+    m = buildService();
+  });
+
+  it('should update language and return spec-shaped user', async () => {
+    const updated = aUser({ language: 'en' });
+    m.updateUserLanguage.mockResolvedValue(updated);
+
+    const result = await m.service.updateMeLanguage(SAMPLE_CLAIMS, 'en');
+
+    expect(m.updateUserLanguage).toHaveBeenCalledWith(SAMPLE_CLAIMS.sub, 'en');
+    expect(result.user.language).toBe('en');
+    expect(result.user.id).toBe(updated.id);
+  });
+});
+
+describe('AuthService.rotatePassword', () => {
+  let m: Mocks;
+
+  beforeEach(() => {
+    m = buildService();
+  });
+
+  it('should hash new password, clear must_rotate flag, and revoke other sessions when current valid', async () => {
+    const user = aUser({ mustRotatePassword: true });
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(true);
+    m.hash.mockResolvedValue('new$argon2id$hash');
+    m.updateUserPassword.mockResolvedValue({ ...user, mustRotatePassword: false });
+    m.revokeAllOtherSessions.mockResolvedValue({ revokedCount: 2 });
+
+    const result = await m.service.rotatePassword(
+      SAMPLE_CLAIMS,
+      'OldPassword!1234',
+      'BrandNewSecret!1',
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(m.verify).toHaveBeenCalledWith(user.passwordHash, 'OldPassword!1234');
+    expect(m.hash).toHaveBeenCalledWith('BrandNewSecret!1');
+    expect(m.updateUserPassword).toHaveBeenCalledWith(user.id, 'new$argon2id$hash');
+    expect(m.revokeAllOtherSessions).toHaveBeenCalledWith(user.id, SAMPLE_CLAIMS.sid);
+  });
+
+  it('should throw AuthError when current password verify fails (422 BUSINESS_RULE)', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(false);
+
+    await expect(
+      m.service.rotatePassword(SAMPLE_CLAIMS, 'WrongCurrent!1', 'BrandNewSecret!1'),
+    ).rejects.toThrow(AuthError);
+    expect(m.updateUserPassword).not.toHaveBeenCalled();
+    expect(m.revokeAllOtherSessions).not.toHaveBeenCalled();
+  });
+
+  it('should throw AuthError when user no longer exists', async () => {
+    m.findUserById.mockResolvedValue(null);
+    await expect(m.service.rotatePassword(SAMPLE_CLAIMS, 'X', 'BrandNewSecret!1')).rejects.toThrow(
+      AuthError,
+    );
+    expect(m.verify).not.toHaveBeenCalled();
+  });
+
+  it('should throw ValidationError when new password fails min_length', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(true);
+
+    await expect(m.service.rotatePassword(SAMPLE_CLAIMS, 'OldOk!1', 'short1!')).rejects.toThrow(
+      ValidationError,
+    );
+    expect(m.updateUserPassword).not.toHaveBeenCalled();
+  });
+
+  it('should throw ValidationError when new password is missing a digit', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(true);
+
+    await expect(
+      m.service.rotatePassword(SAMPLE_CLAIMS, 'OldOk!1', 'NoNumbersHere!'),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it('should throw ValidationError when new password is missing a symbol', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(true);
+
+    await expect(
+      m.service.rotatePassword(SAMPLE_CLAIMS, 'OldOk!1', 'NoSymbolsHere1'),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it('should still succeed when revokeAllOtherSessions throws (best-effort)', async () => {
+    const user = aUser();
+    m.findUserById.mockResolvedValue(user);
+    m.verify.mockResolvedValue(true);
+    m.hash.mockResolvedValue('new$argon2id$hash');
+    m.updateUserPassword.mockResolvedValue({ ...user, mustRotatePassword: false });
+    m.revokeAllOtherSessions.mockRejectedValue(new Error('db hiccup'));
+
+    const result = await m.service.rotatePassword(
+      SAMPLE_CLAIMS,
+      'OldPassword!1234',
+      'BrandNewSecret!1',
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(m.updateUserPassword).toHaveBeenCalled();
   });
 });

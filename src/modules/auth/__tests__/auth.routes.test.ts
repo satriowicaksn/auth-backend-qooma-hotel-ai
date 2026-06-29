@@ -29,10 +29,30 @@ const SUCCESS_LOGIN_PAYLOAD = {
   csrfToken: 'csrf-here',
 };
 
-async function buildTestApp(authMock: Partial<AuthService>): Promise<FastifyInstance> {
+interface BuildOpts {
+  readonly tokenIssuerVerify?: jest.Mock;
+}
+
+async function buildTestApp(
+  authMock: Partial<AuthService>,
+  opts: BuildOpts = {},
+): Promise<FastifyInstance> {
   const fastify = Fastify({ logger: false });
   fastify.decorate('appConfig', testConfig);
   fastify.decorate('services', { auth: authMock as AuthService });
+  // Default verify returns a valid claims object so `/me` family routes can
+  // extract claims without exercising the auth-error path. Tests that need
+  // unauthenticated behavior override via `opts.tokenIssuerVerify`.
+  const verify =
+    opts.tokenIssuerVerify ??
+    jest.fn(() => ({
+      sub: 'u-1',
+      sid: 's-1',
+      role: 'gm_admin',
+      hotelId: 'h-1',
+      deptId: null,
+    }));
+  fastify.decorate('tokenIssuer', { sign: jest.fn(), verify } as never);
   fastify.setErrorHandler((err, _req, reply) => {
     if (err instanceof AppError) {
       void reply.code(err.statusCode).send({ error: err.toJson() });
@@ -189,6 +209,156 @@ describe('POST /api/auth/refresh', () => {
 
     expect(res.statusCode).toBe(401);
     expect(refresh).toHaveBeenCalledWith(null, expect.objectContaining({}));
+
+    await app.close();
+  });
+});
+
+describe('GET /api/auth/me', () => {
+  it('should return spec-shaped body with fresh csrfToken when authenticated', async () => {
+    const getMe = jest.fn<AuthService['getMe']>().mockResolvedValue({
+      user: SUCCESS_LOGIN_PAYLOAD.user,
+      csrfToken: 'fresh-csrf-token',
+    });
+    const app = await buildTestApp({ getMe });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      cookies: { token: 'valid.jwt' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { csrfToken: string; user: Record<string, unknown> };
+    expect(body.csrfToken).toBe('fresh-csrf-token');
+    expect(body.user).toEqual(SUCCESS_LOGIN_PAYLOAD.user);
+    expect(getMe).toHaveBeenCalledTimes(1);
+
+    await app.close();
+  });
+
+  it('should return 401 AUTH_ERROR when access cookie missing', async () => {
+    const getMe = jest.fn<AuthService['getMe']>();
+    const app = await buildTestApp({ getMe });
+
+    const res = await app.inject({ method: 'GET', url: '/api/auth/me' });
+
+    expect(res.statusCode).toBe(401);
+    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe('AUTH_ERROR');
+    expect(getMe).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+});
+
+describe('PATCH /api/auth/me', () => {
+  it('should return updated user when language whitelisted', async () => {
+    const updateMeLanguage = jest.fn<AuthService['updateMeLanguage']>().mockResolvedValue({
+      user: { ...SUCCESS_LOGIN_PAYLOAD.user, language: 'en' },
+    });
+    const app = await buildTestApp({ updateMeLanguage });
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      cookies: { token: 'valid.jwt' },
+      payload: { language: 'en' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { user: { language: string } };
+    expect(body.user.language).toBe('en');
+    expect(updateMeLanguage).toHaveBeenCalledWith(expect.anything(), 'en');
+
+    await app.close();
+  });
+
+  it('should return 400 VALIDATION_ERROR when extra field provided (strict whitelist)', async () => {
+    const updateMeLanguage = jest.fn<AuthService['updateMeLanguage']>();
+    const app = await buildTestApp({ updateMeLanguage });
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/me',
+      cookies: { token: 'valid.jwt' },
+      payload: { language: 'en', name: 'attempted-rename' },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe(
+      'VALIDATION_ERROR',
+    );
+    expect(updateMeLanguage).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+});
+
+describe('POST /api/auth/me/password', () => {
+  const validPayload = {
+    current_password: 'OldPassword!1234',
+    new_password: 'BrandNewSecret!1',
+  };
+
+  it('should return { success: true } when rotation succeeds', async () => {
+    const rotatePassword = jest
+      .fn<AuthService['rotatePassword']>()
+      .mockResolvedValue({ success: true });
+    const app = await buildTestApp({ rotatePassword });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/me/password',
+      cookies: { token: 'valid.jwt' },
+      payload: validPayload,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ success: true });
+    expect(rotatePassword).toHaveBeenCalledWith(
+      expect.objectContaining({ sub: 'u-1', sid: 's-1' }),
+      validPayload.current_password,
+      validPayload.new_password,
+    );
+
+    await app.close();
+  });
+
+  it('should return 401 AUTH_ERROR (422 BUSINESS_RULE in spec) when service throws on wrong current', async () => {
+    const rotatePassword = jest
+      .fn<AuthService['rotatePassword']>()
+      .mockRejectedValue(new AuthError('Invalid current password'));
+    const app = await buildTestApp({ rotatePassword });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/me/password',
+      cookies: { token: 'valid.jwt' },
+      payload: validPayload,
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe('AUTH_ERROR');
+
+    await app.close();
+  });
+
+  it('should return 400 VALIDATION_ERROR when new_password violates policy', async () => {
+    const rotatePassword = jest.fn<AuthService['rotatePassword']>();
+    const app = await buildTestApp({ rotatePassword });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/me/password',
+      cookies: { token: 'valid.jwt' },
+      payload: { current_password: validPayload.current_password, new_password: 'short' },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe(
+      'VALIDATION_ERROR',
+    );
+    expect(rotatePassword).not.toHaveBeenCalled();
 
     await app.close();
   });
