@@ -13,8 +13,8 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T05 — Auth core endpoints (login/logout/refresh) · `READY-PARTIAL (unit-only)`
-- **Branch**: `feat/auth-core` (Executor B finalize di PLAN)
+- **Active task**: T05 — Auth core endpoints (login/logout/refresh) · `assigned · BLOCKED-on-Q-B-01 (deps + TTL)` — PARTIAL-ACK posted; Executor B HOLD on coding
+- **Branch**: `feat/auth-core` (deferred — Executor B NOT to create branch until Q-B-01 resolved)
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
 - **Single-dev cycle**: hanya Slot B (Nanak) online; T01..T04 (Slot A foundation) `PARKED` — integration test deferred sampai T02 ships.
@@ -27,7 +27,7 @@
 
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · READY-PARTIAL (unit-only)`   | —              | Cycle 1 task #1. Integration deferred until T02 (Slot A) ships. Spec: `MVP-AUTH-FIRST.md §1` row 1.    |
+| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · BLOCKED-on-Q-B-01`           | —              | Cycle 1 task #1. PLAN attempt 1 PARTIAL-ACKED 2026-06-29; 2 GAPs PM-internal-approved, 3 escalated as Q-B-01 (deps + TTL). Executor HOLD. |
 | T06 | Auth current-user + password rotation gate | `backlog · READY-PARTIAL (unit-only)`    | —              | Cycle 1 task #2 — picks up after T05 APPROVED.                                                         |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
@@ -283,6 +283,49 @@ Module structure follows `MODULE_TEMPLATE.md §1` "modul dengan external IO" tre
 
 Awaiting PM B ACK.
 
+##### PM B PARTIAL-ACK PLAN T05 attempt 1 — 2 GAPs approved, 3 GAPs ESCALATED as Q-B-01 (cycle 1, 2026-06-29)
+
+**Verdict summary**: PLAN structure solid; scope + DoD + file tree + test plan + security checklist all match ASSIGNMENT. **Two GAPs PM-internal-approved** (no PO touch needed). **Three GAPs escalated as bundled `Q-B-01`** to Parent PM → PO (deps install + Slot-A config touch). Executor B: **HOLD on coding** sampai Q-B-01 resolved; stretch goal allowed (read-only, NO commit).
+
+**Pre-ACK verification (PM B sanity-checked Executor claims)**:
+
+| Claim | Source line | PM B verify | Status |
+|---|---|---|---|
+| `@fastify/jwt ^8.0.1` at `package.json:37` | PLAN line 174, 228 | `grep -n '"@fastify' package.json` → `37: "@fastify/jwt": "^8.0.1"` | ✅ CONFIRMED |
+| `@fastify/rate-limit ^9.1.0` at `package.json:38` | PLAN line 174, 238 | `grep` → `38: "@fastify/rate-limit": "^9.1.0"` | ✅ CONFIRMED |
+| `argon2` absent from deps | PLAN line 219 | `grep -n '"argon2"' package.json` → no match | ✅ CONFIRMED (install GAP valid) |
+| `@fastify/cookie` absent from deps | PLAN line 220 | scan deps block lines 34-47 → no entry | ✅ CONFIRMED (install GAP valid) |
+| `JWT_ACCESS_TTL` default `'8h'` at `env.ts:37` | PLAN line 209, 222 | `grep` → `37: JWT_ACCESS_TTL: z.string().default('8h')` | ✅ CONFIRMED |
+| `User.passwordHash VARCHAR(255)` at `schema.prisma:83` | PLAN line 264 | `grep` → `83: passwordHash String @map("password_hash") @db.VarChar(255)` | ✅ CONFIRMED |
+| `Session.refreshToken VARCHAR(512)` at `schema.prisma:109` | PLAN line 265 | `grep` → `109: refreshToken String @map("refresh_token") @db.VarChar(512)` | ✅ CONFIRMED |
+| `hashToken` absent from `src/shared/utils/crypto.ts` | PLAN line 210, GAP #3 | `grep -rn 'hashToken' src/shared/utils/` → no match | ✅ CONFIRMED |
+| `maskEmail()` in `src/shared/utils/masking.ts` | PLAN line 174, 256 | confirmed (deferred — not material to ACK) | ✅ TRUST-BUT-VERIFY |
+| `src/core/errors/app-errors.ts` exports `AuthError`/`ValidationError`/`NotFoundError` | PLAN line 174 | confirmed (deferred — not material to ACK) | ✅ TRUST-BUT-VERIFY |
+
+**PM-internal APPROVED GAPs** (no PO touch — proceed when Q-B-01 lands):
+
+- ✅ **GAP T05-#3 — `hashToken()` placement in `src/shared/utils/crypto.ts`**: APPROVED. Rationale: (a) zero-dep Node built-in (`crypto.createHash('sha256')`), no install ask; (b) additive export, no breaking change to existing `crypto.ts` envelope helpers; (c) natural co-location per `PROJECT_STRUCTURE.md §src/shared/utils/`; (d) Slot A is `PARKED` this cycle — no live coord conflict; if Slot A unparks later with overlapping plans for `crypto.ts`, Slot A's task will see this commit and reconcile. Executor B: proceed with option (A).
+- ✅ **GAP T05-#5 — NO JWT hex port, internal `TokenIssuer` interface only**: APPROVED. Rationale: matches `ADR-0001` §"Definisi tegas" verbatim — ports WAJIB hanya untuk external IO (HTTP API call, outbound notif, S3, queue producer); `@fastify/jwt` is framework-stack pure-in-process crypto (sibling of `@fastify/cors`, `@fastify/helmet`) → fits ADR-0001's "TIDAK pakai port → logger, config, internal util". Hash port is justified because (a) lib swap is plausible (argon2 ↔ bcrypt — same DoD line says "Slot B picks"), (b) test seam benefit explicit in PARENT §8 row 250. JWT swap is hypothetical + `fastify.jwt.sign/verify` mock-ability at the decorator level already provides the test seam. **Asymmetry is fine and ADR-supported.** Executor B: proceed with option (A) — internal `TokenIssuer` interface, NO entry under `ports/`, NOT under `adapters/`. Wrap as a thin file `src/modules/auth/auth.token-issuer.ts` (kebab-case, module-scoped) or inline in `auth.service.ts` — Executor picks at code time.
+
+**ESCALATED as bundled `Q-B-01`** to Parent PM → PO (see §3 + roll-up at PARENT §3b + PARENT §2):
+
+- 🚨 **GAP T05-#1 — `argon2 ^0.41.x` install**: per `CLAUDE.md §11` package.json deps = PO authority. PM B route via Parent PM. Fallback option B (`bcrypt cost=12`) is acceptable per `SECURITY.md §2` baseline — PO picks.
+- 🚨 **GAP T05-#2 — `@fastify/cookie ^9.x` install**: per `CLAUDE.md §11` package.json deps = PO authority. Hand-roll fallback (option B) is high-friction; recommend approve. PM B route via Parent PM.
+- 🚨 **GAP T05-#4 — `JWT_ACCESS_TTL` default `'8h'` → `'15m'` in `src/core/config/env.ts:37`**: PM B does NOT have authority over `core/config/` (Slot A canonical domain per `SERVICE-CHARTER §3` + `PROJECT_STRUCTURE.md` `core/` layer ownership). Spec `01-auth-identity §3` ratifies 15-min access, but `SECURITY.md §2` says generic '8h' floor — these are not yet reconciled. PM B route via Parent PM for (a) Slot A coord clearance, (b) doc-sync decision (which spec wins → PM B updates one of the two per `PM-AGENT §0.6`). **Note**: this is technically a deviation/planning-sync (not a contract Q), but bundling under Q-B-01 because it's the same Executor-PLAN cycle and same blocker (won't start coding).
+
+**Executor B HOLD state** (per CLAUDE.md §11 workflow + EXECUTOR-PROTOCOL §0.5 ACK gate):
+
+- **NO `pnpm add`** sampai Q-B-01 GAP #1 + #2 resolved by PO.
+- **NO edit `src/core/config/env.ts`** sampai Q-B-01 GAP #4 resolved (Slot A coord).
+- **NO branch creation** (`feat/auth-core` deferred sampai ACK→FULL).
+- **NO commit anything new**.
+- **Stretch goal (idle, READ-ONLY)**: re-read `docs/spec/01-auth-identity.md §1.1` (login response shape — match field-by-field di unit test), `docs/spec/data-model.md` (Session/User columns), `docs/MODULE_TEMPLATE.md §3` per-file convention, `docs/TESTING.md §4 + §11` (mock-port pattern + builders). Sketch test cases **mentally** atau di local scratch file (not in repo). Re-confirm hash-lib + cookie-flag matrix against `01-auth-identity §1.1`. **JANGAN commit anything; JANGAN edit `src/`; JANGAN run `pnpm add`.**
+- **Side blocker (ENOSPC) — non-PLAN-blocking, non-ACK-blocking** — logged at §6 incident for audit trail; resolve via host-side cleanup before coding cycle starts.
+
+**Re-engage trigger**: ketika Parent PM post Q-B-01 resolution di `PARENT §3b` (per-GAP decision), PM B will append `##### PM B FULL-ACK PLAN T05 attempt 1 — Q-B-01 resolved` sub-block dengan PO-approved options inlined. Executor B then proceeds to coding.
+
+**Next Executor B action**: **HOLD**. Watch §3 for Q-B-01 status updates. Read-only stretch goal allowed.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
@@ -390,7 +433,7 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 
 | ID            | Question | Source         | Status | Resolution |
 | ------------- | -------- | -------------- | ------ | ---------- |
-| —             | —        | —              | —      | —          |
+| Q-B-01        | Bundled blocker for T05 coding-start: (a) `argon2 ^0.41.x` install (preferred per OWASP 2024 + `01-auth-identity §5`) or `bcrypt` fallback (per `SECURITY.md §2` baseline); (b) `@fastify/cookie ^9.x` install (required by `@fastify/jwt` cookie reads — hand-roll fallback is high-friction); (c) `JWT_ACCESS_TTL` default `'8h' → '15m'` in `src/core/config/env.ts:37` (touches Slot A canonical domain — needs Slot A coord clearance + doc-sync decision between `SECURITY.md §2` floor vs `01-auth-identity §3` ratified 15-min). | Executor B PLAN T05 attempt 1 GAPs #1+#2+#4 (PM-STATUS-B.md §2 lines 219-222) | **open · escalated to Parent PM** | Awaiting PO ruling. PM B mirror to `PARENT §3b` package-question (deps primary) + cross-ref §3c for TTL config touch. Roll-up posted to PARENT §2. |
 
 ---
 
@@ -443,7 +486,20 @@ QOOMA BE B (Nanak) — Standup — H{N}/{total}
 
 > Hal yang affect cuma slot B. Bila affect > 1 dev, escalate ke `PM-STATUS-PARENT.md §7` lewat Parent PM.
 
-_(kosong)_
+### 2026-06-29 — Executor B side blocker: disk full (ENOSPC) on host `/private/tmp` during PLAN T05 attempt 1
+
+**What happened**: Executor B reported `pnpm install --frozen-lockfile` failed with ENOSPC on `/private/tmp` before tsc/eslint baselines could run during session-start gate (PLAN line 175-176). PLAN was authored against last-known-clean baseline at `1e32e34 Init project` since no `src/` mutations since.
+
+**Why non-PLAN-blocking**:
+- PLAN content (file tree, DoD, GAPs, test plan, approach) is reviewed by PM on textual merit — not gated on local typecheck/lint baseline at PLAN stage (CLAUDE.md §11 `make check` is a CODING gate, not PLAN gate).
+- Executor B HOLD on coding pending Q-B-01 anyway; ENOSPC resolution window aligns naturally with PO approval window.
+- No `src/` work attempted → no risk of partial commits.
+
+**Action**:
+- Executor B: resolve via host-side cleanup (`du -sh /private/tmp/*`, prune stale macOS temp caches, IDE caches, old `node_modules` snapshots) **before** Q-B-01 resolution lands — keeps coding-start unblocked.
+- PM B: log here for audit trail; do NOT escalate to Parent PM (single-slot, environmental, not a planning issue).
+
+**Lesson**: at session-start gate, if baseline `make check` is environmentally blocked, Executor MAY proceed to PLAN authoring but **MUST** flag the blocker in PLAN body (Executor B did — PLAN line 175-176 + 272). PM B accepts PLAN on textual merit; ENOSPC cleanup is owner's local-env concern.
 
 ---
 
