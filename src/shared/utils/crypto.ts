@@ -9,6 +9,8 @@
  * Lihat docs/SECURITY.md §3.
  */
 
+import { createHash } from 'node:crypto';
+
 // TODO(qooma): implementasi dengan node:crypto.
 
 export function encrypt(_plaintext: string): string {
@@ -35,4 +37,14 @@ export function encryptDsn(dsn: string): string {
 
 export function decryptDsn(envelope: string): string {
   return decrypt(envelope);
+}
+
+/**
+ * SHA-256 hex digest. Used for refresh-token at-rest hashing per SECURITY.md §3.
+ * Refresh token stays plaintext in the cookie + transient memory; only the hash
+ * is persisted in `sessions.refresh_token`. Pre-image resistance protects against
+ * DB compromise without breaking the rotation contract.
+ */
+export function hashToken(plaintext: string): string {
+  return createHash('sha256').update(plaintext).digest('hex');
 }
