@@ -13,8 +13,11 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T05 — `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` — VERDICT posted cycle 2 (2026-06-29). 13/13 independent verifications match Executor klaim; 5 DDs ACCEPT; 4 foundation gaps logged as Q-B-02. PM B ruling: Executor B pickup T06 next.
-- **Branch**: `feat/auth-core` (11 commits ahead of `main`) — stay on branch, NO merge to `main` until T02 ships and integration suite ratifies full APPROVE.
+- **Active task**: T06 — Auth current-user + password rotation gate · `assigned · READY-PARTIAL (unit-only, single-dev cycle 3)`. ASSIGNMENT issued cycle 3 (2026-06-29) extending T05's auth module.
+- **T05 status**: `APPROVE-PARTIAL` (cycle 2 unit-scope; full APPROVE held for T02) — re-open trigger waits for Slot A.
+- **Branch**: `feat/auth-core` (10 impl commits ahead of `main` post-rebase) — T06 stacks on T05 same branch.
+- **Cycle 3 sequence (PO-ratified)**: T06 → T11 → T07. Single-dev cycle still active (Slot A/C PARKED).
+- **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
 - **Single-dev cycle**: hanya Slot B (Nanak) online; T01..T04 (Slot A foundation) `PARKED` — integration test deferred sampai T02 ships.
@@ -28,7 +31,7 @@
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
-| T06 | Auth current-user + password rotation gate | `backlog · READY-PARTIAL (unit-only)`    | —              | Cycle 1 task #2 — picks up after T05 APPROVED.                                                         |
+| T06 | Auth current-user + password rotation gate | `assigned · READY-PARTIAL (unit-only, single-dev cycle 3)` | —              | Cycle 3 task. ASSIGNMENT issued 2026-06-29. Extends T05 module. Scope: `GET/PATCH /api/auth/me` + `POST /api/auth/me/password` + `must_rotate_password` per-request gate plugin. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
 
@@ -738,6 +741,186 @@ Now that T05 APPROVE-PARTIAL is issued, two options for Executor B's next move:
 **JANGAN diff-merge ke `main`** — branch `feat/auth-core` stay until full APPROVE.
 
 PM B exits to **wait-mode**: next event is either (a) Executor B claims T06 (post new ASSIGNMENT sub-block under §2 — append-only), or (b) Slot A unparks + T02 lands → PM B re-opens T05 for PARTIAL→FULL upgrade cycle.
+
+### ASSIGNMENT T06 — claimed by exec-B (Nanak) at cycle 3 (2026-06-29)
+
+- **Spec row pointer**: `docs/spec/MVP-AUTH-FIRST.md §1` rows 2 + 3 (`GET /api/auth/me` · `PATCH /api/auth/me` · `POST /api/auth/me/password`) + canonical detail di `docs/spec/01-auth-identity.md §1.1` lines 54-92 + `MVP-AUTH-FIRST.md §4.2` (must_rotate_password per-request gate)
+- **Routed from**: `PM-STATUS-PARENT.md §1` T06 row (status `backlog · READY-PARTIAL (unit-only)` at cycle 2 close; PM B authority untuk row update post-VERDICT)
+- **Branch**: `feat/auth-core` (continues from T05 — same branch, T06 stacks on T05 commits)
+- **Status flag**: `READY-PARTIAL (unit-only, single-dev cycle 3)` — integration deferred until T02 ships (same convention as T05)
+- **Gate target**: G2 (modul auth — T05 + T06 + T11 collectively close G2 per PARENT §5)
+
+#### PM B notes — Scope this cycle (PARTIAL — unit-only, single-dev)
+
+**In scope this submission**:
+1. **`GET /api/auth/me`** route handler — read JWT context (from `fastify.jwt.verify` or T05's TokenIssuer), look up user via `AuthRepository.findUserById` (extend repo), return sanitized user shape matching `01-auth-identity §1.1` lock + **rotate `csrfToken`** (update session row's csrf_token, return new value in response body per spec line 56 "must rotate `csrfToken`"). Cookie-only auth — NO request body.
+2. **`PATCH /api/auth/me`** route handler — body `{ language: 'id' | 'en' }` zod-validated whitelist; service updates `user.language`; return `{ user: <updated> }` per spec lines 60-71. **Only `language` field whitelisted** — reject any other field with `ValidationError`. Email immutable per spec line 103.
+3. **`POST /api/auth/me/password`** route handler — body `{ current_password, new_password }` per spec line 80; service flow:
+   - `argon2.verify(user.passwordHash, current_password)` — fail → `AuthError` 422 BUSINESS_RULE per spec line 90
+   - Validate `new_password` per SECURITY.md §2: min 12 char, ≥1 digit, ≥1 symbol — fail → `ValidationError` 400 per spec line 91
+   - `argon2.hash(new_password)` via T05's `PasswordHasherPort`
+   - `AuthRepository.updatePassword(userId, newHash)` — also **clear `must_rotate_password` flag** to `false` (per spec line 128 + MVP-AUTH-FIRST §4.2 last sentence)
+   - Return `{ success: true }` per spec lines 84-86
+4. **`must_rotate_password` per-request gate** Fastify plugin (cross-cutting). Lives at `src/plugins/must-rotate-password.plugin.ts` OR `src/modules/auth/plugins/must-rotate-password.ts` — Executor decide di PLAN (see Open Item #3). Behavior per `MVP-AUTH-FIRST §4.2`:
+   - Read JWT/session → check `user.must_rotate_password` flag
+   - If `true` AND request path NOT IN allow-list → return `403 PASSWORD_ROTATION_REQUIRED`
+   - Allow-list (per spec §4.2): `POST /api/auth/me/password`, `GET /api/auth/me`, `POST /api/auth/logout`
+   - Register globally in `entrypoints/api.ts` after T11 tenant-guard (when T11 lands) OR standalone if T11 not yet wired (T11 is next-cycle work)
+5. **Reuse T05 building blocks**: `PasswordHasherPort` / `Argon2Hasher` / `TokenIssuer` / `AuthRepository` extended (add `findUserById`, `updatePassword`, `updateLanguage`, `rotateCsrfToken` methods)
+6. **Unit tests** — service + routes + plugin + zod schema parse/reject paths
+
+**Explicitly OUT-of-scope this cycle**:
+- Integration tests for new repo methods — deferred until T02 (T05's `it.todo()` placeholder pattern; add 4-6 new `it.todo()` entries for findUserById/updatePassword/updateLanguage/rotateCsrfToken if Executor wants symmetry)
+- Email-based password reset (`POST /api/users/:id/reset-password` via SMTP) — out of MVP per spec line 129
+- Password history (last-N enforcement) — NOT in spec, NOT in `prisma/schema.prisma` (only `PasswordResetToken` table; `password_history` table absent). Don't introduce schema change.
+- Lockout after N failed `current_password` attempts — NOT in spec for `/me/password` endpoint (lockout is for login per SECURITY.md §6 — separate concern)
+- 2FA / MFA — out of MVP
+- T11 tenant-guard wiring — T11 is next-cycle work; T06 plugin registers independently first
+
+#### PM B notes — DoD this submission
+
+- [ ] 3 endpoints authored (route + zod + service + repo extension): `GET /me`, `PATCH /me`, `POST /me/password`
+- [ ] `GET /api/auth/me` response shape **exactly matches** `01-auth-identity §1.1` login response (same `{ user, csrfToken }` shape — verbatim per spec line 56)
+- [ ] `csrfToken` rotation on `/me`: new random hex via `crypto.randomBytes(32).toString('hex')`, persisted to `sessions.csrf_token`, returned in response body
+- [ ] `PATCH /me` whitelist: only `language` accepted; any other field → `ValidationError` 400
+- [ ] `POST /me/password` flow:
+  - [ ] `current_password` verify via `PasswordHasherPort.verify` (argon2 timing-safe internal)
+  - [ ] Wrong current → `AuthError` 422 `BUSINESS_RULE` (per spec line 90)
+  - [ ] `new_password` validation per SECURITY.md §2: min 12 / ≥1 digit / ≥1 symbol → `ValidationError` 400 on fail
+  - [ ] `new_password` hashed via `PasswordHasherPort.hash` (argon2id)
+  - [ ] `users.password_hash` + `must_rotate_password=false` updated atomically (single Prisma update)
+  - [ ] Return `{ success: true }` per spec lines 84-86
+- [ ] **`must_rotate_password` per-request gate plugin**:
+  - [ ] Fastify plugin at chosen path (PLAN decides per Open Item #3)
+  - [ ] Reads session/JWT → checks `user.must_rotate_password` flag
+  - [ ] Returns `403 PASSWORD_ROTATION_REQUIRED` (custom AppError code) for non-allow-list routes when flag=true
+  - [ ] Allow-list verbatim per spec §4.2: `POST /api/auth/me/password`, `GET /api/auth/me`, `POST /api/auth/logout`
+  - [ ] Registered di `entrypoints/api.ts` — order documented (after `@fastify/jwt`, before route registration)
+- [ ] **AuthRepository extensions**:
+  - [ ] `findUserById(id: string): Promise<User | null>` — read by PK
+  - [ ] `updatePassword(userId, newHash): Promise<void>` — atomic update password_hash + must_rotate_password=false
+  - [ ] `updateLanguage(userId, language): Promise<User>` — return updated user
+  - [ ] `rotateCsrfToken(sessionId, newToken): Promise<void>` — update session row
+- [ ] **AuthService extensions**:
+  - [ ] `getMe(claims: JwtClaims): Promise<{user, csrfToken}>` — fetch user + rotate CSRF + return
+  - [ ] `updateMeLanguage(claims, language): Promise<{user}>`
+  - [ ] `rotatePassword(claims, current, new): Promise<{success: true}>`
+- [ ] Unit tests per `docs/TESTING.md §4` (mock port + mock repo instance):
+  - [ ] `auth.service.test.ts` extensions: getMe happy + 404 user not found; rotatePassword happy + wrong current (422) + weak new (400 — exercise each rule: min length, digit, symbol) + must_rotate cleared post-rotation; updateMeLanguage happy + invalid lang
+  - [ ] `auth.routes.test.ts` extensions: `GET /me` returns shape + Set-Cookie csrf rotation; `PATCH /me` language; `POST /me/password` happy + 422 + 400; whitelist rejects extra fields
+  - [ ] `auth.schema.test.ts` extensions: PatchMeRequest accepts language; rejects non-whitelisted; RotatePasswordRequest accepts valid; rejects weak rule-by-rule
+  - [ ] New plugin test file `must-rotate-password.plugin.test.ts`: flag=false → next(); flag=true + non-allow-list path → 403; flag=true + allow-list path → next(); JWT absent → delegate to upstream auth (skip silently or 401 — confirm in PLAN per Open Item #3)
+- [ ] **Test naming** `should <expected> when <condition>` per CLAUDE.md §8
+- [ ] **Coverage line ≥ 80%** for new files + extended files; target 90% on service/routes/schema per TESTING.md §9 critical
+- [ ] Integration test placeholder extensions: add `it.todo()` entries in existing `auth.repository.integration.test.ts` (or new file if Executor prefers) for findUserById/updatePassword/updateLanguage/rotateCsrfToken — gated on T02
+- [ ] `make check` green (lint + format-check + typecheck + test-unit; NOT test-integration this cycle)
+- [ ] **Security floor** (CLAUDE.md §6 + SECURITY.md):
+  - [ ] argon2 timing-safe verify (lib default)
+  - [ ] No plaintext password leak in log — `maskEmail()` already used; do NOT log `current_password` or `new_password` ever (no `req.body` log)
+  - [ ] No password leak in error response — generic `AuthError` message for wrong current (no "wrong password" specifics); `ValidationError` for weak new with rule violations OK (`min length` / `missing digit` / `missing symbol` enumerated)
+  - [ ] CSRF token: new random 32-byte hex per rotation; old token discarded on session update
+  - [ ] JWT secret still from `config.JWT_ACCESS_SECRET` — no hardcoded
+- [ ] Drift floor: zero `any` / `console.log` / `@ts-ignore` / `throw new Error(`-in-service / default export / forbidden imports (express/typeorm/moment/node-fetch) / `.skip` / `setTimeout()` job-delay / wrap-Prisma interface — same standard as T05
+- [ ] Named exports only; explicit return types on public methods; file ≤ 300 LOC
+- [ ] **APPROVE-PARTIAL convention**: same as T05 — full APPROVE deferred until T02 ships + integration tests fill in `it.todo()` placeholders. VERDICT will be APPROVE-PARTIAL on first SUBMIT.
+
+#### PM B notes — File ownership
+
+**Extend existing T05 files** (per `docs/MODULE_TEMPLATE.md §1` — extending existing module pattern):
+
+```
+src/modules/auth/
+├── auth.schema.ts                      EXTEND: PatchMeRequest + RotatePasswordRequest + MeResponse schemas
+├── auth.types.ts                       EXTEND: add types if needed (e.g. PasswordPolicyError)
+├── auth.service.ts                     EXTEND: getMe + updateMeLanguage + rotatePassword methods
+├── auth.repository.ts                  EXTEND: findUserById + updatePassword + updateLanguage + rotateCsrfToken
+├── auth.routes.ts                      EXTEND: GET /me + PATCH /me + POST /me/password
+└── __tests__/
+    ├── auth.service.test.ts            EXTEND: new describe blocks for getMe/rotatePassword/updateMeLanguage
+    ├── auth.routes.test.ts             EXTEND: inject tests for 3 new endpoints
+    ├── auth.schema.test.ts             EXTEND: zod parse for 2 new schemas
+    ├── auth.repository.integration.test.ts  EXTEND: add 4 it.todo() entries for new repo methods
+    └── must-rotate-password.plugin.test.ts  NEW: plugin unit tests
+```
+
+**New files** (cross-cutting plugin — single new file):
+
+```
+src/plugins/must-rotate-password.plugin.ts  OR  src/modules/auth/plugins/must-rotate-password.ts
+```
+
+Executor B picks path di PLAN (see Open Item #3 below). Recommend `src/plugins/` (cross-cutting per `PROJECT_STRUCTURE.md §src/plugins/` convention — siblings: `auth-jwt`, `hmac-validator`, `rate-limit`, `cors`, `helmet`, etc.).
+
+**Wiring (modify)**:
+- `src/entrypoints/api.ts` — register `mustRotatePasswordPlugin` after `@fastify/jwt` plugin, before route registrations. Order documented inline.
+
+**NO touch zones** (Q-B-02 foundation gaps still parked — same workarounds OK; don't re-fight):
+- `prisma/schema.prisma` — schema unchanged (no password_history, no new column)
+- `src/core/prisma/prisma-client.ts` — still `{}` placeholder; entrypoint cast still applies
+- `.eslintrc.cjs` — eslint-disable inline still OK
+- `src/plugins/error-handler.plugin.ts` — still absent; inline setErrorHandler still applies
+
+#### PM B notes — Parent doc refs (WAJIB baca executor sebelum PLAN)
+
+- **`docs/spec/MVP-AUTH-FIRST.md §1` rows 2 + 3** — canonical endpoint list
+- **`docs/spec/MVP-AUTH-FIRST.md §4.2`** — `must_rotate_password` enforcement rules (allow-list + 403 PASSWORD_ROTATION_REQUIRED)
+- **`docs/spec/01-auth-identity.md §1.1` lines 54-92** — full shape detail untuk `/me` family + error codes (422 for wrong current, 400 for weak new)
+- **`docs/SECURITY.md §2`** — password policy: min 12 char + ≥1 digit + ≥1 symbol (canonical floor for `new_password` validation)
+- **`CLAUDE.md §4/§5/§6/§8`** — Hexagonal Disiplin + TS strict + security WAJIB + testing 80% floor
+- **`docs/MODULE_TEMPLATE.md §3`** — extending existing module pattern (no new module — same `src/modules/auth/`)
+- **`docs/TESTING.md §4`** — unit pattern (mock port + mock repo INSTANCE; do NOT mock Prisma)
+- **`docs/decisions/0001-hexagonal-disiplin.md`** — middleware = NOT a port (`must-rotate-password.plugin.ts` is a Fastify plugin, direct, no hex port wrap)
+- **`PM-STATUS-B.md §2` ASSIGNMENT T05 + PLAN T05 + FULL-ACK** — reuse PasswordHasherPort + TokenIssuer + AuthRepository patterns
+
+#### PM B notes — Acceptance criteria
+
+1. 3 endpoints functional (`GET /me`, `PATCH /me`, `POST /me/password`) with correct shapes per spec
+2. `must_rotate_password` plugin enforces 403 for non-allow-list paths when flag=true
+3. All DoD checkboxes met
+4. `make check` green (lint + format + typecheck + test-unit)
+5. Drift zero T05+T06 territory (foundation gaps Q-B-02 stays — don't re-fight)
+6. Coverage line ≥ 80% on new + extended files; target 90% on service/routes/schema
+7. Security floor: no plaintext password leak in log/response, CSRF properly rotated, argon2 timing-safe verify
+8. **APPROVE-PARTIAL convention** — full APPROVE deferred until T02 ships di Slot A
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 3 sequence (PO-ratified, PARENT §10)**: T06 (this) → T11 (tenant-guard) → T07 (gm_admin users CRUD)
+- **Don't pick T11 sampai T06 APPROVED-PARTIAL.** T11 will be ASSIGNED separately by PM B after T06 SUBMIT-APPROVE.
+- **Single-dev cycle still active**: Slot A/C PARKED. No Parent PM intervention expected.
+- **T05 still PARTIAL** — both T05 and T06 will be PARTIAL until T02 ships. PM B will batch re-open both for FULL APPROVE when T02 lands.
+- **Branch hygiene**: T06 impl commits land on `feat/auth-core` (same branch as T05). PM-STATUS commits (this ASSIGNMENT, executor PLAN/SUBMIT, PM B ACK/VERDICT) land on `main` per branch hygiene rule (§7).
+
+#### PM B notes — Open items untuk Executor B raise di PLAN
+
+1. **JWT context extraction at `GET /me`** — Executor decide pattern di PLAN:
+   - Option (a): Helper function `extractJwtClaims(request): JwtClaims` lokal di `auth.service.ts` atau `auth.routes.ts`
+   - Option (b): Fastify decorator `request.authClaims` populated by a `preHandler` hook on `/me` family routes specifically
+   - Option (c): Wait for T11 tenant-guard plugin (next cycle) — but T06 needs `/me` working THIS cycle so can't wait
+   - **Recommend (a)** for cycle 3 — minimal scope, no plugin scaffold needed. T11 (next cycle) can replace with `request.session` per spec §6 pseudocode. Executor confirm di PLAN.
+
+2. **Password rotation policy resolution** — re-read SECURITY.md §2 line 27 ("min 12 char, 1 angka, 1 simbol"). Spec is canonical: **min 12 / ≥1 digit / ≥1 symbol**. NOT in scope: history depth, lockout, complexity beyond stated rules. Executor confirm di PLAN that rule set matches; raise GAP **only if** Executor finds ambiguity (e.g. is "symbol" = `[^a-zA-Z0-9]` or specific set?). **Recommend**: regex-based check `/[0-9]/` AND `/[^a-zA-Z0-9]/` AND `length >= 12`.
+
+3. **`must_rotate_password` plugin path + integration with T11 (next cycle)** — Executor decide di PLAN:
+   - Option (a): `src/plugins/must-rotate-password.plugin.ts` (cross-cutting per `PROJECT_STRUCTURE.md`) — recommended
+   - Option (b): `src/modules/auth/plugins/must-rotate-password.ts` (module-scoped)
+   - JWT context dependency: plugin needs to read `user.must_rotate_password` from session. Service layer query? Or rely on T11 to populate `request.session`? **For cycle 3** (before T11), plugin must do its own JWT verify + user lookup (Executor inline this). When T11 lands, refactor to read `request.session.user.must_rotate_password` and remove inline lookup.
+   - **Recommend (a) + inline-lookup-for-now** with `TODO(T11)` marker. Document refactor plan in SUBMIT Notes.
+
+4. **Session invalidation post-password-rotation** — spec does NOT mandate. Two design choices:
+   - (i) Invalidate ALL sessions including current (force re-login on all devices) — security-paranoid default; user must log in again with new password on all devices
+   - (ii) Invalidate ALL OTHER sessions, keep current alive (`revoke WHERE userId=X AND sid<>currentSid`) — user-friendly default; current session continues smoothly
+   - (iii) No session invalidation — only password+flag updated; sessions stay live with old `passwordHash`-issued JWTs
+   - **Recommend (ii)** — sensible UX default, mitigates stolen-device scenario. Executor propose; PM B will rule in PLAN ACK.
+
+5. **Rate limit `POST /me/password`** — SECURITY.md §6 says login = 5 fail/15min lockout. Password rotation = adjacent risk surface (brute-force `current_password`). Options:
+   - (a) Inline `@fastify/rate-limit` (already installed) at 5 fail/15min per user — same policy as login
+   - (b) Defer to separate task (similar to T05 deferral of login rate-limit)
+   - **Recommend (b)** — defer to keep T06 scope tight. Add to PM B follow-up list for next cycle. Executor confirm di PLAN.
+
+6. **Password history table** — re-confirm: `prisma/schema.prisma` has NO `password_history` model (verified by PM B: `grep "model " prisma/schema.prisma` shows Tier/Hotel/User/Session/PasswordResetToken only). Spec does NOT mandate history. **Don't introduce schema change** — out of T06 scope. If FE later asks for "can't reuse last N passwords" → separate task with schema migration via Slot A.
+
+Awaiting Executor B PLAN T06 attempt 1.
 
 <!--
 TEMPLATE — copy untuk task baru:
