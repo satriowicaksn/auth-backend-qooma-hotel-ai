@@ -13,7 +13,7 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T06 — Auth current-user + password rotation gate · `assigned · READY-PARTIAL (unit-only, single-dev cycle 3)`. ASSIGNMENT issued cycle 3 (2026-06-29) extending T05's auth module.
+- **Active task**: T06 — Auth current-user + password rotation gate · `assigned · REQUEST-FIX attempt 1 (spec compliance pending — wrong-current-password 422 vs impl 401)`. VERDICT posted cycle 3 (2026-06-29) attempt 1. 14/14 quality verifications match; 6 DDs ACCEPT; single fix required. Estimate 30-45 min impl → SUBMIT attempt 2.
 - **T05 status**: `APPROVE-PARTIAL` (cycle 2 unit-scope; full APPROVE held for T02) — re-open trigger waits for Slot A.
 - **Branch**: `feat/auth-core` (10 impl commits ahead of `main` post-rebase) — T06 stacks on T05 same branch.
 - **Cycle 3 sequence (PO-ratified)**: T06 → T11 → T07. Single-dev cycle still active (Slot A/C PARKED).
@@ -31,7 +31,7 @@
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
-| T06 | Auth current-user + password rotation gate | `assigned · READY-PARTIAL (unit-only, single-dev cycle 3)` | —              | Cycle 3 task. ASSIGNMENT issued 2026-06-29. Extends T05 module. Scope: `GET/PATCH /api/auth/me` + `POST /api/auth/me/password` + `must_rotate_password` per-request gate plugin. |
+| T06 | Auth current-user + password rotation gate | `assigned · REQUEST-FIX attempt 1 (spec compliance pending)` | PM B — cycle 3 (2026-06-29) attempt 1 | Cycle 3 task. VERDICT attempt 1 → REQUEST-FIX: spec 422 BUSINESS_RULE vs impl 401 AuthError on wrong-current-password (`01-auth-identity §1.1` line 90 canonical). Quality + DoD + drift + security all green; 6 DDs ACCEPT. Single fix → SUBMIT attempt 2. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
 
@@ -1304,6 +1304,131 @@ Notes (open items / observations for PM B audit)
 
 Requesting PM B VERDICT.
 
+##### VERDICT T06 attempt 1 — REQUEST-FIX (spec compliance, open item #1). Other criteria met. by PM B (cycle 3, 2026-06-29)
+
+**Outcome**: ⛔ **REQUEST-FIX**. Quality + DoD + drift + security floor all green; **single spec-compliance fix required** before APPROVE-PARTIAL: wrong-current-password must throw `BusinessRuleError` (statusCode 422, code `BUSINESS_RULE`) per `01-auth-identity §1.1` line 90, NOT `AuthError` (401) as implemented. Test file `auth.routes.test.ts:328` already flags the mismatch in its name. Single commit fix (~30-45 min); attempt 2 SUBMIT then APPROVE-PARTIAL.
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — rerun on my session)**
+
+| Check | Executor klaim | PM B independent rerun | Status |
+|---|---|---|---|
+| `make check` exit code | exit 0 green | rerun via `nvm use 20 && make check` → exit 0 (lint 0/0, format, typecheck, test-unit all PASS) | ✅ MATCH |
+| Test counts | 73 pass + 16 todo + 2 skipped suites | identical: `Tests: 2 skipped, 16 todo, 73 passed, 91 total` | ✅ MATCH |
+| Coverage (overall) | 98.73% stmt / 85% branch / 100% funcs / 99.56% lines | exact same numbers | ✅ MATCH |
+| Coverage auth.errors.ts | 100% all | 100% all | ✅ MATCH |
+| Coverage auth.jwt-context.ts | 100% all | 100% all | ✅ MATCH |
+| Coverage auth.service.ts | 100%/95% branch (uncovered 210) | identical | ✅ MATCH (target 90% per TESTING.md §9 critical — exceeded) |
+| Coverage auth.routes.ts | 100% line / 84.61% branch (uncovered 27-28) | identical | ✅ MATCH |
+| Coverage auth.schema.ts | 100% all | 100% all | ✅ MATCH |
+| Coverage must-rotate-password.plugin.ts | 96%/83.33% branch/95.83% line (uncovered 68) | identical | ✅ MATCH (line ≥80% floor met; uncovered 68 is the `unknown` arm of repo-lookup error in plugin — acceptable) |
+| Drift scan T06 territory | zero hits | rerun → 1 false-positive only: `auth.errors.ts:2` matches `any` in comment "maps any AppError" (NOT a type annotation). Zero actual T06-attributable drift. Pre-existing `throw new Error` di Slot A territory (commit `^1e32e34`) — same as T05. | ✅ MATCH |
+| argon2.verify usage | timing-safe internal at rotatePassword | confirmed `auth.service.ts:177 hasher.verify(...)` (mirrors login at line 63) | ✅ MATCH |
+| `revokeAllOtherSessions` filter correctness | `id <> exceptSessionId` | confirmed `auth.repository.ts:166 id: { not: exceptSessionId }` + `revokedAt: null` + `userId` scoping — correct Prisma `not` syntax, NOT accidentally revoking current | ✅ MATCH |
+| `must_rotate_password` clear atomicity | single update query | confirmed `auth.repository.ts:130-136 updateUserPassword` single `db.user.update` with `data: { passwordHash, mustRotatePassword: false }` — ATOMIC | ✅ MATCH |
+| Email mask at new T06 log lines | `maskEmail()` at rotate/me lines | confirmed `auth.service.ts:180 (rotate.rejected)`, `:198 (rotate.success)`; `auth.service.ts:207 (sweep_failed, no email logged in warn — userId only)` | ✅ MATCH |
+| `PasswordRotationRequiredError` content | generic, no userId/field leak | confirmed `auth.errors.ts:13-16` — class only carries `statusCode=403` + `code='PASSWORD_ROTATION_REQUIRED'`, no payload | ✅ MATCH |
+
+**14/14 verification checks PASS independently. Zero Executor claim discrepancies on quality data.**
+
+`make check` excerpt (PM B rerun, abbreviated):
+```
+> @qooma/auth-backend@0.1.0 lint    → PASS (0/0 with --max-warnings 0)
+> @qooma/auth-backend@0.1.0 format:check → All matched files use Prettier
+> @qooma/auth-backend@0.1.0 typecheck → tsc --noEmit clean
+> @qooma/auth-backend@0.1.0 test:unit → Tests: 2 skipped, 16 todo, 73 passed, 91 total | Time: 0.798 s
+```
+
+---
+
+**6 Design Decision rulings — ALL ACCEPT**
+
+| DD | Topic | PM B ruling | Rationale + verification |
+|---|---|---|---|
+| **DD1** | Plugin = factory setup function (NOT `FastifyPluginCallback` via `register()`) | ✅ **ACCEPT** | Plugin file lines 8-13 explain Fastify encapsulation: `register()` scopes hooks to its sub-instance unless `fastify-plugin` (npm) breaks encapsulation. Without that dep, factory `addHook` on root instance is the documented Fastify-4 workaround for global hooks. Zero new deps. Sound. Plugin tests confirm global-hook semantic. **Follow-up**: log `fastify-plugin` install as cycle-4+ backlog (see Open Item #2). |
+| **DD2** | `preHandler` hook (NOT `onRequest`) | ✅ **ACCEPT** | Plugin lines 39-41 explain: `preHandler` is the earliest hook where both `req.routerPath` (route matched, allow-list comparable) AND `req.cookies` (parsed by `@fastify/cookie`) are populated. `onRequest` fires too early → `req.routerPath` undefined + cookies stale. Correct choice. |
+| **DD3** | `fastify.tokenIssuer` decorator added | ✅ **ACCEPT** | Verified at `entrypoints/api.ts:74-78`: `const tokenIssuer = new FastifyJwtTokenIssuer(fastify); fastify.decorate('tokenIssuer', tokenIssuer);`. Type augmentation at `src/shared/types/fastify-augmentation.ts:16 tokenIssuer: TokenIssuer`. Avoids per-request construction; shared between routes + plugin via `extractJwtClaims(fastify.tokenIssuer, token)`. Sound DI; no global mutation issue. |
+| **DD4** | `jest.config.json` `collectCoverageFrom` expanded for plugins | ✅ **ACCEPT** | Additive change only; ensures `src/plugins/must-rotate-password.plugin.ts` appears in coverage report (proof: shows 96/83.33/100/95.83 in PM B rerun output). |
+| **DD5** | AUX-Q1 amendment honored: `PasswordRotationRequiredError` in `auth.errors.ts`, NOT re-exported in barrel | ✅ **ACCEPT** | Verified `auth.errors.ts:13-16` (class def) + `index.ts` (no `auth.errors` re-export — internal-only consumer is the plugin). Module-scoped encapsulation per PM B ACK ruling. |
+| **DD6** | AUX-Q2 as-proposed: `auth.jwt-context.ts` shared, takes `TokenIssuer` interface | ✅ **ACCEPT** | Verified `auth.jwt-context.ts:14-21` — `extractJwtClaims(tokenIssuer: TokenIssuer, token: string \| null \| undefined): JwtClaims` signature; pure function, no port, `TODO(T11)` marker at line 5-7 keeps refactor surface visible. Single source of truth across routes + plugin. |
+
+**All 6 DDs ACCEPT. No rework required for design.**
+
+---
+
+**3 Open Item rulings**
+
+- ⛔ **Open Item #1 — Spec status code mismatch (422 vs 401 for wrong current password)** → **REQUEST-FIX before APPROVE-PARTIAL**
+
+  **Current state**: `auth.service.ts:184` throws `new AuthError('Invalid current password')` → AppError hierarchy maps `AuthError → statusCode 401, code 'AUTH_ERROR'`. Test at `auth.routes.test.ts:328` expects 401 with name `'should return 401 AUTH_ERROR (422 BUSINESS_RULE in spec) when service throws on wrong current'` — Executor already flagged the spec mismatch in the test name itself.
+
+  **Spec**: `docs/spec/01-auth-identity.md §1.1` line 90 — "`422 BUSINESS_RULE` if current password wrong"
+
+  **Rationale for REQUEST-FIX (not waive)**:
+  1. Spec is canonical implementation source. 422 ≠ 401 semantically: 401 = "not authenticated"; 422 = "authenticated but business rule violation". Wrong-current happens AFTER JWT-cookie auth succeeds → 422 is correct.
+  2. Downstream FE / sibling services may route on status code — incorrect 401 will misroute to login redirect instead of "wrong current password" UX flow.
+  3. Single clean fix, ~30-45 min, low blast radius (1 service line + 1-2 test assertion updates). Easier to land now than retrofit later.
+
+  **Required fix scope**:
+  1. **CREATE** `BusinessRuleError extends AppError { statusCode = 422; code = 'BUSINESS_RULE'; }` in `src/modules/auth/auth.errors.ts` (next to existing `PasswordRotationRequiredError`)
+  2. **EDIT** `src/modules/auth/auth.service.ts:184` — replace `throw new AuthError('Invalid current password')` with `throw new BusinessRuleError('Invalid current password')`. Update import.
+  3. **EDIT** `src/modules/auth/__tests__/auth.service.test.ts:388-391` — change `rejects.toThrow(AuthError)` to `rejects.toThrow(BusinessRuleError)`; update mocks/imports
+  4. **EDIT** `src/modules/auth/__tests__/auth.routes.test.ts:327-345` — change test name (drop "in spec" qualifier); change mock to `mockRejectedValue(new BusinessRuleError(...))`; change `expect(res.statusCode).toBe(401)` → `toBe(422)`; change error code expectation `'AUTH_ERROR'` → `'BUSINESS_RULE'`
+  5. Re-run `make check` + coverage; confirm still green + coverage holds (`BusinessRuleError` should land in `auth.errors.ts` coverage — already 100%)
+  6. Optional: leave `PasswordRotationRequiredError` placement unchanged (still NOT re-exported via barrel — same pattern)
+
+  **Estimate**: 30-45 min impl + test update. Single commit on `feat/auth-core` (atop current `6dbde31`):
+  ```
+  fix(auth): use BusinessRuleError 422 for wrong-current-password per spec §1.1
+  ```
+
+- 📋 **Open Item #2 — `fastify-plugin` dep follow-up** → **DEFER as cycle-4+ backlog**
+
+  Factory workaround works correctly per Executor's plugin tests (96/95.83/100/83.33 coverage, behavior verified). Adding `fastify-plugin` as dep is a package install → would require PO ask (Q-B-XX). Not blocking T06 functionality.
+
+  **Action**: log di **§8 Slot B queue → Future-cycle backlog block** (added to existing future-cycle list alongside rate-limit defer). No PO escalation now. **Candidate task**: T_AUX_02 "Adopt `fastify-plugin` for canonical plugin shape — covers T06 must-rotate-password + T11 tenant-guard" — to be authored when T11 design comes up next cycle.
+
+- 📋 **Open Item #3 — Rate-limit deferred** → **CONFIRMED already-deferred per PLAN stance #5 + ACK Standing Instructions**
+
+  No further action needed for VERDICT. Already documented as cycle-4+ backlog. Pairs with T05 login rate-limit deferral (both need DB/Redis lockout state machine). Single follow-up task can cover both.
+
+---
+
+**Conditions for REQUEST-FIX → APPROVE-PARTIAL upgrade**
+
+T06 stays **REQUEST-FIX** until ALL of:
+1. Executor B push fix commit on `feat/auth-core` (atop `6dbde31`) implementing Open Item #1 required scope
+2. `make check` green post-fix (lint + format + typecheck + test-unit) — PM B will independently rerun
+3. Drift scan stays zero on T06 files
+4. Coverage stays ≥80% line (target 90% on service/routes/schema/plugin); `BusinessRuleError` should be 100% covered like `PasswordRotationRequiredError`
+5. Executor B post **`SUBMIT T06 attempt 2`** sub-block on `main` (PM-STATUS-B.md §2 append, per §7 branch hygiene) — concise delta-only format: what changed in attempt 2 + new test evidence + re-rerun `make check` excerpt
+6. PM B re-verify attempt 2 → issue **APPROVE-PARTIAL** sub-block (full APPROVE still deferred until T02 ships, same as T05)
+
+**Branch `feat/auth-core` stays open** — no merge to `main` until T05+T06 both reach full APPROVE post-T02.
+
+---
+
+**Workflow for Executor B (cycle 3 continuation)**:
+
+1. `git checkout feat/auth-core` (still on branch from current impl session — already there)
+2. Implement fix per Open Item #1 required scope (5 sub-steps)
+3. `make check` green
+4. Commit + push: `fix(auth): use BusinessRuleError 422 for wrong-current-password per spec §1.1`
+5. `git checkout main` per §7 branch hygiene
+6. Post `#### SUBMIT T06 — exec-B (Nanak) at cycle 3 (2026-06-29) attempt 2` sub-block in PM-STATUS-B.md §2 (append below this VERDICT, **append-only**); format: concise delta-only (what changed since attempt 1 + green `make check` excerpt + coverage row for `BusinessRuleError`)
+7. Commit + push to main: `exec B: SUBMIT T06 attempt 2 — BusinessRuleError 422 fix per VERDICT`
+8. PM B re-engage → verify + APPROVE-PARTIAL
+
+---
+
+**Roll-up + cross-references**:
+- `PM-STATUS-B.md §1` task tracker row T06 → status flag flipped to `assigned · REQUEST-FIX attempt 1 (spec compliance pending)`
+- `PM-STATUS-B.md §8` future-cycle backlog → append `fastify-plugin install` follow-up next to existing rate-limit deferral
+- `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` REQUEST-FIX entry — using ESCALATE-style line since this is also a state-of-affairs change)
+
+PM B exits to **wait-mode for SUBMIT T06 attempt 2**.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
@@ -1589,6 +1714,17 @@ Available = **1.3 GiB**, well below 5 GiB floor (~3.7 GiB shortfall). System par
 **Single-dev cycle constraint**: T01..T04 (Slot A foundation) + T08..T10 (Slot C admin) PARKED. If Slot B exhausts READY-PARTIAL scope sebelum Slot A unparks → eskalasi ke Parent PM untuk further deviation (Slot B absorb T01..T04 as one-off, per PARENT §8 line 210).
 
 **Full task detail**: lihat PARENT §8 (each T## block dengan Scope + DoD + Parent PM notes). PM B will copy DoD ke ASSIGNMENT block di §2 saat each cycle.
+
+### Future-cycle backlog (Slot B PM-internal — not Q-B-02 Slot A territory)
+
+Items deferred from current cycle work, not blocking, candidates for cycle-4+ task authoring. **No PO action needed**; these are Slot B's own deferrals captured for audit + future planning.
+
+| Topic | Deferred from | Estimated scope | Trigger to activate |
+|---|---|---|---|
+| **Rate-limit lockout state machine** (Redis-backed; covers T05 `/login` + T06 `/me/password`) | T05 PLAN Open Item #5 + T06 PLAN stance #5 (both deferred per PM B ACK rulings) | New task `T_AUX_01` (working title) — implement `5 fail / 15 min per user` lockout per SECURITY.md §6 row 4; uses `@fastify/rate-limit` (already installed) + Redis store; touches login + rotate-password handlers | When G2 surface stabilizes OR when Slot A unparks (whichever first) — rate-limit needs sessions/users tables (T02 dep) for store keying anyway |
+| **`fastify-plugin` install + canonical plugin shape refactor** (covers T06 must-rotate-password + T11 tenant-guard) | T06 PLAN DD1 + VERDICT Open Item #2 (factory workaround validated, but canonical Fastify shape requires this dep) | New task `T_AUX_02` (working title) — `pnpm add fastify-plugin`; refactor `must-rotate-password.plugin.ts` from setup-function shape to `FastifyPluginCallback` wrapped with `fp()`; do the same for T11 tenant-guard | When T11 design comes up next cycle — pair both plugins under one refactor to keep cross-plugin patterns consistent |
+
+Both items are **deferred-by-design**, not regressions. Document at SUBMIT/VERDICT trail to avoid re-litigation each cycle.
 
 <!-- Mirror format dari PM-STATUS-PARENT.md §8 template. -->
 

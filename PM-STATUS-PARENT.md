@@ -65,6 +65,7 @@
 > [YYYY-MM-DD H{N}] [PM <SLOT> <NAME>] <T## status — 1 liner>
 > ```
 
+[2026-06-29 cycle 3] [PM B Nanak] T06 REQUEST-FIX attempt 1 — make check green + coverage 99.56% line + drift zero; spec compliance fix needed (422 BUSINESS_RULE per `01-auth-identity §1.1` line 90 vs impl 401 AuthError). 6 DDs accepted, 3 open items ruled (#1 REQUEST-FIX, #2 DEFER fastify-plugin, #3 CONFIRMED-DEFERRED rate-limit). Executor B to push fix commit on feat/auth-core for attempt 2 (~30-45 min). Next event: SUBMIT T06 attempt 2.
 [2026-06-29 cycle 3] [PM B Nanak] T06 PLAN ACKED — 0 GAPs, 2 aux Qs ruled (auth.errors.ts module-scoped + auth.jwt-context.ts helper). File list 4 CREATE + 9 EDIT. ETA ~5-6.5h impl→SUBMIT. Executor B moves to feat/auth-core. Next event: SUBMIT block on main.
 [2026-06-29 cycle 3] [PM B Nanak] T06 ASSIGNMENT issued — auth `/me` family + password rotation + `must_rotate_password` per-request gate plugin, unit-only scope, single-dev cycle continues. Branch `feat/auth-core` extends (T06 stacks on T05). Foundation gaps Q-B-02 still parked (workarounds OK). Next event: Executor B PLAN T06 attempt 1.
 [2026-06-29 cycle 2] [PM B Nanak] T05 APPROVE-PARTIAL — unit-scope complete (98.56% stmt, 100% line, drift zero, 5 DD accepted, 13/13 independent verifications match). 4 foundation gaps surfaced as Q-B-02 (Slot A territory, no PO needed). Full APPROVE held until T02 ships. Branch `feat/auth-core`, 11 commits ahead of `main` (no merge). Next: Executor B pickup T06 per PM B ruling.
