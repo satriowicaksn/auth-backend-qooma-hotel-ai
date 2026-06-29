@@ -1429,6 +1429,87 @@ T06 stays **REQUEST-FIX** until ALL of:
 
 PM B exits to **wait-mode for SUBMIT T06 attempt 2**.
 
+#### SUBMIT T06 — exec-B (Nanak) at cycle 3 (2026-06-29) attempt 2 — fix-only delta
+
+**Resolution**: VERDICT attempt 1 Open Item #1 (spec 422 BUSINESS_RULE vs impl 401 AuthError on wrong-current-password) applied per required scope. Single commit. No new GAPs, no new DDs, no new workarounds.
+
+**Fix commit**: `e753b38` on `feat/auth-core` (atop `6dbde31`).
+```
+fix(auth): use BusinessRuleError 422 for wrong-current-password per spec §1.1
+```
+
+**Branch state**: `feat/auth-core` force-pushed (rebase atop latest main brought in VERDICT context; `--force-with-lease` used). 20 commits ahead of main total (10 T05 + 10 T06).
+
+**Files changed in attempt 2**: **4** (all EDIT)
+
+```
+M  src/modules/auth/auth.errors.ts                            +12 / -0  (add BusinessRuleError class)
+M  src/modules/auth/auth.service.ts                            +5 / -1  (import + swap AuthError → BusinessRuleError + inline rationale comment)
+M  src/modules/auth/__tests__/auth.service.test.ts             +4 / -3  (import + test name updated + assertion to BusinessRuleError)
+M  src/modules/auth/__tests__/auth.routes.test.ts              +4 / -3  (import + test name updated + status 401 → 422 + code AUTH_ERROR → BUSINESS_RULE)
+```
+
+**LOC delta vs attempt 1**: `+25 / -7` (within `+~20 / -~5` estimate)
+
+**Per VERDICT required scope (lines 1373-1379)**:
+
+- [x] **CREATE** `BusinessRuleError extends AppError { statusCode = 422; code = 'BUSINESS_RULE'; }` in `auth.errors.ts` next to `PasswordRotationRequiredError` ✓
+- [x] **EDIT** `auth.service.ts:184` — swap to `throw new BusinessRuleError('Invalid current password')`; import updated; inline rationale comment added ✓
+- [x] **EDIT** `auth.service.test.ts:383` — assertion `rejects.toThrow(BusinessRuleError)`; test name dropped "AuthError" qualifier, now reads `'should throw BusinessRuleError (422) when current password verify fails per spec §1.1'` ✓
+- [x] **EDIT** `auth.routes.test.ts:327` — mock now rejects with `BusinessRuleError`; status assertion `422`; error code assertion `'BUSINESS_RULE'`; test name updated to drop "in spec" qualifier (now: `'should return 422 BUSINESS_RULE when service throws BusinessRuleError on wrong current (spec §1.1)'`) ✓
+- [x] `make check` + coverage re-run; both green (see below) ✓
+- [x] `PasswordRotationRequiredError` placement unchanged; barrel still does NOT re-export either error class (same DD5 pattern) ✓
+
+**Quality gate (post-fix)**:
+
+- `make typecheck`: **PASS**
+- `make lint`: **PASS** (0 errors, 0 warnings; auto-fix applied import-order shuffle on attempt-1 + 2 commits)
+- `make format-check`: **PASS**
+- `make test-unit`: **PASS** — 73 passed + 16 todo + 2 skipped suites (count UNCHANGED from attempt 1)
+- `make check` exit 0 confirmed
+
+**Test evidence (delta)**:
+
+```
+Test Suites: 2 skipped, 7 passed, 7 of 9 total
+Tests:       2 skipped, 16 todo, 73 passed, 91 total   ← UNCHANGED count (no test added/removed; 2 assertions updated)
+Time:        ~0.9s
+```
+
+**Coverage (delta)**:
+
+```
+File                             | % Stmts | % Branch | % Funcs | % Lines
+---------------------------------|---------|----------|---------|---------
+All files                        |   98.76 |       85 |     100 |   99.57   ← was 98.73 / 85 / 100 / 99.56 (BusinessRuleError adds 1 stmt, covered)
+ modules/auth/auth.errors.ts     |     100 |      100 |     100 |     100   ← BusinessRuleError class 100% covered via service+routes wrong-current tests
+ modules/auth/auth.service.ts    |     100 |       95 |     100 |     100   ← UNCHANGED
+ modules/auth/auth.routes.ts     |     100 |    84.61 |     100 |     100   ← UNCHANGED
+ plugins/must-rotate-password    |      96 |    83.33 |     100 |   95.83   ← UNCHANGED
+```
+
+All per-file targets STILL met (critical ≥90% line; floor ≥80% — every T06 file at 100% line except plugin at 95.83%). Global thresholds met.
+
+**Drift scans (T06 fix files)**:
+
+```
+$ grep -rnE "(: any[^a-z]| any[^a-z_])|console\.(log|info)|@ts-ignore|@ts-nocheck|throw new Error\(|export default" src/modules/auth/auth.errors.ts src/modules/auth/auth.service.ts src/modules/auth/__tests__/auth.service.test.ts src/modules/auth/__tests__/auth.routes.test.ts
+   (zero hits — sole grep match was a false-positive in auth.errors.ts:2 comment "any AppError" which is documentation prose, not code drift)
+```
+
+**14-row verify table from attempt 1**: still applicable. **Row #1 (spec status code semantic) now FLIPS from ⛔ → ✅** — spec §1.1 line 90 now matches impl: wrong-current returns 422 with code `BUSINESS_RULE`. All other 13 rows unchanged.
+
+**6 design decisions from attempt 1**: unchanged. No new DDs at code-time for this fix (single-target swap; no new architectural choice).
+
+**3 Open items**:
+- **#1 — Spec status code 422** → ✅ **RESOLVED** (REQUEST-FIX applied)
+- **#2 — `fastify-plugin` dep follow-up** → 📋 **DEFER as cycle-4+ backlog** (unchanged; ACK ruling stands)
+- **#3 — Rate-limit deferred** → 📋 **CONFIRMED-DEFERRED** (unchanged; pairs with T05 login lockout)
+
+**Pre-existing Q-B-02 workarounds reused verbatim** — no new workarounds, no new GAPs, no new package install asks.
+
+Requesting PM B VERDICT (expected: APPROVE-PARTIAL).
+
 <!--
 TEMPLATE — copy untuk task baru:
 
