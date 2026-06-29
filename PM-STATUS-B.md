@@ -407,6 +407,202 @@ Awaiting PM B ACK.
 
 **PM B state**: **WAIT-MODE for SUBMIT**. No further action di §2 dari PM B side sampai Executor posts SUBMIT. Standby for VERDICT cycle.
 
+#### SUBMIT T05 — exec-B (Nanak) at cycle 2 (2026-06-29) attempt 1
+
+Task: Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing (READY-PARTIAL unit-only)
+
+Branch: `feat/auth-core` (10 commits ahead of `main`, working tree clean)
+
+Files changed: 24 files, +1517 / -34
+
+```
+ jest.config.json                                              |  43 +++ (new)
+ package.json                                                  |  10 +-
+ pnpm-lock.yaml                                                |  68 ++-
+ src/core/config/env.ts                                        |   2 +-
+ src/entrypoints/api.ts                                        | 106 ++++--
+ src/modules/auth/__tests__/argon2-hasher.adapter.test.ts      |  22 ++ (new)
+ src/modules/auth/__tests__/auth.builders.ts                   |  32 ++ (new)
+ src/modules/auth/__tests__/auth.repository.integration.test.ts|  23 ++ (new)
+ src/modules/auth/__tests__/auth.routes.test.ts                | 195 ++ (new)
+ src/modules/auth/__tests__/auth.schema.test.ts                |  52 ++ (new)
+ src/modules/auth/__tests__/auth.service.test.ts               | 264 ++ (new)
+ src/modules/auth/__tests__/auth.token-issuer.test.ts          |  85 ++ (new)
+ src/modules/auth/adapters/argon2-hasher.adapter.ts            |  18 ++ (new)
+ src/modules/auth/auth.cookie-helpers.ts                       |  89 ++ (new)
+ src/modules/auth/auth.repository.ts                           | 141 ++ (new)
+ src/modules/auth/auth.routes.ts                               |  58 ++ (new)
+ src/modules/auth/auth.schema.ts                               |  37 ++ (new)
+ src/modules/auth/auth.service.ts                              | 185 ++ (new)
+ src/modules/auth/auth.token-issuer.ts                         |  50 ++ (new)
+ src/modules/auth/auth.types.ts                                |  25 ++ (new)
+ src/modules/auth/index.ts                                     |  10 ++ (new)
+ src/modules/auth/ports/password-hasher.port.ts                |   4 ++ (new)
+ src/shared/types/fastify-augmentation.ts                      |  20 ++ (new)
+ src/shared/utils/crypto.ts                                    |  12 + (additive hashToken)
+```
+
+Commits (10 — matches FULL-ACK suggested sequence cap):
+
+1. `10d8813` — chore(deps): add argon2 + @fastify/cookie per Q-B-01 D02/D03
+2. `011071b` — chore(config): JWT_ACCESS_TTL 8h -> 15m per Q-B-01(c) / D04
+3. `8b8586d` — feat(auth): zod schemas + types + barrel skeleton
+4. `2196aec` — feat(auth): PasswordHasherPort + Argon2Hasher + hashToken helper
+5. `f934f22` — feat(auth): cookie helpers + TokenIssuer + Fastify augmentations
+6. `d463546` — feat(auth): AuthRepository (Prisma direct, no port)
+7. `ffb64fe` — feat(auth): AuthService orchestration (login, logout, refresh)
+8. `2db0eef` — feat(auth): route handlers + entrypoint wiring
+9. `623e2b7` — chore(test): jest.config.json + script flag for ts-node-free run
+10. `7cfc1df` — test(auth): unit suite + integration placeholder; route + entrypoint touch-ups
+
+DoD self-check (vs ASSIGNMENT §"DoD this submission" lines 71-94)
+
+- [x] **3 endpoints authored** — `login`/`logout`/`refresh` in `auth.routes.ts:28-58`; zod parse in handler (Fastify 4 AJV doesn't accept zod natively — flagged as design note below); service methods in `auth.service.ts:39-135`; repo methods in `auth.repository.ts:37-103`.
+- [x] **Cookie + CSRF response shape matches `01-auth-identity §1.1` verbatim** — `auth.routes.ts:37,52` returns `{ user, csrfToken }`; field-by-field zod schema lock in `auth.schema.ts:17-25` (id/email/name/role/hotel_id/dept_id/language). Asserted explicitly in `auth.routes.test.ts:65-68`.
+- [x] **Sessions table writes** — `auth.repository.ts:46-59` `createSession` writes refresh_token (hashed) + csrf_token + expires_at + user_agent + ip_address. Method authored; integration test deferred to T02 (placeholder file with 10 `it.todo`).
+- [x] **JWT plumbing** — `auth.token-issuer.ts:23-31` sign uses `fastify.jwt.sign` with claims `{sub, sid, role, hotelId, deptId}`. Access TTL 15m (env default per D04). Refresh TTL 30d (config default).
+- [x] **Password hash port + adapter** — `ports/password-hasher.port.ts` (`PasswordHasherPort` interface) + `adapters/argon2-hasher.adapter.ts` (`Argon2Hasher` argon2id default). Service consumes port; entrypoint wires concrete adapter (with eslint-disable comment because `no-restricted-imports` has no entrypoint exception in `.eslintrc.cjs` — flagged in §"Notes" below for PM B).
+- [x] **Unit tests per TESTING.md §4**:
+  - Service tests mock hash port + repo class **instance** (not Prisma) per TESTING.md §4 example — `auth.service.test.ts:43-98` builds plain object then casts `as unknown as AuthRepository`
+  - Route tests via Fastify `inject()` with mocked services decorator — `auth.routes.test.ts:32-46`
+  - Zod schema parse + reject paths — `auth.schema.test.ts` (6 tests)
+  - Happy path login: cookie set + csrfToken returned + session row create called with correct shape — `auth.service.test.ts:107-148`
+  - 401 path: wrong password → AuthError — `auth.service.test.ts:150-163`
+  - Logout: session revocation invoked by claims.sid — `auth.service.test.ts:173-186`; idempotent on invalid/null/empty — `:188-205`
+  - Refresh: new JWT issued + session rotated; missing/expired/inactive-user paths — `auth.service.test.ts:215-262`
+- [x] **Test naming** — every `it()` follows `should <expected> when <condition>` form (verified manually + via lint scan)
+- [x] **Coverage line ≥ 80%** for added files (T05 scope, repository excluded per cycle-1 convention): see "Test evidence" below
+- [x] **Integration placeholder** — `auth.repository.integration.test.ts` with 10 `it.todo()` calls referencing T02 dependency
+- [x] **`make check` green** — full output below
+- [x] **Security floor (CLAUDE.md §6 + docs/SECURITY.md)**:
+  - argon2id default (not bcrypt; PO ruling Q-B-01(a))
+  - Refresh token: plaintext only in cookie/transient memory; SHA-256-hashed in DB via new `hashToken()` (SECURITY.md §3)
+  - JWT signed with `config.JWT_ACCESS_SECRET` (env-loaded) — no hardcoded secret
+  - `timingSafeEqual` not needed — argon2 verify is internally timing-safe (lib default)
+  - Email masked in log via `maskEmail()` at all three log lines (`auth.service.ts:42,51,69`)
+  - No raw request.body logged anywhere
+- [x] **No `any` / `console.log` / `@ts-ignore`** in T05 files (drift scan output below; `@ts-expect-error` not used)
+- [x] **No `throw new Error(`** in modules/auth — only AppError subclasses (AuthError, ValidationError)
+- [x] **Named exports only** — index.ts barrel uses `export { ... }`; entrypoint api.ts default-allowed per eslintrc override
+- [x] **Public function explicit return type** — every public method on AuthService/AuthRepository/Argon2Hasher/FastifyJwtTokenIssuer has explicit `Promise<...>` or `: void`
+- [x] **File ≤ 300 LOC rule-of-thumb** — largest is auth.service.ts at 183 LOC
+
+Quality gate
+
+- `make typecheck`: PASS
+- `make lint`: PASS (0 errors, 0 warnings, `--max-warnings 0`)
+- `make test-unit`: PASS — 31 passed + 10 todo + 2 skipped suites (skipped suites = `_template/*` pre-existing)
+- `make format-check`: PASS
+- `make check` exit 0 confirmed
+
+Test evidence
+
+```
+Test Suites: 2 skipped, 6 passed, 6 of 8 total
+Tests:       2 skipped, 10 todo, 31 passed, 43 total
+Time:        ~0.7s
+```
+
+Coverage (scoped via `collectCoverageFrom` to T05 files; repository excluded as integration-deferred):
+
+```
+---------------------------|---------|----------|---------|---------|-------------------
+File                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+---------------------------|---------|----------|---------|---------|-------------------
+All files                  |   98.56 |    79.31 |     100 |     100 |
+ auth                      |   98.49 |    79.31 |     100 |     100 |
+  auth.cookie-helpers.ts   |   92.85 |       50 |     100 |     100 | 23-27
+  auth.routes.ts           |     100 |    81.81 |     100 |     100 | 22-23
+  auth.schema.ts           |     100 |      100 |     100 |     100 |
+  auth.service.ts          |     100 |      100 |     100 |     100 |
+  auth.token-issuer.ts     |     100 |      100 |     100 |     100 |
+ auth/adapters             |     100 |      100 |     100 |     100 |
+  argon2-hasher.adapter.ts |     100 |      100 |     100 |     100 |
+---------------------------|---------|----------|---------|---------|-------------------
+```
+
+Per-file targets (TESTING.md §9 + PM B DoD):
+- `auth.service.ts`: target 90% line → **100%** ✓
+- `auth.routes.ts`: target 90% line → **100%** ✓
+- `auth.schema.ts`: target 90% line → **100%** ✓
+- `auth.token-issuer.ts`: floor 80% line → **100%** ✓
+- `argon2-hasher.adapter.ts`: floor 80% line → **100%** ✓
+- `auth.cookie-helpers.ts`: floor 80% line → **100%** ✓ (branch 50% — TTL parser fallback is unreachable from current call sites; intentional defensive behavior)
+- `auth.repository.ts`: EXCLUDED from cycle-1 coverage per APPROVE-PARTIAL convention; re-evaluated post-T02
+
+Drift scans (per EXECUTOR-PROTOCOL §4.4, restricted to T05 touched files)
+
+```
+$ grep -rnE ': any|<any>|as any' src/modules/auth src/shared/utils/crypto.ts src/shared/types/fastify-augmentation.ts src/entrypoints/api.ts --include='*.ts' | grep -v '__tests__'
+   (zero hits)
+
+$ grep -rnE 'console\.(log|info|debug)' src/modules/auth src/shared/utils/crypto.ts src/shared/types/fastify-augmentation.ts src/entrypoints/api.ts
+   (zero hits — entrypoint uses console.error for fatal-startup which is eslint-allowed)
+
+$ grep -rnE "throw new Error\(" src/modules/auth src/shared/utils/crypto.ts src/shared/types/fastify-augmentation.ts src/entrypoints/api.ts | grep -v '__tests__'
+   (zero hits)
+   (PRE-EXISTING in src/core/config/env.ts:75 + src/core/http/http-client.ts + src/shared/utils/crypto.ts:23,30 stubs — NOT my drift; flagged for Slot A foundation)
+
+$ grep -rnE "from 'express'|from 'typeorm'|from 'sequelize'|from 'moment'|from 'node-fetch'" src/modules/auth src/shared src/entrypoints
+   (zero hits)
+
+$ grep -rn '^export default ' src/modules/auth src/shared
+   (zero hits)
+
+$ grep -rn '\.skip(' src/modules/auth --include='*.test.ts'
+   (zero hits)
+   (PRE-EXISTING in src/modules/_template/__tests__/*.test.ts — _template territory)
+
+$ grep -rnE "https?://" src/modules/auth | grep -v '__tests__'
+   (zero hits — no hardcoded URL)
+
+$ grep -rnE "setTimeout\(" src/modules/auth
+   (zero hits)
+```
+
+Security check (CLAUDE.md §6 + SECURITY.md)
+
+- argon2id password hashing via `Argon2Hasher.hash` (`adapters/argon2-hasher.adapter.ts:8-10`) — argon2id default mode confirmed
+- Refresh token at-rest hashing: `hashToken(refreshToken)` called before passing to repo (`auth.service.ts:148` + `:120`) — SHA-256 hex digest
+- JWT secret: `config.JWT_ACCESS_SECRET` injected via `loadConfig()` in entrypoint (`entrypoints/api.ts:38`) — no hardcoded values
+- `timingSafeEqual`: not needed; argon2 `verify` is internally timing-safe per library guarantees (also explicitly noted in adapter via try/catch returning false instead of throwing)
+- Email PII masking: `maskEmail()` applied in `auth.service.ts:42,51,69` for every log line touching email
+- Phone PII: not present in T05 surface (login only consumes email/password; phone is admin-create scope T05-out)
+- No webhook in T05 surface (HMAC check NA)
+- No secret hardcoded — confirmed via grep
+- Cookie flags:
+  - `token`: HttpOnly ✓, Secure conditional on `NODE_ENV !== 'development'` ✓, SameSite=Lax ✓, Path=/ ✓, Max-Age=ttlToSeconds(JWT_ACCESS_TTL) ✓
+  - `refresh`: HttpOnly ✓, Secure conditional ✓, SameSite=Lax ✓, Path=/api/auth/refresh ✓, Max-Age=ttlToSeconds(JWT_REFRESH_TTL) ✓
+  - `csrfToken`: NOT a cookie — returned in response body per spec §1.1 (FE holds in memory, not localStorage) ✓
+
+Notes (open items / observations for PM B audit)
+
+1. **Pre-existing foundation gaps surfaced during impl** (NOT introduced by T05; flagged for PM B → Parent PM coord with Slot A when foundation unparks):
+   - `jest.config.ts` requires `ts-node` (not in devDeps). Worked around with `jest.config.json` + `--config jest.config.json` flag in package.json scripts. When Slot A installs ts-node OR migrates config to `.cjs`, the JSON + flag can be removed cleanly.
+   - `src/core/prisma/prisma-client.ts` exports a placeholder `{}` rather than a real PrismaClient. Entrypoint casts to `PrismaClient` via `db as unknown as PrismaClient` (`entrypoints/api.ts:62`) — flagged with TODO(slot-A) comment. Auth surface typechecks but runtime needs Slot A's T02 to ship a real Prisma client.
+   - `.eslintrc.cjs` does not have `no-restricted-imports: off` override for `src/entrypoints/*.ts`. Entrypoint needs to import adapters for manual wiring per CLAUDE.md §4 + ADR-0001. Used inline `// eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary ...` in `entrypoints/api.ts:21`. PM B may want to bump this to a per-file override at the eslintrc level (Slot A territory).
+   - `src/plugins/error-handler.plugin.ts` does not exist yet (Slot A foundation). Entrypoint installs an inline `fastify.setErrorHandler` mapping `AppError → reply.code(err.statusCode)` so auth routes return correct status codes today. TODO(slot-A) marker placed (`entrypoints/api.ts:36`).
+
+2. **Design decision: `sid` claim added to JWT** — not explicitly in PLAN but required so `/logout` can identify which session to revoke (since access cookie path = `/` but refresh cookie path = `/api/auth/refresh`, the refresh cookie isn't sent to `/logout`). The alternative — widening refresh cookie path — felt riskier for exposure surface. `JwtClaims` type now: `{ sub, sid, role, hotelId, deptId }`. Logout uses `verify → claims.sid → repo.revokeSession(sid)`. Flag for PM B awareness.
+
+3. **Design decision: routes use `FastifyPluginCallback` (sync) not `FastifyPluginAsync`** — to satisfy `@typescript-eslint/require-await` lint (the body only registers route handlers, no `await`). Both forms work for `fastify.register`. Template uses Async; mine differs. Flag for PM B preference.
+
+4. **Design decision: zod parsed manually in `/login` handler** — Fastify 4's `schema:` option expects AJV-compatible JSON Schema, not zod objects. PLAN had `schema: { body: LoginRequestSchema }`. Adjusted to parse with `LoginRequestSchema.safeParse(req.body)` in the handler and throw `ValidationError` on failure. PM B may want to revisit and add `fastify-type-provider-zod` later (would be a separate package install GAP).
+
+5. **`@fastify/cookie` pinned to ^9.4.0 (not latest ^11.x)** — latest requires Fastify ^5; repo is on Fastify ^4.28.1 per `package.json:45`. Recorded inline in `chore(deps)` commit body.
+
+6. **`shared/utils/crypto.ts` additive touch** — only added `hashToken()` export at the bottom (12 lines including doc comment + 1-line import). Existing `encrypt`/`decrypt`/`encryptDsn`/`decryptDsn` stubs untouched. Cross-team additive-touch flag for Slot A awareness (PM B to consolidate at `PARENT §10` if appropriate per FULL-ACK line 359).
+
+7. **`src/core/config/env.ts:37` TTL edit** — exactly the single-line change per D04 with the mandated inline comment. No other env.ts changes.
+
+8. **ENOSPC recovery (incident §6)** — host disk went from 1.3 GiB → 8.4 GiB free via `npm cache clean --force` (reclaimed ~5.3 GiB). Above the 5 GiB floor before any `pnpm add` invocation. Yarn cache (~22 GiB) noted but NOT cleared — repo is pnpm-managed; left for owner's discretion.
+
+9. **No `console.log`** added; entrypoint uses `console.error` for the fatal-startup catch which is eslint-allowed (`'no-console': ['error', { allow: ['warn', 'error'] }]`).
+
+Sample request/response (would need Slot A's T02 + ts-node-free `make start` path to verify against real server — deferred per cycle-1 convention; routes verified via Fastify `inject()` in unit tests). `auth.routes.test.ts:55-80` is the canonical reference for the cookie + body shape on `POST /api/auth/login`.
+
+Requesting PM B VERDICT.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
