@@ -159,6 +159,130 @@ Copy from `MVP-AUTH-FIRST §1` row 1 + cycle-1 unit-only addendum:
 
 Awaiting Executor B PLAN.
 
+#### PLAN T05 — exec-B (Nanak) at cycle 1 (2026-06-29) attempt 1
+
+**Scope recap**
+
+Implement Auth core (T05) per ASSIGNMENT §"In scope" 1-10 + DoD lines 71-94. Three endpoints (`POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh`) wired in `src/modules/auth/` (new module) — zod schemas, service orchestrator, Prisma-direct repository, **password hash port + argon2 adapter**, JWT plumbing via `@fastify/jwt` (already installed), refresh token rotation with SHA-256-hashed storage per SECURITY.md §3, session row writes (refresh_token + csrf_token + expires_at + user_agent + ip_address) keyed off the existing `Session` model in `prisma/schema.prisma:106-122`. Unit tests cover service (mock hash port + mock repo class instance per TESTING.md §4) + zod schemas + route handlers via Fastify `inject()`. Integration test is a `it.todo()` placeholder gated on T02. Wiring stub di `src/entrypoints/api.ts` (manual DI — no tsyringe per CLAUDE.md §4). Cycle 1 APPROVE-PARTIAL convention applies — full APPROVE deferred until T02 ships.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+
+- Identity confirmed: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓ (auto-load by harness)
+- Task spec read: `MVP-AUTH-FIRST.md §1` row 1; `01-auth-identity §1.1` (login response shape locked at H3), §3 (sessions table + rotation strategy), §5 (hash lib options); `SERVICE-CHARTER §2` (cross-service contract notes)
+- Parent docs spot-read: `CLAUDE.md §4` (Hexagonal Disiplin — port wajib untuk external IO, dilarang wrap Prisma), `§5` (TS strict + naming + error handling), `§6` (security floor — JWT 8h/30d, hash refresh, mask PII), `§8` (testing — 80% line floor, JANGAN mock Prisma), `§11` (workflow — package install butuh PO approval); `docs/MODULE_TEMPLATE.md §1-§4`; `docs/SECURITY.md §2-§6`; `docs/TESTING.md §4` (unit pattern dengan mock port + mock repo INSTANCE) + `§9` (auth=critical, 90% recommended/80% floor) + `§11` (builder pattern); `docs/decisions/0001-hexagonal-disiplin.md` (port hanya external IO); `prisma/schema.prisma` (User/Session models already defined — no schema migration needed for T05)
+- Dependencies: none **required** (T01..T04 PARKED per cycle-1 single-dev model; integration scope deferred). Routine read of `src/core/errors/app-errors.ts` confirms `AuthError`/`ValidationError`/`NotFoundError` ready. `src/core/config/env.ts:36-39` already exposes `JWT_ACCESS_SECRET`/`JWT_ACCESS_TTL`/`JWT_REFRESH_SECRET`/`JWT_REFRESH_TTL`. `src/shared/utils/masking.ts` exposes `maskEmail()`. `@fastify/jwt ^8.0.1` already in `package.json:37` — no install GAP for JWT lib.
+- `make typecheck` clean: **BLOCKED — system disk full (ENOSPC) on `/private/tmp`; `pnpm install --frozen-lockfile` fails before tsc runs.** Will retry post-cleanup or post-machine-restart; baseline clean is assumed from `main` state (no `src/` mutations since `1e32e34 Init project`).
+- `make lint` clean: same ENOSPC blocker; same assumption.
+- Scaffolder risk: **none** — no `pnpm create` / `prisma init`-style command planned. Only `pnpm add` for two new packages (see GAPs #1, #2).
+
+**Files to create**
+
+```
+src/modules/auth/
+├── index.ts                                  (barrel — export authRoutes + AuthService type; NO repo/adapter export)
+├── auth.routes.ts                            (Fastify plugin — POST /login, /logout, /refresh)
+├── auth.service.ts                           (orchestrator: hash port + repo + JWT issuer + masking)
+├── auth.repository.ts                        (Prisma direct — user lookup + session create/revoke/rotate; NO interface wrap per ADR-0001)
+├── auth.schema.ts                            (zod: LoginRequest/LoginResponse/RefreshResponse/LogoutResponse)
+├── auth.types.ts                             (JwtClaims, SessionContext, AuthDomain types)
+├── ports/
+│   └── password-hash.port.ts                 (PasswordHashPort interface — hash, verify)
+├── adapters/
+│   └── argon2-hash.adapter.ts                (Argon2Adapter implements PasswordHashPort; argon2id default)
+└── __tests__/
+    ├── auth.service.test.ts                  (unit — mock PasswordHashPort + mock AuthRepository class instance)
+    ├── auth.routes.test.ts                   (unit — Fastify inject() against in-process app with mocked services decorator)
+    ├── auth.schema.test.ts                   (unit — zod parse happy/reject paths)
+    └── auth.repository.integration.test.ts   (PLACEHOLDER: `it.todo()` x N referencing T02 dependency)
+```
+
+Optional helper (only if reusable across §"Test builders" §11):
+
+```
+src/modules/auth/__tests__/auth.builders.ts   (aUser, aSession, aLoginRequest builders — TESTING.md §11)
+```
+
+**Files to modify**
+
+- `src/entrypoints/api.ts` — wire `AuthService` (manual DI per CLAUDE.md §4): `new AuthService(new AuthRepository(db), new Argon2Adapter(), fastify.jwt, config)`; `fastify.register(authRoutes, { prefix: '/api/auth' })`; register `@fastify/cookie` plugin (pending GAP #2) and `@fastify/jwt` (with `cookie` opt).
+- `src/core/config/env.ts:37` — **change `JWT_ACCESS_TTL` default from `'8h'` to `'15m'`** to match spec §3 ratification (pending GAP #4). `JWT_REFRESH_TTL '30d'` stays.
+- `src/shared/utils/crypto.ts` — **add `hashToken(plaintext: string): string`** export using `crypto.createHash('sha256').update(plaintext).digest('hex')` per SECURITY.md §3 (pending GAP #3). Existing `encrypt`/`decrypt` stubs untouched.
+- `package.json` + `pnpm-lock.yaml` — install `argon2` (GAP #1) + `@fastify/cookie` (GAP #2). **Will NOT run `pnpm add` until GAPs cleared via PM B → Parent PM → PO.**
+
+**Approach**
+
+Module structure follows `MODULE_TEMPLATE.md §1` "modul dengan external IO" tree because hash lib is the one external dep (port + adapter per ADR-0001). `AuthService` receives `(repo: AuthRepository, hasher: PasswordHashPort, tokenIssuer: TokenIssuer, config: AppConfig)` — note `tokenIssuer` is a small **internal DI seam** (typed wrapper around `fastify.jwt.sign/verify` — see GAP #5), **NOT** a hexagonal port. Login flow: zod-parse body → repo `findUserByEmail` → hasher `verify` → on success generate refresh+csrf tokens (`crypto.randomBytes(32).toString('hex')` Node built-in — no dep) → repo `createSession` with refresh hashed via new `hashToken()` → service builds JWT claims `{ sub, role, hotelId, deptId }` → route sets cookies (`token` httpOnly+secure-by-env+sameSite=lax+path=/+maxAge=15m; `refresh` httpOnly+secure+sameSite=lax+path=/api/auth/refresh+maxAge=30d) + returns `{ user, csrfToken }` matching `01-auth-identity §1.1` verbatim. Logout: read refresh cookie → repo `revokeSessionByHash` → clear both cookies. Refresh: read+hash refresh cookie → repo `findActiveSessionByHash` → if expired/revoked throw `AuthError` → repo `rotateSession` (revoke old + insert new in single Prisma `$transaction`) → issue new access JWT + set fresh refresh cookie. Test strategy per `TESTING.md §4`: `AuthService` unit tests instantiate service with `jest.mocked()` repo class + `jest.mocked()` hash port + fake `TokenIssuer`; route tests use Fastify `inject()` with `fastify.decorate('services', { auth: mockedServiceInstance })`; `auth.repository.integration.test.ts` is `it.todo('should persist session when login succeeds — fill in after T02')` x N. Errors: wrong password → `AuthError('Invalid credentials')` (statusCode 401); zod-reject in `schema: { body }` returns Fastify default 400 which we map via `ValidationError` if we add a setSchemaErrorFormatter — defer formatter to T11/plugin task and let Fastify default 400 stand for now (state explicit in SUBMIT). PII at log: only `maskEmail()` on inputs; full redact pattern handled at winston layer (Slot A's responsibility once shipped).
+
+**GAPs / questions**
+
+- **GAP T05-#1 — argon2 install (PO approval per CLAUDE.md §11)**: hash lib not in `package.json`. ASSIGNMENT line 76 mandates `password-hash.port.ts` + adapter. Options: A) `argon2` (npm, native binding, argon2id default — OWASP 2024 password-storage CHEAT-SHEET recommended, GPU/ASIC-resistant, memory-hard), B) `bcrypt` (npm, mature, cost=12 mentioned in SECURITY.md §2), C) `bcryptjs` (pure-JS bcrypt — slower but no native compile). My intent: **A) argon2** — strictly newer/stronger than bcrypt at MVP level; `01-auth-identity §5` explicitly lists argon2id as acceptable. PM B route to Parent PM → PO. **BLOCKED-on-PO-approval-for-deps: argon2 ^0.41.x (latest stable). Will not start coding adapter until cleared.**
+- **GAP T05-#2 — `@fastify/cookie` install (PO approval per CLAUDE.md §11)**: needed for `reply.setCookie()` / `request.cookies` ergonomics; `@fastify/jwt ^8` reads from `request.cookies.<name>` which **requires `@fastify/cookie` registered**. Options: A) install `@fastify/cookie ^9.x`, B) hand-roll via `reply.header('Set-Cookie', '...')` + `request.headers.cookie` parsing (error-prone, three endpoints × two cookies = repeated boilerplate). My intent: **A) install `@fastify/cookie`**. **BLOCKED-on-PO-approval-for-deps: @fastify/cookie ^9.x. Will not start coding routes until cleared.**
+- **GAP T05-#3 — `hashToken()` helper placement (shared/utils ownership)**: SECURITY.md §3 mandates SHA-256 hash for refresh tokens. Repo currently has no helper. Options: A) extend `src/shared/utils/crypto.ts` with `hashToken(plaintext: string): string` export (Node built-in `createHash`; no dep), B) new file `src/shared/utils/token-hash.ts`, C) inline private helper in `auth.service.ts`. My intent: **A)** — natural home next to existing crypto envelope helpers, single function, zero dep. Cross-team touch on `shared/utils` is low-risk (additive export). Flag for PM B because Slot A may have plans for `crypto.ts`.
+- **GAP T05-#4 — `JWT_ACCESS_TTL` default '8h' vs spec '15m'**: `src/core/config/env.ts:37` defaults to `'8h'` (aligned with SECURITY.md §2 generic baseline), but `01-auth-identity §3` ("Recommended: short-lived access token in cookie (15 min), long-lived refresh token …") + PM B DoD line 75 ("default 15 min per spec §3") supersede for Auth. Options: A) edit default to `'15m'` in env.ts (single-line change, all envs inherit unless override), B) leave default `'8h'` and require explicit env override in deploys. My intent: **A)** — keep config truth in sync with auth-spec ratification; SECURITY.md §2 is generic floor, spec §3 is concrete contract. Touch on `core/config/` is sensitive (Slot A's domain) — flag for PM B → Parent PM if Slot A objects.
+- **GAP T05-#5 — JWT port (architectural, no install impact)**: hash gets `PasswordHashPort` per ADR-0001 + ASSIGNMENT line 76. Symmetry question — does JWT signing warrant the same? My position: **NO port** for JWT. Rationale: ADR-0001 §"Definisi tegas" mandates ports for *external IO* (HTTP API, outbound notif, S3, Bull producer) and **explicitly forbids ports for "logger, config, internal util"**. `@fastify/jwt` is a registered Fastify plugin (framework-stack, like `@fastify/cors`), pure in-process crypto, no IO — it's closer to "logger" than to "vendor adapter". Hash gets a port because PM B's DoD line 76 + Parent PM PARENT §8 row 250 cite swap-ability (argon2 ↔ bcrypt) and unit-test seam. JWT lib swap is hypothetical and the test seam comes from `fastify.jwt.sign` mock-ability at the Fastify decorator level. Approach: `AuthService` receives a thin `TokenIssuer` interface (`sign(claims) → token; verify(token) → claims`) as constructor dep — **this is an internal DI seam, NOT a hex port** — wired in entrypoint with a `FastifyJwtTokenIssuer` (1-file thin wrapper, NOT under `adapters/`). Unit tests inject a fake `TokenIssuer`. Options: A) NO hex port — internal `TokenIssuer` interface only (my intent), B) ADD `JwtSignerPort` under `ports/` for symmetry with hash, C) skip abstraction — sign inline in route handler. My intent: **A)**. Flag PM B for confirmation given hash-port asymmetry; willing to switch to B if PM B prefers strict symmetry.
+
+**Non-GAPs explicitly confirmed (PM B item-by-item address)**
+
+- (a) **Hash lib choice** — argon2 (argon2id default). Rationale + install GAP raised as #1 above.
+- (b) **JWT library** — `@fastify/jwt ^8.0.1` **already installed** (`package.json:37`). No install GAP. Will register in `api.ts` with `{ secret: config.JWT_ACCESS_SECRET, cookie: { cookieName: 'token', signed: false } }`.
+- (c) **CSRF token gen** — `crypto.randomBytes(32).toString('hex')` (Node built-in `node:crypto`). No dep, generated per-session, stored plaintext in `sessions.csrf_token` (per spec §1.1: rotates on every `GET /api/auth/me` — but `/me` is T06 scope; for T05 we set on login and refresh).
+- (d) **Cookie flags matrix**:
+
+  | Cookie     | httpOnly | secure                         | sameSite | path                  | maxAge                |
+  | ---------- | -------- | ------------------------------ | -------- | --------------------- | --------------------- |
+  | `token`    | ✓        | `config.NODE_ENV !== 'development'` | `lax`    | `/`                   | match `JWT_ACCESS_TTL` (15m) |
+  | `refresh`  | ✓        | same                           | `lax`    | `/api/auth/refresh`   | match `JWT_REFRESH_TTL` (30d) |
+  | (no cookie) `csrfToken` — returned in response body, FE holds in memory per spec §1.1 |
+
+- (e) **Rate-limit on /login + /refresh** — **defer** to separate task per PM B note line 158. `@fastify/rate-limit ^9.1.0` is already installed (`package.json:38`); the lockout policy (5 fail/15 min per IP+email + 15-min account lockout per SECURITY.md §6) is more than plugin config — it needs account-state tracking in DB or Redis. Out of T05 row DoD. Will state explicit in SUBMIT.
+
+**Test plan (per TESTING.md §4 + §11)**
+
+- `auth.service.test.ts` (≥ 12 tests): `describe('AuthService.login')` — should set cookie + return user/csrfToken when credentials valid; should throw AuthError when user not found; should throw AuthError when password mismatch; should throw AuthError when user is_active=false; should mask email in log. `describe('AuthService.logout')` — should revoke session row when refresh cookie present; should no-op when cookie absent (idempotent). `describe('AuthService.refresh')` — should rotate session and issue new JWT when refresh valid; should throw AuthError when session revoked; should throw AuthError when session expired; should preserve user agent/ip on rotation.
+- `auth.routes.test.ts` (≥ 6 tests): `inject()` POST /login happy → 200 + Set-Cookie headers + body shape; 400 on missing field; 401 on bad password (mocked service rejection). POST /logout → 204 + Set-Cookie clear. POST /refresh → 200 + new Set-Cookie. POST /refresh w/o cookie → 401.
+- `auth.schema.test.ts` (≥ 4 tests): LoginRequest accepts valid; rejects invalid email; rejects short password (< 12 char per SECURITY.md §2.4); rejects missing fields.
+- `auth.repository.integration.test.ts` — `it.todo()` placeholders mirroring the unit list, all tagged "fill in after T02".
+- Coverage target: ≥ 90% line on `auth.service.ts` + `auth.routes.ts` + `auth.schema.ts`; ≥ 80% on `argon2-hash.adapter.ts` (verify hash + verify roundtrip without real argon2 cost burn — use low cost via test env override).
+- Builders in `__tests__/auth.builders.ts`: `aUser({...})`, `aSession({...})`, `aLoginRequest({...})`.
+
+**Security checklist (CLAUDE.md §6 + SECURITY.md)**
+
+- Password hash via argon2id (argon2 default). No bcrypt cost-12 unless GAP #1 lands on B.
+- Refresh token: plaintext only in cookie + transient memory; SHA-256-hashed at rest via new `hashToken()` (GAP #3).
+- CSRF token: plaintext at rest is acceptable (used as proof-of-possession, not credential) — matches spec §1.1.
+- JWT signed via `JWT_ACCESS_SECRET` from `config` (already in env schema). No secret hardcoded.
+- `timingSafeEqual` not needed — argon2's `verify` is internally timing-safe.
+- PII masking: `maskEmail()` applied at every log line touching user email. No raw `request.body` log.
+- No secret value or token logged: rely on winston redact pattern (Slot A's plugin task). For T05 we'll just NOT log them explicitly.
+
+**Risks + assumptions**
+
+- **Risk**: integration test pathway deferred → unit + Fastify-inject tests provide coverage but cannot prove the Prisma queries are correct against real PG. APPROVE-PARTIAL convention per PM B note line 149 covers this; re-open on T02 ships per line 150-151.
+- **Risk**: GAPs #1 + #2 install approval cadence (3 hops: PM B → Parent PM → PO) may stall T05. Mitigation: if PO blocks `argon2`, fall back to `bcrypt` (intent option B in GAP #1) — same port interface, swap adapter only.
+- **Risk**: GAP #4 (env default change) may collide with Slot A's foundation work on `core/config`. Mitigation: route via PM B → Parent PM to confirm Slot A is OK; if not, leave default and document override in `.env.example`.
+- **Assumption**: `User.passwordHash` column is the storage location for argon2 envelope (already in `prisma/schema.prisma:83` — `password_hash VARCHAR(255)`). Argon2 envelope is ≤ 100 char so VARCHAR(255) sufficient.
+- **Assumption**: `Session.refreshToken` column stores SHA-256 hex (64 char) — `VARCHAR(512)` (schema.prisma:109) is way more than enough.
+- **Assumption**: `must_rotate_password` enforcement is T06 scope (not T05) per PM B note line 65-66 + spec §4.2. T05 login simply succeeds and issues the cookie; the rotation gate is per-request middleware (T06).
+
+**Tooling sanity**
+
+- Working tree clean ✓ on `main`. Branch `feat/auth-core` will be created when implementation starts (post-ACK).
+- Node 20.19.6 available via nvm (system default v18 incompatible — will export PATH in shell on each session).
+- Disk full (ENOSPC on `/private/tmp`) is current blocker for `pnpm install` and therefore `make typecheck`/`make lint` baselines. Will resolve via host-side cleanup before coding starts. Not a code/planning issue.
+
+**ETA**
+
+- PLAN ACK + GAP resolution cycle: ~30-60 min wall-time once PO sees install asks.
+- Implementation (routes + service + repo + schema + types + port + adapter + wiring + config tweak + hashToken helper): ~3-4h engineering time.
+- Unit tests (service + routes + schema + builders + placeholder integration): ~2-3h.
+- Self-validate (`make check` + drift scans per §4.4): ~30 min.
+- Total wall-time exec: ~6-8h from ACK to SUBMIT, conditional on GAP closure.
+
+**Status: BLOCKED-on-PO-approval-for-deps: `argon2`, `@fastify/cookie`. Will not start coding until GAPs #1 and #2 are cleared via PM B → Parent PM → PO. GAPs #3, #4, #5 are PM B internal decisions (no PO touch needed).**
+
+Awaiting PM B ACK.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
