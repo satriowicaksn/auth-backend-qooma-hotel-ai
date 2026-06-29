@@ -9,6 +9,7 @@ import { hashToken } from '@shared/utils/crypto.js';
 import { maskEmail } from '@shared/utils/masking.js';
 
 import { ttlToSeconds } from './auth.cookie-helpers.js';
+import { BusinessRuleError } from './auth.errors.js';
 import type { AuthRepository, SessionCreateInput, UserRow } from './auth.repository.js';
 import { evaluatePasswordPolicy, type LoginRequestDto } from './auth.schema.js';
 import type { TokenIssuer } from './auth.token-issuer.js';
@@ -181,7 +182,10 @@ export class AuthService {
         userId: user.id,
         reason: 'wrong_current',
       });
-      throw new AuthError('Invalid current password');
+      // 422 BUSINESS_RULE per spec 01-auth-identity §1.1 line 90. NOT 401 —
+      // the session JWT already authenticated; this is an authorized user
+      // failing a business rule, not an auth failure.
+      throw new BusinessRuleError('Invalid current password');
     }
 
     const failedRules = evaluatePasswordPolicy(newPassword);

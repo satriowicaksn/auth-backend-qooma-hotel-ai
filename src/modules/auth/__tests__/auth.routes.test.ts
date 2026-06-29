@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from '@core/config/env.js';
 import { AppError, AuthError } from '@core/errors/app-errors.js';
 
+import { BusinessRuleError } from '../auth.errors.js';
 import { authRoutes } from '../auth.routes.js';
 import type { AuthService } from '../auth.service.js';
 
@@ -324,10 +325,10 @@ describe('POST /api/auth/me/password', () => {
     await app.close();
   });
 
-  it('should return 401 AUTH_ERROR (422 BUSINESS_RULE in spec) when service throws on wrong current', async () => {
+  it('should return 422 BUSINESS_RULE when service throws BusinessRuleError on wrong current (spec §1.1)', async () => {
     const rotatePassword = jest
       .fn<AuthService['rotatePassword']>()
-      .mockRejectedValue(new AuthError('Invalid current password'));
+      .mockRejectedValue(new BusinessRuleError('Invalid current password'));
     const app = await buildTestApp({ rotatePassword });
 
     const res = await app.inject({
@@ -337,8 +338,8 @@ describe('POST /api/auth/me/password', () => {
       payload: validPayload,
     });
 
-    expect(res.statusCode).toBe(401);
-    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe('AUTH_ERROR');
+    expect(res.statusCode).toBe(422);
+    expect((JSON.parse(res.body) as { error: { code: string } }).error.code).toBe('BUSINESS_RULE');
 
     await app.close();
   });

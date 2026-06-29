@@ -13,3 +13,15 @@ export class PasswordRotationRequiredError extends AppError {
   readonly statusCode = 403;
   readonly code = 'PASSWORD_ROTATION_REQUIRED';
 }
+
+/**
+ * 422 BUSINESS_RULE per spec docs/spec/01-auth-identity.md §1.1 line 90 —
+ * authenticated user violates a business rule (current password mismatch,
+ * etc.). NOT the same semantic as 401 AUTH_ERROR: 401 = "not authenticated",
+ * 422 = "authenticated but business rule violation". Downstream FE routes
+ * on the code to choose between login-redirect (401) vs. inline error UX (422).
+ */
+export class BusinessRuleError extends AppError {
+  readonly statusCode = 422;
+  readonly code = 'BUSINESS_RULE';
+}

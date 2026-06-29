@@ -6,6 +6,7 @@ import { AuthError, ValidationError } from '@core/errors/app-errors.js';
 
 import { hashToken } from '@shared/utils/crypto.js';
 
+import { BusinessRuleError } from '../auth.errors.js';
 import type { AuthRepository, SessionCreateInput } from '../auth.repository.js';
 import { AuthService } from '../auth.service.js';
 import type { TokenIssuer } from '../auth.token-issuer.js';
@@ -380,14 +381,14 @@ describe('AuthService.rotatePassword', () => {
     expect(m.revokeAllOtherSessions).toHaveBeenCalledWith(user.id, SAMPLE_CLAIMS.sid);
   });
 
-  it('should throw AuthError when current password verify fails (422 BUSINESS_RULE)', async () => {
+  it('should throw BusinessRuleError (422) when current password verify fails per spec §1.1', async () => {
     const user = aUser();
     m.findUserById.mockResolvedValue(user);
     m.verify.mockResolvedValue(false);
 
     await expect(
       m.service.rotatePassword(SAMPLE_CLAIMS, 'WrongCurrent!1', 'BrandNewSecret!1'),
-    ).rejects.toThrow(AuthError);
+    ).rejects.toThrow(BusinessRuleError);
     expect(m.updateUserPassword).not.toHaveBeenCalled();
     expect(m.revokeAllOtherSessions).not.toHaveBeenCalled();
   });
