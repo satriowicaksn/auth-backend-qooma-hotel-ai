@@ -1,4 +1,4 @@
-import type { FastifyPluginCallback } from 'fastify';
+import type { FastifyPluginCallback, FastifyRequest } from 'fastify';
 
 import { ValidationError } from '@core/errors/app-errors.js';
 
@@ -10,8 +10,13 @@ import {
   setAccessCookie,
   setRefreshCookie,
 } from './auth.cookie-helpers.js';
-import { LoginRequestSchema } from './auth.schema.js';
-import type { SessionContext } from './auth.types.js';
+import { extractJwtClaims } from './auth.jwt-context.js';
+import {
+  LoginRequestSchema,
+  PatchMeRequestSchema,
+  RotatePasswordRequestSchema,
+} from './auth.schema.js';
+import type { JwtClaims, SessionContext } from './auth.types.js';
 
 function sessionContextFromRequest(
   headers: Readonly<Record<string, string | string[] | undefined>>,
@@ -22,6 +27,10 @@ function sessionContextFromRequest(
     userAgent: typeof ua === 'string' ? ua : null,
     ipAddress: typeof ip === 'string' && ip.length > 0 ? ip : null,
   };
+}
+
+function claimsFromRequest(req: FastifyRequest): JwtClaims {
+  return extractJwtClaims(req.server.tokenIssuer, req.cookies[ACCESS_COOKIE_NAME]);
 }
 
 export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
@@ -52,6 +61,38 @@ export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     setAccessCookie(reply, result.accessToken, fastify.appConfig);
     setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
     return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
+  });
+
+  fastify.get('/me', async (req, reply) => {
+    const claims = claimsFromRequest(req);
+    const result = await fastify.services.auth.getMe(claims);
+    return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
+  });
+
+  fastify.patch('/me', async (req, reply) => {
+    const claims = claimsFromRequest(req);
+    const parsed = PatchMeRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError('Invalid /me payload', { issues: parsed.error.issues });
+    }
+    const result = await fastify.services.auth.updateMeLanguage(claims, parsed.data.language);
+    return reply.code(200).send({ user: result.user });
+  });
+
+  fastify.post('/me/password', async (req, reply) => {
+    const claims = claimsFromRequest(req);
+    const parsed = RotatePasswordRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      // 422 when current-password verification ends up failing belongs to AuthError
+      // (mapped by service). Here we only return 400 for shape/policy failures.
+      throw new ValidationError('Invalid password rotation payload', { issues: parsed.error.issues });
+    }
+    const result = await fastify.services.auth.rotatePassword(
+      claims,
+      parsed.data.current_password,
+      parsed.data.new_password,
+    );
+    return reply.code(200).send(result);
   });
 
   done();

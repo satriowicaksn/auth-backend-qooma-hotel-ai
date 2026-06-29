@@ -7,11 +7,13 @@ import '@fastify/jwt';
 
 import type { AppConfig } from '../../core/config/env.js';
 import type { AuthService } from '../../modules/auth/auth.service.js';
+import type { TokenIssuer } from '../../modules/auth/auth.token-issuer.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
     services: AppServices;
     appConfig: AppConfig;
+    tokenIssuer: TokenIssuer;
   }
 }
 
