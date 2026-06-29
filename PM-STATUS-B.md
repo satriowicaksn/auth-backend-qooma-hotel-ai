@@ -2065,6 +2065,164 @@ PLAN line 1858 asked PM B to confirm DoD line 1666 interpretation. PM B ruling:
 
 **PM B state**: **WAIT-MODE for SUBMIT T11 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Cross-slot execution per §4-D01.
 
+#### SUBMIT T11 — exec-B (Nanak) cycle 4 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D01.
+
+**Cross-slot heritage (audit trail)**
+- Canonical owner of record: Slot A (Nathan) — `SERVICE-CHARTER.md §3`
+- Execution this cycle: Slot B (Nanak) one-off — `PARENT §4-D01` (PO-ratified 2026-06-29)
+- All 5 T11 commits carry footer `Cross-slot execution per §4-D01 (Slot A canonical territory).` (audit verified — see commit list + audit log below)
+- Future amendments return to Slot A per §4-D01 last sentence
+
+Task: tenant-guard middleware (Fastify `preHandler` plugin) — READY-FULL unit-only this cycle; integration deferred until T02 ships, batched APPROVE-PARTIAL with T05+T06.
+
+Branch: `feat/auth-core` rebased atop main (latest ACK context); force-pushed (`--force-with-lease`). 25 commits ahead of main total (10 T05 + 10 T06 + 5 T11).
+
+T11 files changed: **5** (`3 CREATE / 2 EDIT` — exact match with ASSIGNMENT baseline)
+T11 LOC delta: **+555 / -0**
+
+```
+A  src/plugins/tenant-guard.ts                                            +157 (factory + audit log + JSDoc cross-slot header)
+A  src/modules/auth/__tests__/tenant-guard.plugin.test.ts                 +324 (13 unit tests across 5 describe groups)
+A  src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts     +28  (4 it.todo() placeholders, T02-gated)
+M  src/modules/auth/auth.errors.ts                                        +13  (TenantScopeViolationError class)
+M  src/shared/types/fastify-augmentation.ts                               +33  (Session + TenantScope types + FastifyRequest augmentation)
+```
+
+Commits (5 — atomic per logical unit; ACK suggested sequence followed):
+
+1. `48e1e55` — feat(auth): add TenantScopeViolationError 403 TENANT_SCOPE_VIOLATION
+2. `188946a` — chore(types): add Session + TenantScope augmentation for tenant-guard
+3. `dbb2f0d` — feat(plugins): tenant-guard factory + audit log *(amended once to switch hook signature from `async (req)` → `(req, _reply, done)` after timeout discovery — see DD1 below)*
+4. `403ce77` — test(plugins): tenant-guard 4-role unit coverage + audit log shape
+5. `99bb0cb` — test(plugins): integration placeholders for tenant-guard (T02-gated)
+
+**Cross-slot footer audit** — `git log --format="%B" feat/auth-core ^c9413e8 | grep "§4-D01"` returns 5 matches (one per commit), every body verbatim with `Cross-slot execution per §4-D01 (Slot A canonical territory).` ✓
+
+DoD self-check (15 items per ASSIGNMENT §"DoD this submission" lines 1659-1690)
+
+- [x] **Plugin file CREATE** `src/plugins/tenant-guard.ts` — factory function `registerTenantGuard(fastify, deps)` per T06 DD1 precedent (no `register()`, no new dep) ✓
+- [x] **`preHandler` hook** on root instance (matches T06 timing — `routeOptions.url` populated, `@fastify/cookie` parsed) ✓
+- [x] **JWT context reuse** — imports `extractJwtClaims` from `@modules/auth/auth.jwt-context.js`; zero duplication; helper's `TODO(T11)` comment left as documentary marker per ASSIGNMENT line 1708 ✓
+- [x] **Allowlist mechanism** via `registerTenantGuard(fastify, { allowlist: readonly string[] })` per Open Item #1 (b) ruling — `new Set(deps.allowlist)` once at registration for `O(1)` lookups ✓
+- [x] **Deny-by-default**: non-`super_admin` + missing `hotelId` claim → throws `TenantScopeViolationError` (403 TENANT_SCOPE_VIOLATION) per Open Item #2 ruling ✓
+- [x] **Cross-tenant resource access reject**: satisfied at **handler boundary** in T07 onwards via `req.tenantScope` filter (Open Item #4 (a) shallow-claim-only ruling; ACK lines 1990-2001 explicitly confirmed plugin does NOT do URL-param diff) ✓
+- [x] **`super_admin` bypass** global per Open Item #3 (a) — bypass branch placed BEFORE the `hotelId === null` check so super_admin with null hotelId still passes ✓
+- [x] **`req.session` populated** `{ userId, role, hotelId, deptId }` (claims-derived camelCase per Amendment 2 — no DB lookup); set on both super_admin and non-super_admin allow paths ✓
+- [x] **`req.tenantScope` populated**: `super_admin` → `{ type: 'all-hotels' }`; else → `{ type: 'single-hotel', hotelId }` ✓
+- [x] **Types extension** `src/shared/types/fastify-augmentation.ts` — additive `Session` + `TenantScope` types + `FastifyRequest` module augmentation (`session?` + `tenantScope?` both optional); existing `tokenIssuer` augmentation untouched ✓
+- [x] **NEW AppError subclass** `TenantScopeViolationError` in `src/modules/auth/auth.errors.ts` next to `BusinessRuleError` + `PasswordRotationRequiredError`; statusCode 403; **NOT** re-exported via barrel `index.ts` (DD5 pattern preserved) ✓
+- [x] **Unit test file CREATE** `src/modules/auth/__tests__/tenant-guard.plugin.test.ts` (per ACK + T06 precedent location) — **13 tests** across 5 describe groups: super_admin (2) + parametric non-super_admin valid-hotelId × 3 roles (3) + missing-hotelId deny + audit-log shape + upstream-auth-delegation (3) + allowlist behavior (2) + route pattern matching (1) ✓
+- [x] **Integration placeholder** `tenant-guard.plugin.integration.test.ts` — **4** `it.todo()` entries gated on T02 ✓
+- [x] **Coverage ≥ 80% line; target 90% on plugin** — see coverage table below; plugin at **94.44% line** ✓
+- [x] **`make check` green** — full output excerpt below ✓
+- [x] **Drift floor zero** scoped to T11 territory — see drift block below ✓
+- [x] **Security floor**:
+  - [x] Fail-closed verified by explicit negative test: when `tokenIssuer.verify` throws AppError, plugin skips AND `req.session`/`req.tenantScope` both `undefined` (test "should skip enforcement when tokenIssuer.verify throws AppError")
+  - [x] No JWT secret in error response — `TenantScopeViolationError.toJson()` returns `{ code, message, details: { userId } }` only
+  - [x] Status code consistency — all deny cases produce 403 TENANT_SCOPE_VIOLATION (single status, no 404 mix)
+  - [x] Audit log shape per Open Item #5 — exact 7-field check: `msg`, `correlationId`, `userId`, `role`, `claimHotelId`, `path`, `method`; no raw token, no cookie value, no email
+  - [x] correlationId = `req.id` (Fastify auto-assigned) — works without separate plugin
+
+Acceptance criteria mapping (8 items + bonus #9 cross-slot per ASSIGNMENT §"Acceptance criteria")
+
+1. **Plugin functional via factory pattern** ✓ — `registerTenantGuard` exported, T06 DD1 shape
+2. **4-role unit coverage** ✓ — super_admin (×2 hotelId variants) + gm_admin + dept_head + staff (parametric `describe.each`); unauthenticated/invalid JWT/allowlist all covered
+3. **Allowlist mechanism** ✓ — Set-based, O(1) lookup; empty allowlist exercises every-route-guarded edge
+4. **Cross-tenant reject with consistent status** ✓ — 403 across all deny cases (single AppError subclass; entrypoint setErrorHandler maps statusCode uniformly)
+5. **`make check` green** ✓ — exit 0
+6. **Drift zero T11 territory** ✓
+7. **Coverage ≥ 80% / target 90% plugin** ✓ — plugin 94.44% line / 100% func
+8. **APPROVE-PARTIAL convention** ✓ — integration `it.todo()` placeholder; full APPROVE batches with T05+T06 on T02 ship
+9. **Cross-slot heritage marker** ✓ — header + every commit body + audit verified
+
+Quality gate
+
+- `make typecheck`: **PASS**
+- `make lint`: **PASS** (0 errors, 0 warnings, `--max-warnings 0`)
+- `make format-check`: **PASS**
+- `make test-unit`: **PASS** — 86 passed + 20 todo + 2 skipped suites (delta vs T06 SUBMIT: +13 plugin tests + 4 new integration todo)
+- `make check` exit 0 confirmed
+
+Test evidence
+
+```
+Test Suites: 2 skipped, 9 passed, 9 of 11 total
+Tests:       2 skipped, 20 todo, 86 passed, 108 total
+Time:        ~0.9s
+```
+
+Coverage (scoped via `collectCoverageFrom` to `src/modules/auth/**` + `src/plugins/**`)
+
+```
+---------------------------------|---------|----------|---------|---------|-------------------
+File                             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+---------------------------------|---------|----------|---------|---------|-------------------
+All files                        |   98.22 |    81.94 |     100 |    98.9 |
+ plugins                         |   95.08 |       75 |     100 |      95 |
+  must-rotate-password.plugin.ts |      96 |    83.33 |     100 |   95.83 | 68 (T06 carryover — non-AppError re-raise path)
+  tenant-guard.ts                |   94.44 |    66.66 |     100 |   94.44 | 102-103 (non-Error throw conversion — defensive)
+ modules/auth                    |   99.06 |    85.41 |     100 |     100 |
+  auth.errors.ts                 |     100 |      100 |     100 |     100 | (TenantScopeViolationError covered via deny test)
+  … (other files unchanged from T06 SUBMIT)
+---------------------------------|---------|----------|---------|---------|-------------------
+```
+
+Per-file targets:
+- `tenant-guard.ts`: target 90% line → **94.44%** ✓
+- `auth.errors.ts`: 100% line ✓
+- `fastify-augmentation.ts`: type-only file (no executable code; not in coverage report) — types compile-checked via tsc ✓
+- Global thresholds met (lines 80%, branch 70%, func 75%, stmts 80%)
+
+Drift scans (T11 territory: `src/plugins/tenant-guard.ts`, `src/modules/auth/auth.errors.ts`, `src/shared/types/fastify-augmentation.ts`, and the 2 new test files)
+
+```
+$ grep -rnE "(: any[^a-z]| any[^a-z_])|console\.(log|info)|@ts-ignore|@ts-nocheck|throw new Error\(|export default" src/plugins/tenant-guard.ts src/modules/auth/auth.errors.ts src/shared/types/fastify-augmentation.ts src/modules/auth/__tests__/tenant-guard.plugin.test.ts src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts
+   (zero hits — sole grep match was a false-positive in auth.errors.ts:2 comment "any AppError" which is documentation prose, not code drift)
+```
+
+Cross-slot marker compliance (per ASSIGNMENT §"Cross-slot heritage")
+
+```
+$ git log --format="%H %B" feat/auth-core ^c9413e8 | grep -c "§4-D01"
+5
+$ git log --oneline feat/auth-core ^c9413e8
+99bb0cb test(plugins): integration placeholders for tenant-guard (T02-gated)
+403ce77 test(plugins): tenant-guard 4-role unit coverage + audit log shape
+dbb2f0d feat(plugins): tenant-guard factory + audit log
+188946a chore(types): add Session + TenantScope augmentation for tenant-guard
+48e1e55 feat(auth): add TenantScopeViolationError 403 TENANT_SCOPE_VIOLATION
+```
+
+All 5 commits carry the footer line verbatim ✓
+
+Security check (CLAUDE.md §6 + MVP-AUTH-FIRST §4.1)
+
+- **Fail-closed by construction**: every error path either throws `AppError` subclass (caught by setErrorHandler → 403) OR skips with documented delegate-to-401 hand-off. Negative test ("should skip enforcement when tokenIssuer.verify throws AppError") asserts `req.session` AND `req.tenantScope` both `undefined` on the skip path.
+- **Status code consistency**: 403 TENANT_SCOPE_VIOLATION on every deny case (single subclass + single status — no `404 for wrong hotel` vs `403 for missing claim` mix).
+- **No JWT secret / token / cookie value in audit log** — audit log shape is the canonical 7-field whitelist; `userId` is the opaque UUID (CLAUDE.md §6.3 — not PII).
+- **`super_admin` bypass branch order**: super_admin check placed BEFORE `hotelId === null` check, so a super_admin with `hotelId: null` (legitimate per spec) still passes. Verified by `should set tenantScope = { type: "all-hotels" } ... when claims.hotelId is null` test.
+- **Cross-tenant row-level**: NOT plugin's job per Open Item #4 (a); handler enforces via `req.tenantScope` consumption (T07 territory). Integration placeholder `it.todo()` #1 captures this for fill-in post-T02.
+- **No raw `throw new Error(...)`** anywhere in T11 source — `done(new Error(String(err)))` in the non-AppError catch branch is the conversion shim Fastify expects (caught by setErrorHandler → 500). Drift-scan-clean because regex targets `throw new Error\(`, not the `done()` argument.
+
+Design decisions taken at code-time (DDs)
+
+1. **Sync hook signature with explicit `done` callback** — initial impl used `(req) => { ... }` (no async, hoping to satisfy `require-await` lint without inventing a Promise). Fastify treated it as a sync hook expecting `done()` callback → tests timed out (10s). Refactored to canonical 3-arg sync signature `(req, _reply, done) => { ... done(); }`. Errors propagated via `done(err)` not `throw` (Fastify catches both, but `done(err)` is the documented sync-hook contract). Plugin commit `dbb2f0d` was amended pre-push to fold the fix into the original feat commit (zero noise in shared history; same audit-trail intent).
+2. **Allowlist Set construction at registration time** — `new Set(deps.allowlist)` once at `registerTenantGuard` call, captured in closure for `O(1)` per-request lookup. Avoids re-construction per request.
+3. **`matchedPath(req)` shared helper** — used by both `isAllowlisted` (allowlist match) and the audit log (`path` field). Source of truth = `req.routeOptions.url` (Fastify 4.28+ canonical) with `req.url.split('?')[0]` fallback for unmatched paths. Test "should resolve req.routeOptions.url for matched routes (param route)" verifies the pattern shape is preserved (e.g., `/api/hotels/:hotelId/users`, not the concrete URL).
+4. **`TenantScopeViolationError` placement** — `src/modules/auth/auth.errors.ts` next to `PasswordRotationRequiredError` + `BusinessRuleError` (cycle-3 `auth.errors.ts` AUX-Q1 home pattern). DD5 pattern preserved: not re-exported via barrel `index.ts` — plugin imports directly.
+5. **`req.session` + `req.tenantScope` both set only on the allow paths** — explicit `req.session = sessionFromClaims(claims)` per branch (super_admin + non-super_admin-with-hotelId). Skip paths (allowlist, missing cookie, invalid JWT) leave both fields `undefined` so downstream handlers can detect "guard skipped me" if needed.
+6. **`fastify.log.warn` direct call (not a separate logger dep)** — Fastify's built-in pino-based logger is sufficient for audit; injecting winston would add complexity for cycle-4 unit-only scope. T07 + tenant-guard wiring at api.ts time can route audit logs through the service-wide winston instance if needed.
+
+Notes (open items / observations for PM B VERDICT consideration)
+
+1. **No new GAPs, no new DDs requiring PM B amendment, no new package install asks.** All 5 PM B open items + 3 amendments executed per ACK ruling; Open Item #4 (a) shallow-claim ruling honored (plugin does NOT do URL-param diff).
+2. **Pre-existing Q-B-02 workarounds reused verbatim** — jest.config.json `--config` flag, Prisma client cast, eslint-disable on adapter import in entrypoint, inline `setErrorHandler` in entrypoint. T11 introduced zero new workarounds.
+3. **Plugin coverage 94.44% line / 66.66% branch** — uncovered lines 102-103 are the non-`AppError`-error catch path (`done(err instanceof Error ? err : new Error(String(err)))`). `extractJwtClaims` only throws `AuthError`, so the else branch is defensive-unreachable in normal flow. Branch coverage 66.66% is below the 70% per-file target but global threshold (70%) is met at 81.94% overall — acceptable for defensive code. PM B may choose to require an explicit "non-Error throw" test case; if so, easy follow-up commit.
+4. **Hook timing surprise documented in DD1** — for Slot A's future handoff: when refactoring to `FastifyPluginCallback` + `fp()` shape (`T_AUX_02`), pick the async wrapping carefully (the `async` keyword without a real await tripped `require-await` lint in this cycle — known issue). The current 3-arg sync `done()` signature is the simplest path that satisfies both Fastify expectations and the lint rule.
+5. **Integration placeholder count = 4** — slightly above ASSIGNMENT minimum of 3+. Extra entry (`it.todo` for "JWT refresh interplay") anticipates the rotation-aware test that T07/T08 might want when scoped routes start re-rotating sessions.
+
+Requesting PM B VERDICT (expected: APPROVE-PARTIAL — full APPROVE batches with T05+T06 on T02 ship).
+
 <!--
 TEMPLATE — copy untuk task baru:
 
