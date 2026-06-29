@@ -1,5 +1,7 @@
 import type { FastifyPluginCallback } from 'fastify';
 
+import { ValidationError } from '@core/errors/app-errors.js';
+
 import {
   ACCESS_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
@@ -8,7 +10,7 @@ import {
   setAccessCookie,
   setRefreshCookie,
 } from './auth.cookie-helpers.js';
-import { LoginRequestSchema, type LoginRequestDto } from './auth.schema.js';
+import { LoginRequestSchema } from './auth.schema.js';
 import type { SessionContext } from './auth.types.js';
 
 function sessionContextFromRequest(
@@ -23,21 +25,17 @@ function sessionContextFromRequest(
 }
 
 export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
-  fastify.post<{ Body: LoginRequestDto }>(
-    '/login',
-    {
-      schema: {
-        body: LoginRequestSchema,
-      },
-    },
-    async (req, reply) => {
-      const ctx = sessionContextFromRequest(req.headers, req.ip);
-      const result = await fastify.services.auth.login(req.body, ctx);
-      setAccessCookie(reply, result.accessToken, fastify.appConfig);
-      setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
-      return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
-    },
-  );
+  fastify.post('/login', async (req, reply) => {
+    const parsed = LoginRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError('Invalid login payload', { issues: parsed.error.issues });
+    }
+    const ctx = sessionContextFromRequest(req.headers, req.ip);
+    const result = await fastify.services.auth.login(parsed.data, ctx);
+    setAccessCookie(reply, result.accessToken, fastify.appConfig);
+    setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
+    return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
+  });
 
   fastify.post('/logout', async (req, reply) => {
     const accessToken = req.cookies[ACCESS_COOKIE_NAME] ?? null;

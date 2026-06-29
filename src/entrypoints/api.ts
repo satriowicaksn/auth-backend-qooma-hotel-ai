@@ -15,6 +15,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { createLogger, format, transports } from 'winston';
 
 import { loadConfig, type AppConfig } from '@core/config/env.js';
+import { AppError } from '@core/errors/app-errors.js';
 import { db } from '@core/prisma/prisma-client.js';
 
 // eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary that instantiates adapters per CLAUDE.md §4 + ADR-0001 (services consume the port).
@@ -33,6 +34,22 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   });
 
   fastify.decorate('appConfig', config);
+
+  // TODO(slot-A): replace with src/plugins/error-handler.plugin.ts when foundation
+  // ships. Inline mapping keeps auth routes returning correct status codes today.
+  fastify.setErrorHandler((err, _req, reply) => {
+    if (err instanceof AppError) {
+      void reply.code(err.statusCode).send({ error: err.toJson() });
+      return;
+    }
+    if (err.validation !== undefined) {
+      void reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: err.message, details: err.validation },
+      });
+      return;
+    }
+    void reply.code(500).send({ error: { code: 'INTERNAL', message: 'Internal server error' } });
+  });
 
   await fastify.register(cookiePlugin);
   await fastify.register(jwtPlugin, {
