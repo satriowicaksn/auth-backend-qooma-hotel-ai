@@ -89,13 +89,37 @@
 
 | ID            | Question | Raised by | Source         | Status | Resolution |
 | ------------- | -------- | --------- | -------------- | ------ | ---------- |
-| Q-B-01        | T05 coding-start blocker bundle (3 sub-items). **(a) Hash lib install**: prefer `argon2 ^0.41.x` (OWASP 2024 + `01-auth-identity §5`); fallback `bcrypt` (per `SECURITY.md §2` baseline cost=12). PO pick. **(b) Cookie plugin install**: `@fastify/cookie ^9.x` (required by `@fastify/jwt ^8` cookie reads — confirmed via `package.json:37`). Hand-roll fallback is high-friction repeated boilerplate; recommend approve. **(c) `JWT_ACCESS_TTL` default `'8h' → '15m'`** in `src/core/config/env.ts:37` — `01-auth-identity §3` ratifies 15-min access vs `SECURITY.md §2` generic 8h floor. Touches Slot A canonical `core/config/` domain (per `SERVICE-CHARTER §3` + `PROJECT_STRUCTURE.md` layer rules) — needs (i) Slot A coord clearance, (ii) doc-sync decision (which spec wins → PM update one of two per `PM-AGENT §0.6`). Cross-ref §3c. | PM B (consolidated from Executor B PLAN T05 attempt 1 GAPs #1+#2+#4) | PM-STATUS-B.md §2 lines 219-222; PM-STATUS-B.md §3 row Q-B-01 | **open · awaiting PO ruling** | — |
+| Q-B-01        | T05 coding-start blocker bundle (3 sub-items). **(a) Hash lib install**: prefer `argon2 ^0.41.x` (OWASP 2024 + `01-auth-identity §5`); fallback `bcrypt` (per `SECURITY.md §2` baseline cost=12). PO pick. **(b) Cookie plugin install**: `@fastify/cookie ^9.x` (required by `@fastify/jwt ^8` cookie reads — confirmed via `package.json:37`). Hand-roll fallback is high-friction repeated boilerplate; recommend approve. **(c) `JWT_ACCESS_TTL` default `'8h' → '15m'`** in `src/core/config/env.ts:37` — `01-auth-identity §3` ratifies 15-min access vs `SECURITY.md §2` generic 8h floor. Touches Slot A canonical `core/config/` domain (per `SERVICE-CHARTER §3` + `PROJECT_STRUCTURE.md` layer rules) — needs (i) Slot A coord clearance, (ii) doc-sync decision (which spec wins → PM update one of two per `PM-AGENT §0.6`). Cross-ref §3c. | PM B (consolidated from Executor B PLAN T05 attempt 1 GAPs #1+#2+#4) | PM-STATUS-B.md §2 lines 219-222; PM-STATUS-B.md §3 row Q-B-01 | **open · presented to PO 2026-06-29** | — (Parent PM recommendation below, awaiting PO ruling) |
+
+#### Parent PM consolidation + recommendation — Q-B-01 (2026-06-29, awaiting PO ruling)
+
+Verified Executor B's claims independently: `@fastify/jwt ^8.0.1` + `@fastify/rate-limit ^9.1.0` present in `package.json`; `argon2`, `bcrypt`, `@fastify/cookie` absent. PM B PARTIAL-ACK is well-scoped — GAPs #3 (hashToken in `shared/utils/crypto.ts`) + #5 (no JWT hex port — internal `TokenIssuer` only, ADR-0001 alignment) PM-internal-approved cleanly; the escalated three are genuine PO authority items per `CLAUDE.md §11` (package deps) + `SERVICE-CHARTER §3` (cross-slot domain touch).
+
+**Parent PM recommendations to PO** — one ruling unblocks all three:
+
+1. **Sub-item (a) — Hash lib**: ✅ approve `argon2 ^0.41.x` (argon2id default).
+   - `01-auth-identity §5` lists `argon2id OR bcrypt(cost=12+)` — both acceptable; spec doesn't force the choice.
+   - argon2id is OWASP 2024 top recommendation (memory-hard → GPU/ASIC-resistant); bcrypt remains industry-mature with 14yr track record.
+   - Lock-in risk is **low** — PM B's PLAN puts hash behind `PasswordHashPort` (per ADR-0001), so adapter swap is one-file later if argon2 native compile ever breaks an arch.
+   - **Fallback option** if PO prefers operational simplicity over forward-looking security: `bcrypt ^5.x` cost=12 — ratify as §4 deviation footnote, same port surface.
+
+2. **Sub-item (b) — Cookie plugin**: ✅ approve `@fastify/cookie ^9.x`.
+   - Required by `@fastify/jwt ^8` cookie reads (verified). Ecosystem-standard official Fastify plugin.
+   - Hand-roll fallback = `reply.header('Set-Cookie', ...)` × 3 endpoints × 2 cookies (`token`+`refresh`) with manual `Max-Age`/`Path`/`SameSite` parsing — bug magnet, no upside.
+   - Zero lock-in concern; pure HTTP plumbing.
+
+3. **Sub-item (c) — TTL change + doc-sync**: ✅ approve `JWT_ACCESS_TTL: '8h' → '15m'` in `src/core/config/env.ts:37`, **as a §4 deviation** (Slot B touches Slot A canonical `core/config/`; ownership of record stays Slot A — same pattern as T11). After PO ruling, **Parent PM updates `docs/SECURITY.md §2`** (per `PM-AGENT §0.6` planning-sync authority) to clarify: "8h access TTL is a generic floor for non-auth services; auth-spec services follow `docs/spec/01-auth-identity.md §3` (15-min access + 30-day refresh)." This resolves the floor-vs-ratification conflict at single source of truth without contradicting either doc.
+
+**If PO approves all 3**: Executor B resumes T05 coding immediately (after ENOSPC cleanup at slot-internal §6); estimated wall-time to SUBMIT per PLAN line 277-280 = ~6-8h. **If PO declines (a)** → swap argon2 → bcrypt, no schedule impact. **If PO declines (b)** → recommend Parent PM push back; T05 effectively blocked on rewrite. **If PO declines (c)** → `JWT_ACCESS_TTL` stays `'8h'`, T05 ships with override via `.env` instead — adds a tiny env-discipline burden but no code-rewrite.
+
+Once ruling lands: §3b Resolution column fills (sub-item by sub-item), §4 deviation row appended for (c) and possibly (a-fallback), Parent PM commits `docs:` planning-sync edit per (c), §1 T05 row status flips back to `READY-PARTIAL (unit-only)`, short roll-up at §2 from PM B after FULL-ACK.
 
 ### 3c. Architecture / planning questions
 
 | ID            | Question                                                                                                                                                                                                  | Raised by | Source                                                  | Status | Resolution |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | ------ | ---------- |
 | Q-PARENT-01   | Tenant-guard middleware ownership + sequencing. `SERVICE-CHARTER §3` lists it under Slot A foundation, but PO's explicit T01..T04 list does not include it. T05/T06/T07 (Slot B) all need it at runtime. Should it be (a) added as T0_aux Slot A foundation task, (b) absorbed into T05 (first Slot B endpoint), or (c) inlined as a util in T07 since that's the first hotel-scoped read? | Parent PM | `SERVICE-CHARTER §3` + `MVP-AUTH-FIRST §4.1` + `01-auth §6` | **resolved** 2026-06-29 | **PO ruling**: option (1) — author **T11** as Slot A canonical task (see §1 T11 row); Slot B executes this cycle via §4 deviation (2026-06-29). Rationale: preserve Charter ownership of record, avoid cross-modul leak from inlining, keep tenant-guard as single source of truth for security review (CLAUDE.md §6). |
+| Q-PARENT-02   | Doc-sync conflict surfaced by Q-B-01(c): `docs/SECURITY.md §2` (generic 8h JWT access floor) vs `docs/spec/01-auth-identity.md §3` (15-min access ratification for Auth service). Which is canonical, and how do future services know which TTL applies? Cross-cutting because any new sibling service consulting SECURITY.md will inherit the 8h default unless we add the floor-vs-spec-override clarification. | Parent PM (consolidated from Q-B-01(c)) | `SECURITY.md §2` + `01-auth-identity §3` + Q-B-01(c) | **open · gated on Q-B-01(c) PO ruling** | Parent PM recommendation: after PO rules Q-B-01(c), Parent PM edits `SECURITY.md §2` (per `PM-AGENT §0.6` planning-sync) — clarify "8h is generic non-auth floor; auth-spec services follow `01-auth-identity §3`." Single source of truth restored. Will appear in §4 as `docs:` planning sync entry. |
 
 ---
 
@@ -145,6 +169,30 @@
 > 🎯 Fokus besok (cross-dev)
 > - <re-balance / dependency unblock / shared-infra ship>
 > ```
+
+### Cycle 1 — 2026-06-29 (single-dev cycle: Slot B only)
+
+```
+QOOMA BE PARENT — Standup — cycle 1
+
+Dev A (Nathan) — OFFLINE this cycle. T01..T04 (foundation) PARKED. T11 ownership-of-record stays Slot A; Slot B executes T11 per §4 deviation 2026-06-29.
+Dev B (Nanak)  — T05 ASSIGNMENT issued + PLAN attempt 1 PARTIAL-ACKED in same cycle. 2 GAPs PM-internal-approved, 3 GAPs escalated as Q-B-01 (deps + TTL). Executor HOLD pending PO ruling.
+Dev C (Satrio) — OFFLINE this cycle. T08..T10 (admin surface) PARKED.
+
+📅 Gate status
+- Next gate: G2 (Auth module ready) — depends on T05+T06+T11 ship. T05 in flight; gate status: in motion, no calendar pressure (criteria-based per PO ruling 2026-06-29).
+- Open contract questions: 0
+- Open package questions: 1 (Q-B-01, escalated to PO 2026-06-29)
+- Open architecture questions: 1 (Q-PARENT-02, gated on Q-B-01(c))
+
+🚨 Eskalasi ke PO
+- Q-B-01 ruling — 3 sub-items (deps install ×2 + TTL change). See §3b for Parent PM consolidation + 3 recommendations. One PO pass unblocks Executor B for ~6-8h T05 implementation runway.
+
+🎯 Fokus besok (cross-dev)
+- PO ruling lands → PM B FULL-ACK PLAN T05 → Executor B resumes coding (post-ENOSPC cleanup).
+- If PO declines (a)+(b) → revisit; if PO declines only (c) → unblock with `.env` override path, no rewrite.
+- Cadence note: 1 ASSIGNMENT → 1 PLAN → ESCALATION inside cycle 1 = healthy. Multi-PM file-based protocol holding under load.
+```
 
 ### H0 — 2026-06-12 (bootstrap, pre-multi-dev kickoff)
 
@@ -459,6 +507,7 @@ ke §2 / §6 di sini, **bukan** ke PO langsung.
 | 2026-06-29 | Single-dev cycle 1: only Slot B (Nanak) online                       | A, B, C     | T01..T04 (Slot A foundation) + T08..T10 (Slot C admin surface) marked `PARKED · unowned-this-cycle` in §1. Slot B runs unblock audit on T05..T07 + T11 — see §8. If Slot B exhausts READY-PARTIAL scope, escalate to PO for further deviation (Slot B absorbs T01..T04).                                                                |
 | 2026-06-29 | Tenant-guard middleware ownership (Q-PARENT-01)                      | A, B, C     | **RESOLVED**: PO ruling option (1) — T11 authored as Slot A canonical task (see §1). Slot B executes T11 this cycle per §4 deviation. Charter ownership preserved.                                                                                                                                                                       |
 | 2026-06-29 | Slot B cycle 1 execution sequence (PO-ratified)                      | B           | **T05 → T06 → T11 → T07**. T05/T06 don't need T11 (login public, `/me` reads user from JWT directly). T11 before T07 because T07 wires tenant-guard. Integration tests across all four deferred until T02 ships. T07 SUBMIT-APPROVE blocked until T11 APPROVED.                                                                          |
+| 2026-06-29 | Q-B-01 in flight: T05 coding-start blocked on PO ruling (deps + TTL) | B (+ A doc sync) | Executor B HOLD; PM B PARTIAL-ACKED PLAN T05 attempt 1, 3 GAPs bundled to §3b Q-B-01 + cross-ref §3c Q-PARENT-02 (doc-sync). Parent PM recommendations posted under §3b table — single PO ruling unblocks all three (approve `argon2`+`@fastify/cookie` install, approve TTL 8h→15m as §4 deviation, then Parent PM `docs:` sync edit on `SECURITY.md §2`). Side blocker (ENOSPC) logged at PM-STATUS-B.md §6 — slot-internal, no escalation. |
 
 <!-- Contoh:
 2026-06-30 | core/queue/ Bull factory pattern decision | B, C | A ship dulu (T05), B & C unblocked H+1
