@@ -25,3 +25,16 @@ export class BusinessRuleError extends AppError {
   readonly statusCode = 422;
   readonly code = 'BUSINESS_RULE';
 }
+
+/**
+ * 403 TENANT_SCOPE_VIOLATION per spec docs/spec/01-auth-identity.md §6 +
+ * MVP-AUTH-FIRST §4.1 fail-closed mandate. Thrown by `tenant-guard.ts`
+ * plugin when a non-`super_admin` request lacks a `hotelId` claim (i.e.
+ * the JWT is missing tenant context). Row-level cross-tenant rejection
+ * (e.g. URL param mismatch) is delegated to handler boundaries via the
+ * `req.tenantScope` filter per `scopedTickets` pattern (spec §6 line 388-398).
+ */
+export class TenantScopeViolationError extends AppError {
+  readonly statusCode = 403;
+  readonly code = 'TENANT_SCOPE_VIOLATION';
+}
