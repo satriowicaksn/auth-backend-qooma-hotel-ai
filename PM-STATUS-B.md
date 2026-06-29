@@ -985,6 +985,27 @@ Available = **1.3 GiB**, well below 5 GiB floor (~3.7 GiB shortfall). System par
 - Commit message: conventional commits — `feat(modul): X`, `fix(modul): Y`.
 - Gunakan `make commit MSG="..."` — auto lint + typecheck + format-check sebelum commit.
 
+### Branch hygiene rule (ratified cycle 2 2026-06-29 post-T05 cherry-pick cleanup)
+
+**Rule**: PM-STATUS-*.md (cross-session tracking docs) ALWAYS live on `main` — separate from impl artifacts.
+
+- **Always on `main` (direct commit, no branch)**:
+  - `PM-STATUS-B.md` (slot B tracker)
+  - `PM-STATUS-PARENT.md` (cross-dev roll-up)
+  - Executor B `SUBMIT` block writes → main directly
+  - PM B `ASSIGNMENT` / `ACK` / `VERDICT` block writes → main directly
+- **On `feat/<modul>-<short>` branch until full APPROVE**:
+  - `src/`, `prisma/`, `package.json`, `pnpm-lock.yaml`, `jest.config.*`, env config touches, all impl + build artifacts
+- **Mixed-touch commits (impl + PM-STATUS) FORBIDDEN** — split into 2 commits, one per channel
+- **Workflow per cycle**:
+  1. Executor on `feat/<modul>-<short>`: code + test + self-validate
+  2. Executor `git checkout main` → write SUBMIT block in `PM-STATUS-B.md` → commit to main → push
+  3. PM B `git checkout feat/<modul>-<short>` → run independent verify (make check, drift, coverage)
+  4. PM B `git checkout main` → write VERDICT block + status row + roll-up → commit to main → push
+  5. PM B reconcile branch via `git rebase main` + `git push --force-with-lease`
+- **Rationale**: Cross-session visibility (Parent PM, future Slot A/C) reads from main; impl-on-branch only merges to main on full APPROVE. Decouples tracking cadence from merge cadence.
+- **Cherry-pick precedent**: cycle 2 SUBMIT (`8202e49`→`8ac6db2`/main) + VERDICT (`a4e97c7`→`4c9117e`/main) demonstrated clean migration when rule was retro-applied.
+
 ---
 
 ## 8. Slot B queue (filter dari PARENT §8 di mana Slot=B)
