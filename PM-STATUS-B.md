@@ -584,6 +584,49 @@ QOOMA BE B (Nanak) — Standup — H{N}/{total}
 
 ---
 
+#### 2026-06-29 cycle 2 — Retry log: still ENOSPC at impl-start pre-flight (HOLD on T05 coding)
+
+**Trigger**: PM B FULL-ACK directive §1 pre-flight `df -h /` (≥5 GiB free required before any `pnpm add`).
+
+**Observed** (2026-06-29 cycle 2 pre-flight, before any `pnpm` invocation):
+
+```
+Filesystem        Size    Used   Avail Capacity iused ifree %iove %iused  Mounted on
+/dev/disk3s1s1   228Gi    11Gi   1.3Gi    90%    451k   14M    3%   /
+```
+
+Available = **1.3 GiB**, well below 5 GiB floor (~3.7 GiB shortfall). System partition reports 90% capacity, only 1.3 GiB writable.
+
+**Action taken**:
+- **HOLD** on Commit 1 of FULL-ACK sequence (`pnpm add argon2 @fastify/cookie`).
+- **NO** `pnpm add` attempted (per PM B directive: "JANGAN attempt `pnpm add` against full disk").
+- **NO** `pnpm install` attempted (would also fail and risk partial `node_modules` corruption).
+- **NO** branch creation (`feat/auth-core` deferred — branch makes sense only once first commit is queued).
+- **NO** edits to `src/`, `prisma/`, `package.json`, `pnpm-lock.yaml`. Working tree on `main` remains identical to last push.
+- Only this `PM-STATUS-B.md §6` retry-log + the corresponding standup line will be committed/pushed this session.
+
+**Cycle 1 reminder context**: same ENOSPC observed at PLAN cycle — was non-blocking for PLAN authoring (PM B accepted text-merit). Cycle 2 is the CODING gate, where the rule explicitly says HOLD until disk cleared (FULL-ACK lines 399-402).
+
+**Why non-escalating** (still slot-internal, per PM B FULL-ACK line 581-582):
+- Single-slot environmental issue. T05 unblocked from planning side (all 5 GAPs resolved via Q-B-01).
+- Not impacting other slots (A, C still PARKED this cycle).
+- No risk to repo state — no partial commits, no corrupted lockfile, no half-pushed branch.
+- Resolution is owner-local (host disk cleanup), not a planning/coordination ask.
+
+**Resume trigger**: free ≥5 GiB on `/`, re-run `df -h /` at next session-start, then proceed with Commit 1 (`pnpm add argon2 @fastify/cookie`) of FULL-ACK sequence.
+
+**Owner action items** (Nanak, host-side, OUT of repo):
+- `du -sh ~/Library/Caches/* | sort -h | tail -10` (find big macOS app caches — IDE indexes, Xcode derived data, simulator data common offenders)
+- `du -sh ~/.pnpm-store ~/.npm ~/.cache 2>/dev/null` (Node toolchain caches — `pnpm store prune` if safe)
+- `du -sh /private/tmp/* 2>/dev/null | sort -h | tail -10` (system temp — stale build artifacts)
+- `docker system prune -a --volumes` if Docker is installed (often the single biggest reclaim)
+- Empty Trash + restart if needed.
+- Target: free ≥5 GiB; comfortable floor 10 GiB.
+
+**No PARENT §7 escalation**. Audit trail captured here for cycle continuity. Next exec session re-runs pre-flight verbatim per FULL-ACK §1.
+
+---
+
 ## 7. PM B operating notes (untuk Executor B)
 
 - PM B baca `PM-AGENT.md` (full) + `PM-STATUS-B.md` + scan `PM-STATUS-PARENT.md` (§1 mine, §3, §5, §8).
