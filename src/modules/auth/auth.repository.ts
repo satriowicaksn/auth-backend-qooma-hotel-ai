@@ -10,6 +10,10 @@ import type {
 
 import type { Language, Role } from './auth.types.js';
 
+export interface RevokeOthersResult {
+  readonly revokedCount: number;
+}
+
 export interface UserRow {
   readonly id: string;
   readonly hotelId: string | null;
@@ -111,6 +115,60 @@ export class AuthRepository {
       where: { id: userId },
       data: { lastLoginAt: new Date() },
     });
+  }
+
+  async findUserById(id: string): Promise<UserRow | null> {
+    const row = await this.db.user.findUnique({ where: { id } });
+    return row === null ? null : this.toUserRow(row);
+  }
+
+  /**
+   * Atomic password rotation: write new hash AND clear `must_rotate_password`
+   * in one query. Used by `POST /api/auth/me/password`; the flag-clear is the
+   * gate's release per spec MVP-AUTH-FIRST §4.2.
+   */
+  async updateUserPassword(userId: string, newHash: string): Promise<UserRow> {
+    const row = await this.db.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash, mustRotatePassword: false },
+    });
+    return this.toUserRow(row);
+  }
+
+  async updateUserLanguage(userId: string, language: Language): Promise<UserRow> {
+    const row = await this.db.user.update({
+      where: { id: userId },
+      data: { language },
+    });
+    return this.toUserRow(row);
+  }
+
+  async rotateCsrfToken(sessionId: string, newCsrfToken: string): Promise<void> {
+    await this.db.session.update({
+      where: { id: sessionId },
+      data: { csrfToken: newCsrfToken },
+    });
+  }
+
+  /**
+   * Best-effort sweep: revoke every active session for the user EXCEPT the
+   * `exceptSessionId` (the current request's session). Caller logs + ignores
+   * failures — password rotation must not fail because the sweep hit a hiccup
+   * (max 15min access TTL per D04 caps the stale-token window).
+   */
+  async revokeAllOtherSessions(
+    userId: string,
+    exceptSessionId: string,
+  ): Promise<RevokeOthersResult> {
+    const result = await this.db.session.updateMany({
+      where: {
+        userId,
+        id: { not: exceptSessionId },
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+    return { revokedCount: result.count };
   }
 
   private toUserRow(row: PrismaUser): UserRow {
