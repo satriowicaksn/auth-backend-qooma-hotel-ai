@@ -13,8 +13,8 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T05 — Auth core endpoints (login/logout/refresh) · `T05 IMPL-READY (PO-cleared cycle 1)` — Q-B-01 RESOLVED 2026-06-29 by PO; FULL-ACK posted; Executor B clear to implement (gated only on host ENOSPC cleanup, slot-internal)
-- **Branch**: `feat/auth-core` (Executor B create at first impl commit per CLAUDE.md §12)
+- **Active task**: T05 — `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` — VERDICT posted cycle 2 (2026-06-29). 13/13 independent verifications match Executor klaim; 5 DDs ACCEPT; 4 foundation gaps logged as Q-B-02. PM B ruling: Executor B pickup T06 next.
+- **Branch**: `feat/auth-core` (11 commits ahead of `main`) — stay on branch, NO merge to `main` until T02 ships and integration suite ratifies full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
 - **Single-dev cycle**: hanya Slot B (Nanak) online; T01..T04 (Slot A foundation) `PARKED` — integration test deferred sampai T02 ships.
@@ -27,7 +27,7 @@
 
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · READY-PARTIAL (unit scope, PO-cleared per §4-D02/D03/D04)` | —              | Cycle 1 task #1. Q-B-01 **RESOLVED 2026-06-29 by PO**. PLAN attempt 1 FULL-ACKED 2026-06-29; Executor B IMPL-READY pending ENOSPC host cleanup. |
+| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `backlog · READY-PARTIAL (unit-only)`    | —              | Cycle 1 task #2 — picks up after T05 APPROVED.                                                         |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
@@ -603,6 +603,142 @@ Sample request/response (would need Slot A's T02 + ts-node-free `make start` pat
 
 Requesting PM B VERDICT.
 
+##### VERDICT T05 attempt 1 — APPROVE-PARTIAL (unit scope complete; full APPROVE deferred until T02 migration ships) by PM B (cycle 2, 2026-06-29)
+
+**Outcome**: ✅ **APPROVE-PARTIAL**. Unit-scope DoD met in full; cycle-1 APPROVE-PARTIAL convention engaged per ASSIGNMENT §"Acceptance criteria" item 8 + FULL-ACK standing instructions. Branch `feat/auth-core` (11 commits ahead of `main` including this SUBMIT) **stays on branch** — NO merge to `main` until T02 lands and integration suite turns green (re-validation cycle described under "Conditions for PARTIAL→FULL upgrade" below).
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — trust-but-verify, all re-run on my session)**
+
+| Check | Executor klaim | PM B independent rerun | Status |
+|---|---|---|---|
+| `make check` (lint + format-check + typecheck + test-unit) | exit 0 green | rerun via `nvm use 20 && make check` → exit 0; output excerpt below | ✅ MATCH |
+| Test counts | 31 passed + 10 todo + 2 skipped suites | identical: `Tests: 2 skipped, 10 todo, 31 passed, 43 total` | ✅ MATCH |
+| Coverage (overall) | 98.56% stmt / 79.31% branch / 100% funcs / 100% lines | exact same numbers (rerun via `npx jest --config jest.config.json --coverage`) | ✅ MATCH |
+| Coverage (auth.service.ts) | 100% stmt+branch+funcs+lines | 100% | ✅ MATCH (target 90% per TESTING.md §9 critical — exceeded) |
+| Coverage (auth.routes.ts) | 100% stmt+funcs+lines, 81.81% branch | identical | ✅ MATCH |
+| Coverage (auth.cookie-helpers.ts) | 92.85%/50%/100%/100% — uncovered 23-27 | identical | ✅ MATCH (50% branch = defensive TTL parser fallback at lines 23-27; intentional unreachable from current call sites; **PM B accepts dengan note** per user-PM cycle-2 ratification) |
+| Drift scan (T05 files) | zero hits | rerun `grep -rnE "(: any[^a-z]\| any[^a-z_])\|console\.(log\|info)\|@ts-ignore\|@ts-nocheck\|throw new Error\(\|export default" src/modules/auth src/shared/utils/crypto.ts src/core/config/env.ts --include='*.ts'` → only 4 hits, ALL non-T05: (1) `auth.repository.integration.test.ts:9` — false-positive on `: any` in comment "any spec runs"; (2-4) `crypto.ts:23,30` + `env.ts:75` `throw new Error` confirmed pre-existing per `git blame` → commit `^1e32e34 Init project` by Satrio (Slot A territory) | ✅ MATCH (zero T05-attributable drift) |
+| Refresh hashing | SHA-256 via `hashToken()` at service.ts:105,147 | confirmed (`grep "createHash\|hashToken"`) | ✅ MATCH |
+| PII masking | `maskEmail()` at 3 log lines | confirmed at `auth.service.ts:44,53,71` | ✅ MATCH |
+| JWT secret no hardcode | from `config.JWT_ACCESS_SECRET` | confirmed at `entrypoints/api.ts:56` `secret: config.JWT_ACCESS_SECRET` | ✅ MATCH |
+| argon2 timing-safe verify | `argonVerify` (lib internal) | confirmed at `argon2-hasher.adapter.ts:13` + try/catch returning false on malformed envelope | ✅ MATCH |
+| Cookie flags matrix (`token`/`refresh`/`csrfToken`) | httpOnly/secure-conditional/sameSite=lax/path correct | confirmed at `auth.cookie-helpers.ts:45-49,55-59,75-87`; csrfToken returned in body not cookie | ✅ MATCH (per `01-auth-identity §1.1`) |
+| DD1 `sid` claim | present in JwtClaims + used at logout | confirmed at `auth.types.ts:16`, `auth.token-issuer.ts:16,28,41`, `auth.service.ts:93,96,163` | ✅ MATCH |
+| DD2 `FastifyPluginCallback` (sync) | sync form, not async | confirmed at `auth.routes.ts:1, :27` | ✅ MATCH |
+| DD3 manual `safeParse` in `/login` | Fastify 4 AJV-native workaround | confirmed at `auth.routes.ts:29` | ✅ MATCH |
+
+`make check` excerpt (PM B rerun, abbreviated):
+```
+> @qooma/auth-backend@0.1.0 lint    → PASS (0/0 with --max-warnings 0)
+> @qooma/auth-backend@0.1.0 format:check → All matched files use Prettier
+> @qooma/auth-backend@0.1.0 typecheck → tsc --noEmit clean
+> @qooma/auth-backend@0.1.0 test:unit → Tests: 2 skipped, 10 todo, 31 passed, 43 total | Time: 0.788 s
+```
+
+**All 13 verification checks PASS independently. Zero Executor claim discrepancies.**
+
+---
+
+**DoD checklist mapping** (12 items per ASSIGNMENT §"DoD this submission" lines 71-94)
+
+| # | DoD item | Status | Evidence |
+|---|---|---|---|
+| 1 | 3 endpoints authored (route + zod + service + repo) | ✓ | `auth.routes.ts:28-58`, `auth.schema.ts`, `auth.service.ts:39-135`, `auth.repository.ts:37-103` |
+| 2 | Cookie + CSRF response shape matches `01-auth-identity §1.1` verbatim | ✓ | `auth.routes.ts:37,52` returns `{ user, csrfToken }`; zod lock at `auth.schema.ts:17-25`; asserted at `auth.routes.test.ts:65-68` |
+| 3 | Sessions writes (refresh+csrf+expires_at+ua+ip) | ✓ | `auth.repository.ts:46-59` `createSession` — refresh **hashed** before write |
+| 4 | JWT plumbing (access 15m, refresh 30d) | ✓ | `auth.token-issuer.ts:23-31` + env defaults per D04 |
+| 5 | Password hash port + adapter | ✓ | `ports/password-hasher.port.ts` interface + `adapters/argon2-hasher.adapter.ts` (argon2id default) — service consumes port, entrypoint wires adapter |
+| 6 | Unit tests per TESTING.md §4 (mock port + mock repo INSTANCE) + coverage ≥80% | ✓ | service mocks port + repo class instance (NOT Prisma) at `auth.service.test.ts:43-98`; routes via `inject()` at `auth.routes.test.ts:32-46`; coverage 98.56% stmt / 100% line — exceeds 80% floor; critical files (service/routes/schema) at 100% line ≥ 90% target |
+| 7 | Test naming `should <expected> when <condition>` | ✓ | spot-checked across 6 test files; convention adhered |
+| 8 | Coverage ≥ 80% line for added files | ✓ | per Step 3 coverage table — minimum 92.85% stmt across all T05 files; line coverage = 100% on every file |
+| 9 | Integration placeholder `it.todo()` referencing T02 | ✓ | `auth.repository.integration.test.ts` — **10 `it.todo()` calls** (jest reports `10 todo`) |
+| 10 | `make check` green | ✓ | PM B independent rerun → exit 0 |
+| 11 | Security floor (refresh SHA-256, no plaintext secret, email masked, argon2 timing-safe, JWT signed via config) | ✓ | independent verify per Step 3d above — all 6 sub-items confirmed |
+| 12 | No `any` / `console.log` / `@ts-ignore` / `throw new Error(`-in-service / default export | ✓ | drift scan zero T05-attributable hits; 3 `throw new Error` are pre-existing Slot A territory (git blame confirms commit `1e32e34`) |
+
+**Bonus DoD line items verified**:
+- ✓ Named exports only (CLAUDE.md §5) — barrel `index.ts` clean
+- ✓ Public function explicit return type — every public method has `Promise<...>` or `: void`
+- ✓ File ≤ 300 LOC — largest is `auth.service.ts` at 183 LOC
+- ✓ Branch `feat/auth-core` per CLAUDE.md §12
+
+---
+
+**5 Design Decision rulings (PM B sign-off)**
+
+| DD | Topic | PM B ruling | Rationale |
+|---|---|---|---|
+| **DD1** | `sid` claim added to JWT (beyond PLAN) | ✅ **ACCEPT** | Enables session-specific revocation at `/logout` without widening refresh-cookie path scope (refresh path = `/api/auth/refresh`, NOT `/logout`). JwtClaims `{sub, sid, role, hotelId, deptId}` — small schema addition, sound security trade. Verified `sid` flows: created at login (`service.ts:163`), signed (`token-issuer.ts:28`), verified (`:41`), used to revoke specific session (`service.ts:93`). No leakage. |
+| **DD2** | `FastifyPluginCallback` (sync) bukan `FastifyPluginAsync` | ✅ **ACCEPT option (i) — divergence dari `_template`** | `_template/_template.routes.ts` uses Async, T05 uses Callback (sync). Both valid for `fastify.register`. Reason for divergence: `@typescript-eslint/require-await` lint conflict (route body only registers handlers, no `await`). Working code + lint clean > template mirroring with eslint-disable. **Documented as mini-ADR candidate for Planning next cycle** — flag for cross-template alignment review. No action required from Executor B. |
+| **DD3** | Manual `LoginRequestSchema.safeParse` di `/login` handler (Fastify 4 = AJV-native) | ✅ **ACCEPT for cycle 1** | Fastify 4's `schema:` option expects AJV JSON Schema, not zod objects. Manual `safeParse` + throw `ValidationError` is a legit pattern. `fastify-type-provider-zod` would be a separate package install GAP — **defer to next cycle**, logged below as PM B open observation for future Planning consideration (not blocking T05 APPROVE-PARTIAL). |
+| **DD4** | `@fastify/cookie` pinned `^9.4.0` (not `^11.x`) | ✅ **ACCEPT (forced)** | `^11.x` requires Fastify `^5`; this repo is on Fastify `^4.28.1` per `package.json:45`. Version pinning correct. Recorded inline in `chore(deps)` commit body (`10d8813`). |
+| **DD5** | TokenIssuer internal seam, NO hex port | ✅ **ACCEPT (re-affirm — already approved in Q-B-01 GAP #5)** | ADR-0001 alignment: `@fastify/jwt` is framework-stack pure-in-process crypto (sibling cors/helmet), not external IO. Hash gets a port (lib swap + test seam justified); JWT lib swap is hypothetical and `fastify.jwt.sign/verify` decorator already provides the test seam. Asymmetric port design ratified. |
+
+**All 5 DDs ACCEPT. No rework required.**
+
+---
+
+**4 pre-existing Slot A foundation gaps surfaced by Executor B during T05 impl** → **logged as `Q-B-02`** in §3 below
+
+These are NOT Executor B regressions. They are Slot A territory items that Executor B workaround sensibly for cycle 1 unit-only scope. Surface untuk Slot A onboarding next cycle via Parent PM coord (`PARENT §10`).
+
+- **(a)** `jest.config.ts` needs `ts-node` (devDep absent) — Executor workaround: `jest.config.json` + `--config jest.config.json` flag in `package.json` test scripts. Clean migration path: when Slot A installs ts-node OR migrates jest config to `.cjs`, the JSON + flag removable cleanly.
+- **(b)** `src/core/prisma/prisma-client.ts` exports `{}` placeholder — Executor workaround: entrypoint cast `db as unknown as PrismaClient` with `TODO(slot-A)` marker at `entrypoints/api.ts:62`. Auth typechecks; runtime needs Slot A's T02 to ship real PrismaClient.
+- **(c)** `.eslintrc.cjs` lacks `no-restricted-imports: off` override for `src/entrypoints/*.ts` — Executor workaround: inline `// eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary` at `entrypoints/api.ts:21`. Slot A territory to bump to per-file override.
+- **(d)** `src/plugins/error-handler.plugin.ts` doesn't exist — Executor workaround: inline `fastify.setErrorHandler` mapping `AppError → reply.code(err.statusCode)` at `entrypoints/api.ts:36` with `TODO(slot-A)` marker.
+
+All 4 = sound workarounds for cycle 1 unit-only. PM B request Parent PM coord via PARENT §10 row (Parent PM authority; PM B raise via PARENT §3b Q-B-02 + roll-up at PARENT §2). **No PO action needed**.
+
+---
+
+**`hashToken()` additive-touch consolidation note**
+
+Executor B added `hashToken(plaintext: string): string` export to `src/shared/utils/crypto.ts:48-49` (12 lines added including doc + `import { createHash } from 'node:crypto'`). Conditions from FULL-ACK GAP #3 verified:
+- ✅ Additive-only (no signature change to existing `encrypt`/`decrypt`/`encryptDsn`/`decryptDsn` stubs)
+- ✅ No new dep (Node built-in `node:crypto`)
+- ✅ Documented in SUBMIT Notes #6
+
+Cross-team additive-touch will be flagged to Parent PM via §2 roll-up for consolidation at PARENT §10 (Parent PM authority).
+
+---
+
+**Conditions for PARTIAL → FULL upgrade**
+
+T05 stays **APPROVE-PARTIAL** until ALL of:
+1. Slot A T02 (initial Prisma migration) APPROVED + `prisma migrate dev` applied locally
+2. Executor B re-opens `auth.repository.integration.test.ts` — replaces 10 `it.todo()` with real testcontainers Postgres assertions per `docs/TESTING.md §5`
+3. PM B re-validate full integration suite green + repo coverage ≥ 80% line per `TESTING.md §9` floor
+4. Drift scan re-run clean across `auth.repository.ts`
+5. Re-issue VERDICT as **`APPROVE (full)`** with new sub-block under this SUBMIT
+
+Branch `feat/auth-core` stays open (no merge to `main`) until full APPROVE. Hygiene rationale: integration coverage gap + Slot A foundation workarounds (Q-B-02 a-d) should both clear before merge.
+
+---
+
+**Sequence next (PM B decision per FULL-ACK convention)**
+
+Per ASSIGNMENT §"Sequence + cycle constraint" + PARENT §10 cycle-1 sequence: **T05 → T06 → T11 → T07**.
+
+Now that T05 APPROVE-PARTIAL is issued, two options for Executor B's next move:
+
+- **Option A — Pickup T06 now** (recommended): T06 is `READY-PARTIAL (unit-only)` per PARENT §1 + §8. T06 scope (`/api/auth/me` family + `must_rotate_password` per-request gate plugin) builds on T05's session lookup machinery — momentum + freshly-loaded mental model favor continuing. Same single-dev cycle, same foundation gaps already surfaced (Executor B can reuse Q-B-02 workarounds; no fresh blockers expected). T06 SUBMIT can land in next cycle window; T05 PARTIAL→FULL upgrade waits for T02 anyway.
+- **Option B — Hold sampai T02 ships, then re-open T05 for FULL APPROVE first**: pure-sequence discipline but burns Executor B idle cycles since T02 is Slot A territory and PARKED. Unfavorable.
+
+**PM B ruling: Option A (pickup T06)**. Executor B may self-select T06 from §8 queue per `EXECUTOR-PROTOCOL §4.1` self-select clause. PM B akan post ASSIGNMENT T06 block separately when Executor signals start; OR Executor B can post `ASSIGNMENT T06 — claimed by exec-B` self-claim per protocol, and PM B will append ACK/PLAN cycle.
+
+---
+
+**Roll-up + cross-references posted**:
+- `PM-STATUS-B.md §1` task tracker row T05 → status flag flipped to `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)`
+- `PM-STATUS-B.md §3` Q-B-02 row appended (4-gap consolidation, Slot A territory)
+- `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` APPROVE entry format + Q-B-02 mention)
+
+**JANGAN diff-merge ke `main`** — branch `feat/auth-core` stay until full APPROVE.
+
+PM B exits to **wait-mode**: next event is either (a) Executor B claims T06 (post new ASSIGNMENT sub-block under §2 — append-only), or (b) Slot A unparks + T02 lands → PM B re-opens T05 for PARTIAL→FULL upgrade cycle.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
@@ -710,7 +846,8 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 
 | ID            | Question | Source         | Status | Resolution |
 | ------------- | -------- | -------------- | ------ | ---------- |
-| Q-B-01        | Bundled blocker for T05 coding-start: (a) `argon2 ^0.41.x` install (preferred per OWASP 2024 + `01-auth-identity §5`) or `bcrypt` fallback (per `SECURITY.md §2` baseline); (b) `@fastify/cookie ^9.x` install (required by `@fastify/jwt` cookie reads — hand-roll fallback is high-friction); (c) `JWT_ACCESS_TTL` default `'8h' → '15m'` in `src/core/config/env.ts:37` (touches Slot A canonical domain — needs Slot A coord clearance + doc-sync decision between `SECURITY.md §2` floor vs `01-auth-identity §3` ratified 15-min). | Executor B PLAN T05 attempt 1 GAPs #1+#2+#4 (PM-STATUS-B.md §2 lines 219-222) | **open · escalated to Parent PM** | Awaiting PO ruling. PM B mirror to `PARENT §3b` package-question (deps primary) + cross-ref §3c for TTL config touch. Roll-up posted to PARENT §2. |
+| Q-B-01        | Bundled blocker for T05 coding-start: (a) `argon2 ^0.41.x` install (preferred per OWASP 2024 + `01-auth-identity §5`) or `bcrypt` fallback (per `SECURITY.md §2` baseline); (b) `@fastify/cookie ^9.x` install (required by `@fastify/jwt` cookie reads — hand-roll fallback is high-friction); (c) `JWT_ACCESS_TTL` default `'8h' → '15m'` in `src/core/config/env.ts:37` (touches Slot A canonical domain — needs Slot A coord clearance + doc-sync decision between `SECURITY.md §2` floor vs `01-auth-identity §3` ratified 15-min). | Executor B PLAN T05 attempt 1 GAPs #1+#2+#4 (PM-STATUS-B.md §2 lines 219-222) | **RESOLVED 2026-06-29 by PO** | PO approved all 3 sub-items (PARENT §4-D02/D03/D04). `docs/SECURITY.md §2` doc-sync edit by Parent PM (lines 25-26). T05 PLAN FULL-ACKED; SUBMIT delivered cycle 2 with all 3 deviations applied. |
+| Q-B-02        | 4 pre-existing Slot A foundation gaps surfaced by Executor B during T05 impl (cycle 2, 2026-06-29): (a) `jest.config.ts` needs `ts-node` (devDep absent) — Executor workaround: `jest.config.json` + `--config` flag; (b) `src/core/prisma/prisma-client.ts` exports `{}` placeholder — Executor workaround: entrypoint cast `db as unknown as PrismaClient` with `TODO(slot-A)`; (c) `.eslintrc.cjs` lacks `no-restricted-imports` off-override for `src/entrypoints/*.ts` — Executor workaround: inline `eslint-disable-next-line` di `entrypoints/api.ts:21`; (d) `src/plugins/error-handler.plugin.ts` doesn't exist — Executor workaround: inline `setErrorHandler` mapping `AppError → reply.code(err.statusCode)` di `entrypoints/api.ts:36` with `TODO(slot-A)`. **Also noted**: Yarn cache (~22 GiB) untouched on host — unused (repo is pnpm); future cleanup ask if disk pressure returns (not a blocker now per §6 ENOSPC entry update). | Executor B SUBMIT T05 Notes #1 (cycle 2, PM-STATUS-B.md §2) | **open · cross-dev coord (Slot A territory; no PO action needed)** | Surface untuk Slot A onboarding next cycle via Parent PM coord. PM B request Parent PM consolidation at `PARENT §10` cross-dev coord row (Parent PM authority). All 4 workarounds sound for cycle-1 unit-only scope; do not block T05 APPROVE-PARTIAL. Roll-up to PARENT §2 mentions Q-B-02 for Parent PM pickup. |
 
 ---
 
@@ -779,6 +916,16 @@ QOOMA BE B (Nanak) — Standup — H{N}/{total}
 **Lesson**: at session-start gate, if baseline `make check` is environmentally blocked, Executor MAY proceed to PLAN authoring but **MUST** flag the blocker in PLAN body (Executor B did — PLAN line 175-176 + 272). PM B accepts PLAN on textual merit; ENOSPC cleanup is owner's local-env concern.
 
 ---
+
+#### 2026-06-29 cycle 2 — Resolution: ENOSPC cleared via `npm cache clean --force` (reclaimed ~5.3 GiB; 1.3 → 8.4 GiB free)
+
+**Reported by**: Executor B in SUBMIT T05 attempt 1 Notes #8 (cycle 2, PM-STATUS-B.md §2).
+
+**What was reclaimed**: `npm cache` (~5.3 GiB) — host disk back above 5 GiB floor before any `pnpm add` invocation (T05 dep installs argon2 + @fastify/cookie executed cleanly post-cleanup).
+
+**Untouched**: Yarn cache (~22 GiB) — repo is pnpm-managed; left for owner's discretion. Logged at Q-B-02 (§3) as future cleanup ask if disk pressure returns.
+
+**Lesson update**: `npm cache clean --force` is sufficient for typical Node-monorepo dev pressure; only escalate Yarn cache cleanup when sub-5-GiB recurs.
 
 #### 2026-06-29 cycle 2 — Retry log: still ENOSPC at impl-start pre-flight (HOLD on T05 coding)
 
