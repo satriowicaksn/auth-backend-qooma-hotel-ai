@@ -24,6 +24,8 @@ import { AuthRepository } from '@modules/auth/auth.repository.js';
 import { authRoutes } from '@modules/auth/auth.routes.js';
 import { AuthService } from '@modules/auth/auth.service.js';
 import { FastifyJwtTokenIssuer } from '@modules/auth/auth.token-issuer.js';
+import { registerMustRotatePasswordGate } from '@plugins/must-rotate-password.plugin.js';
+
 // Side-effect: pull Fastify augmentations (fastify.services, fastify.appConfig, cookie + jwt).
 import '@shared/types/fastify-augmentation.js';
 
@@ -68,16 +70,24 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // currently returns a placeholder until Slot A's T02 foundation lands; cast
   // keeps wiring type-correct so auth surface compiles ahead of foundation.
   const prisma = db as unknown as PrismaClient;
+  const authRepo = new AuthRepository(prisma);
+  const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
 
   const authService = new AuthService(
-    new AuthRepository(prisma),
+    authRepo,
     new Argon2Hasher(),
-    new FastifyJwtTokenIssuer(fastify),
+    tokenIssuer,
     config,
     logger,
   );
 
+  fastify.decorate('tokenIssuer', tokenIssuer);
   fastify.decorate('services', { auth: authService });
+
+  // Register the must-rotate-password gate after JWT plugin + tokenIssuer
+  // decoration, before any route registration so it applies to every
+  // route via the root-instance `preHandler` hook.
+  registerMustRotatePasswordGate(fastify, { repo: authRepo });
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
 
