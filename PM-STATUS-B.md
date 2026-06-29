@@ -922,6 +922,130 @@ Executor B picks path di PLAN (see Open Item #3 below). Recommend `src/plugins/`
 
 Awaiting Executor B PLAN T06 attempt 1.
 
+#### PLAN T06 — exec-B (Nanak) at cycle 3 (2026-06-29) attempt 1
+
+**Scope recap**
+
+Extend `src/modules/auth/` (existing T05 module on `feat/auth-core` branch) with 3 new endpoints (`GET /api/auth/me`, `PATCH /api/auth/me`, `POST /api/auth/me/password`) + a cross-cutting `must-rotate-password` Fastify plugin that returns `403 PASSWORD_ROTATION_REQUIRED` for non-allow-list paths when `users.must_rotate_password = true`. Reuse T05 building blocks (`PasswordHasherPort` / `Argon2Hasher` / `TokenIssuer` / `AuthRepository`) — no new ports, no new adapters, no new ext deps. Extend `AuthRepository` with 4 read/write methods (`findUserById`, `updatePassword`, `updateLanguage`, `rotateCsrfToken`) + add 1 method for the rotation-policy session sweep (`revokeAllOtherSessions`). Extend `AuthService` with 3 orchestration methods (`getMe`, `updateMeLanguage`, `rotatePassword`). Add 1 new file (`src/plugins/must-rotate-password.plugin.ts`) for the cross-cutting gate. Wire plugin in `entrypoints/api.ts` after `@fastify/jwt`, before route registrations. Unit tests extend the 4 existing T05 test files + 1 new plugin test file. Integration tests stay as `it.todo()` placeholders (T02 deferral, same APPROVE-PARTIAL convention as T05). `make check` green prerequisite.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+
+- Identity confirmed: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓ (auto-load)
+- Task spec read: `MVP-AUTH-FIRST.md §1` rows 2+3 + `§4.2`; `01-auth-identity §1.1` lines 54-92; `SECURITY.md §2.4` (password policy: min 12 + ≥1 digit + ≥1 symbol)
+- Parent docs spot-read: `CLAUDE.md §4-§6, §8`; `docs/MODULE_TEMPLATE.md §1, §3`; `docs/decisions/0001-hexagonal-disiplin.md` (middleware/plugin ≠ port); `docs/TESTING.md §4, §9` (mock port + mock repo instance; auth=critical 90% target); `PROJECT_STRUCTURE.md §src/plugins/` (cross-cutting Fastify plugin location); T05 patterns in current `src/modules/auth/*` (on `feat/auth-core` branch); existing `prisma/schema.prisma` User/Session columns
+- Dependencies: T05 `APPROVE-PARTIAL` confirmed (PM B VERDICT cycle 2). T06 stacks on `feat/auth-core` branch. Q-B-02 foundation gaps still parked — reuse T05 workarounds (jest.config.json + Prisma cast + eslint-disable on adapter import + inline setErrorHandler). No fresh blockers expected.
+- `make typecheck` clean: ✓ on `main` baseline (verified mid-session by hopping to feat/auth-core; will re-verify post-checkout). Codebase on main is the pre-T05-merge state since T05 not yet merged; will checkout `feat/auth-core` post-ACK and re-baseline there.
+- `make lint` clean: same as above, ✓ on T05 branch
+- Scaffolder risk: **none** — no `pnpm create` / `prisma init` / scaffolder planned. **No new package install needed** (argon2, @fastify/cookie, @fastify/jwt, @fastify/rate-limit, zod all present in `package.json` post-T05).
+
+**Files to create** (2 new)
+
+```
+src/plugins/must-rotate-password.plugin.ts                   NEW (cross-cutting gate)
+src/modules/auth/__tests__/must-rotate-password.plugin.test.ts  NEW (plugin unit tests)
+```
+
+Optional 3rd new file if symbol set is non-trivial:
+
+```
+src/modules/auth/auth.password-policy.ts                     NEW (regex predicates + error mapper, isolated for clean unit-test)
+```
+
+Executor will decide at code-time whether to inline policy in `auth.schema.ts` (smaller change) or hoist to `auth.password-policy.ts` (better test isolation). PLAN baseline: **inline in schema** (one fewer file).
+
+**Files to modify** (~9 EDIT)
+
+Existing T05 surface (extended, additive):
+- `src/modules/auth/auth.schema.ts` — add `PatchMeRequestSchema` (strict, `language` only) + `RotatePasswordRequestSchema` (current + new with rule-by-rule zod refine) + `MeResponseSchema` (alias/reuse of `LoginResponseSchema`) + `PasswordChangeResponseSchema` (`{ success: literal(true) }`)
+- `src/modules/auth/auth.types.ts` — add `PasswordPolicyViolation` discriminated union (`min_length` | `missing_digit` | `missing_symbol`) for granular ValidationError details (or fold into ValidationError details — Executor decides)
+- `src/modules/auth/auth.service.ts` — add `getMe(claims)` + `updateMeLanguage(claims, language)` + `rotatePassword(claims, current, new)` methods
+- `src/modules/auth/auth.repository.ts` — add `findUserById` + `updatePassword(userId, newHash)` (atomic: also `must_rotate_password=false`) + `updateLanguage(userId, lang)` + `rotateCsrfToken(sessionId, newToken)` + `revokeAllOtherSessions(userId, exceptSessionId)` (per Open Item #4 decision below)
+- `src/modules/auth/auth.routes.ts` — register `GET /me`, `PATCH /me`, `POST /me/password` handlers. JWT-context helper inlined here (per Open Item #1 decision)
+- `src/modules/auth/__tests__/auth.service.test.ts` — extend with `describe('AuthService.getMe', ...)` (3 tests) + `describe('AuthService.updateMeLanguage', ...)` (2 tests) + `describe('AuthService.rotatePassword', ...)` (6 tests covering: happy + clears must_rotate; 422 wrong current; 400 weak new per-rule × 3; revokes other sessions ✓)
+- `src/modules/auth/__tests__/auth.routes.test.ts` — extend with 3 new describe blocks (`GET /me`, `PATCH /me`, `POST /me/password`); test JWT cookie present/absent/expired; test 422/400 mappings
+- `src/modules/auth/__tests__/auth.schema.test.ts` — extend with `PatchMeRequestSchema` (3 tests: language ok, extra field rejected, missing rejected) + `RotatePasswordRequestSchema` (4 tests: happy + missing length + missing digit + missing symbol)
+- `src/modules/auth/__tests__/auth.repository.integration.test.ts` — add 5 `it.todo()` entries for new repo methods (findUserById/updatePassword/updateLanguage/rotateCsrfToken/revokeAllOtherSessions)
+
+Cross-cutting wiring:
+- `src/entrypoints/api.ts` — register `mustRotatePasswordPlugin` after `@fastify/jwt` plugin, before `authRoutes`. Order documented inline.
+
+**File count**: **2 CREATE / 9 EDIT** (10 if optional `auth.password-policy.ts` lands).
+
+**Approach**
+
+`GET /me` flow: route handler reads `req.cookies.token` → calls local `extractJwtClaims(fastify, token)` helper (uses `fastify.jwt.verify` — throws `AuthError` on missing/invalid) → returns claims with `sid` → service `getMe(claims)` does `repo.findUserById(claims.sub)` + generates new CSRF (`crypto.randomBytes(32).toString('hex')`) + `repo.rotateCsrfToken(claims.sid, newCsrf)` + returns `{ user: toAuthUser(user), csrfToken }`. Route returns 200 + body. **No new Set-Cookie** (csrfToken in body per spec §1.1; access cookie stays as-is). `PATCH /me` flow: zod-parse body (`PatchMeRequestSchema` strict whitelist `{ language }`) → call `service.updateMeLanguage(claims, body.language)` → service `repo.updateLanguage(claims.sub, language)` returns updated user → route returns `{ user }`. `POST /me/password` flow: zod-parse body → service `rotatePassword(claims, current, new)`: `repo.findUserById(claims.sub)` (404 → unusual since claims came from valid JWT but defensive `AuthError`) → `hasher.verify(user.passwordHash, current)` (false → `AuthError` 422 `BUSINESS_RULE` with code `INVALID_CURRENT_PASSWORD`) → policy-check new (per Open Item #2 — `length>=12 && /[0-9]/ && /[^a-zA-Z0-9]/`) (fail → `ValidationError` 400 with per-rule details `{ failed: ['min_length', 'missing_digit', ...] }`) → `hasher.hash(new)` → `repo.updatePassword(claims.sub, newHash)` (atomic: also `must_rotate_password=false`) → `repo.revokeAllOtherSessions(claims.sub, claims.sid)` (Open Item #4 (ii)) → return `{ success: true }`. **Plugin** (`must-rotate-password.plugin.ts`): registered as `onRequest` hook globally. For each request: if path IN allow-list (`POST /api/auth/me/password` + `GET /api/auth/me` + `POST /api/auth/logout`) → skip (next). Else: read `req.cookies.token` → if absent → skip (no auth context to enforce against; let downstream 401 if needed). Else try `fastify.jwt.verify` → if invalid → skip (defer to existing 401 path). Else valid claims → `repo.findUserById(claims.sub)` → if `user.must_rotate_password === true` → throw `PasswordRotationRequiredError` (new AppError subclass with `statusCode=403, code='PASSWORD_ROTATION_REQUIRED'`). The inline `setErrorHandler` already maps AppError → status code, so the 403 lands cleanly. **TODO(T11)** marker on the inline lookup: when T11 ships tenant-guard plugin populating `request.session`, refactor plugin to read `request.session.user.mustRotatePassword` and remove inline repo lookup. Allow-list matched against `req.routerPath` (Fastify's normalized route path) to avoid path-prefix mismatches. **Test strategy** per T05 pattern: service tests use plain-object mocks cast to `AuthRepository`/`PasswordHasherPort`/`TokenIssuer` (avoids `unbound-method` lint trap); route tests via Fastify `inject()` with mocked service decorator; plugin test instantiates a fastify instance, registers @fastify/cookie + @fastify/jwt + the plugin + 3 dummy routes (one allow-listed, one not, one healthcheck), inject with various flag/cookie combos. Errors: define `PasswordRotationRequiredError extends AppError` in `core/errors/app-errors.ts` — **WAIT**, that's `src/core/` (Slot A territory). Alternative: inline in plugin file (subclass `AppError` locally) OR add to `src/modules/auth/auth.errors.ts` (module-local). Recommend **inline subclass in plugin file** (1-file scope, minimal cross-team touch). Flag for PM B confirmation.
+
+**6 Open items — stance final**
+
+1. ✅ **JWT context extraction at `/me`** → **(a) helper function** `extractJwtClaims(fastify, token)` inlined in `auth.routes.ts` (or its own helper file `auth.jwt-context.ts` if reused across multiple routes/plugin; baseline: inline). Helper reads `fastify.jwt.verify(token)` → returns `JwtClaims`; throws `AuthError` on null/empty/invalid. Plugin file gets its own copy of the helper (or imports from `auth.routes.ts` — Executor decides at code-time; both work since this is module-internal). **TODO(T11)** marker: when T11 lands, replace with `request.session.user` populated by tenant-guard. **Confirm (a).**
+
+2. ✅ **Password rotation policy** → **regex set**: `length >= 12` AND `/[0-9]/` AND `/[^a-zA-Z0-9]/`. Symbol = ANY char outside `[a-zA-Z0-9]` (broad per spec ambiguity; matches OWASP common-policy definition). Encoded in zod via `.refine()` chain — one refine per rule with discriminated error key (`min_length` | `missing_digit` | `missing_symbol`) surfaced via `ValidationError.details`. **Confirm — no GAP raised.**
+
+3. ✅ **Plugin path** → **(a) `src/plugins/must-rotate-password.plugin.ts`** (cross-cutting per `PROJECT_STRUCTURE.md`, siblings: auth-jwt/hmac-validator/rate-limit/cors/helmet etc.). Inline JWT-verify + inline `repo.findUserById` lookup with `TODO(T11)` marker for future refactor to `request.session`. **Confirm (a).**
+
+4. ✅ **Session invalidation post-rotation** → **(ii) revoke ALL OTHER sessions, keep current alive**. Repo method `revokeAllOtherSessions(userId, exceptSessionId)` — single Prisma updateMany with `WHERE userId=$1 AND id<>$2 AND revokedAt IS NULL`. Service calls this after `updatePassword` (separate query, NOT in a transaction since the atomic guarantee is between updatePassword + must_rotate_password=false, not against session revoke; failure to revoke other sessions does NOT block password rotation — log warning, don't throw). **Confirm (ii).**
+
+5. ✅ **Rate limit `POST /me/password`** → **(b) defer** to a separate follow-up task per PM B recommendation. SECURITY.md §6 lockout policy needs DB/Redis state tracking (similar to login lockout deferral in T05). Add explicit "Rate-limit deferred" line to SUBMIT Notes for PM B follow-up backlog. **Confirm (b).**
+
+6. ✅ **Password history table** → **NO schema change**. Verified `prisma/schema.prisma` has no `password_history` model per PM B note. Out of T06 scope; if FE asks later → separate task with Slot A schema migration. **Confirm.**
+
+**Auxiliary design questions (resolved internally, no PM B blocker)**
+
+- **`PasswordRotationRequiredError` AppError subclass placement**: `src/core/errors/app-errors.ts` is Slot A territory; touch risk per Q-B-02 ethos. Options: (i) inline subclass in `src/plugins/must-rotate-password.plugin.ts` (module-internal extends from import); (ii) new `src/modules/auth/auth.errors.ts` (module-scoped); (iii) extend `src/core/errors/app-errors.ts` (Slot A territory). **Intent: (i)** — inline subclass in plugin file. AppError abstract class is importable from `@core/errors/app-errors.js`; defining a 3-line subclass in the plugin file keeps the cross-team touch zero. Flag for PM B confirm — willing to switch to (ii) if PM B prefers module-scoped errors file.
+- **`extractJwtClaims` helper reuse**: For T06, the helper is used by both routes (`GET /me`) and the plugin. Two copies risk drift. Options: (A) export helper from `auth.routes.ts` (touches barrel?) — no, route file isn't barrel-exported; (B) extract to `src/modules/auth/auth.jwt-context.ts` (1 new file); (C) duplicate (2 LOC each). **Intent: (B)** — small dedicated file `auth.jwt-context.ts` exporting `extractJwtClaims(fastify, token | null): JwtClaims` (throws AuthError on null/invalid). One file count up (+1 EDIT becomes +1 CREATE). Adjusts file count: **3 CREATE / 9 EDIT**.
+
+**GAPs / questions (PLAN-blocking)**
+
+- **(none)**. All 6 PM B open items have confirmed stances. Auxiliary design questions (`PasswordRotationRequiredError` placement, `extractJwtClaims` extraction) are intent-stated; PM B may push back at ACK time but they're not blockers.
+- **No package install needed** — argon2, @fastify/cookie, @fastify/jwt, @fastify/rate-limit, zod, winston all in `package.json` post-T05.
+- **No schema change needed** — `prisma/schema.prisma` User/Session columns sufficient (`must_rotate_password` already exists at User row).
+- **No env var addition needed** — no new TTL, no new secret.
+- **No cross-team file touch beyond existing Q-B-02 workarounds** — `src/core/*` untouched, `src/plugins/error-handler.plugin.ts` still absent (inline setErrorHandler in entrypoint still serves), `.eslintrc.cjs` untouched (eslint-disable comment pattern reused).
+
+**Test plan summary (per TESTING.md §4 + §11)**
+
+- `auth.service.test.ts` extensions: ~11 new tests (3 getMe + 2 updateMeLanguage + 6 rotatePassword)
+- `auth.routes.test.ts` extensions: ~9 new tests (3 endpoints × happy + auth/validation paths)
+- `auth.schema.test.ts` extensions: ~7 new tests (3 PatchMe + 4 RotatePassword)
+- `must-rotate-password.plugin.test.ts` (NEW): ~6 tests (flag=false → next; flag=true non-allowlist → 403; flag=true allowlist → next; cookie absent → skip; cookie invalid → skip; routes-decorator path-matching)
+- `auth.repository.integration.test.ts` extensions: ~5 new `it.todo()` placeholders
+- Coverage target per file (T06 scope): line ≥80% floor; 90% on service/routes/schema/plugin
+
+**Security checklist (CLAUDE.md §6 + SECURITY.md)**
+
+- argon2 verify (timing-safe internal) for current password check
+- argon2id hash (T05 default mode) for new password
+- `must_rotate_password=false` cleared atomically in `updatePassword` (single Prisma write)
+- CSRF rotation on `GET /me`: new 32-byte hex per call; old token discarded by session row update
+- No plaintext password logged anywhere (no `req.body` log, even on validation failure)
+- No specifics in wrong-current AuthError message (generic "Invalid current password" — no "user not found"-style information leak)
+- `ValidationError` details on weak new password enumerate per-rule failures (acceptable info disclosure — improves UX, no auth bypass risk)
+- Session sweep post-rotation (Open Item #4 (ii)) — current session continues smoothly; other devices forced re-login (mitigates stolen-device window)
+- Plugin: short-circuit on cookie absent / JWT invalid (don't leak whether user has must_rotate flag via timing); delegate to downstream 401
+
+**Risks + assumptions**
+
+- **Risk**: Plugin inline JWT-verify + repo lookup adds a DB hit per request. Optimization deferred to T11 (`request.session` populated upstream). Acceptable for T06 unit-scope; flag at SUBMIT Notes.
+- **Risk**: `revokeAllOtherSessions` is best-effort post-rotation. If DB hiccup leaves a row unrevoked, user's other-device session keeps the old `passwordHash`-issued JWT alive until natural expiry (max 15min access TTL per D04). Acceptable per OWASP best-practice (rotation forces re-auth on token expiry, not immediately on all devices).
+- **Assumption**: `req.routerPath` is the right path field for allow-list matching in Fastify 4. Will verify at code-time; fallback to `req.url.split('?')[0]` if needed.
+- **Assumption**: `users.must_rotate_password` column exists (verified in `prisma/schema.prisma:88`). No schema migration.
+- **Assumption**: T05's `feat/auth-core` branch is checkout-ready and `make check` green there. Will verify post-ACK with checkout + baseline run.
+
+**ETA**
+
+- PLAN ACK cycle: ~15-30 min wall-time
+- Implementation (3 endpoints + plugin + 5 repo methods + 3 service methods + extractJwtClaims helper + Prisma client cast cleanup if needed): ~2.5-3.5h engineering time
+- Unit tests (service extensions + routes extensions + schema extensions + plugin tests + integration `it.todo` extensions): ~2-3h
+- Self-validate per §4.4 (make check + drift scan + coverage check): ~30-45 min
+- Total wall-time exec: **~5-6.5h from ACK to SUBMIT**, conditional on no surprises during plugin path-matching debugging
+
+**Status: ready-for-ACK. No PLAN-blocking GAPs. All 6 open items have confirmed stances.**
+
+Per PM B branch hygiene rule (this file §7) + cycle-3 directive: PM-STATUS commits land on `main`; impl commits (post-ACK) will land on `feat/auth-core`. **NOT switching branch / NOT touching `src/` until PM B ACK posted.** Will checkout `feat/auth-core` only after ACK.
+
+Awaiting PM B ACK.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
