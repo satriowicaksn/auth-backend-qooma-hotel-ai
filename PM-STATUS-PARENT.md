@@ -65,6 +65,7 @@
 > [YYYY-MM-DD H{N}] [PM <SLOT> <NAME>] <T## status — 1 liner>
 > ```
 
+[2026-06-29 cycle 2] [PM B Nanak] T05 FULL-ACK — PLAN attempt 1 cleared, Executor B IMPL-READY. Implementation start pending ENOSPC host-side cleanup. Next event: SUBMIT block in PM-STATUS-B.md §2.
 [2026-06-29 cycle 1] [PM B Nanak] T05 ESCALATED — PLAN T05 attempt 1 PARTIAL-ACKED (2 GAPs PM-internal-approved); 3 GAPs need PO ruling (deps install: `argon2` + `@fastify/cookie`; TTL change `JWT_ACCESS_TTL '8h'→'15m'` in `core/config/env.ts` touches Slot A). Raised at PARENT §3b Q-B-01. Executor B HOLD on coding.
 
 <!-- TEMPLATE:

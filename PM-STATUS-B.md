@@ -13,8 +13,8 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T05 — Auth core endpoints (login/logout/refresh) · `assigned · BLOCKED-on-Q-B-01 (deps + TTL)` — PARTIAL-ACK posted; Executor B HOLD on coding
-- **Branch**: `feat/auth-core` (deferred — Executor B NOT to create branch until Q-B-01 resolved)
+- **Active task**: T05 — Auth core endpoints (login/logout/refresh) · `T05 IMPL-READY (PO-cleared cycle 1)` — Q-B-01 RESOLVED 2026-06-29 by PO; FULL-ACK posted; Executor B clear to implement (gated only on host ENOSPC cleanup, slot-internal)
+- **Branch**: `feat/auth-core` (Executor B create at first impl commit per CLAUDE.md §12)
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
 - **Single-dev cycle**: hanya Slot B (Nanak) online; T01..T04 (Slot A foundation) `PARKED` — integration test deferred sampai T02 ships.
@@ -27,7 +27,7 @@
 
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · BLOCKED-on-Q-B-01`           | —              | Cycle 1 task #1. PLAN attempt 1 PARTIAL-ACKED 2026-06-29; 2 GAPs PM-internal-approved, 3 escalated as Q-B-01 (deps + TTL). Executor HOLD. |
+| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · READY-PARTIAL (unit scope, PO-cleared per §4-D02/D03/D04)` | —              | Cycle 1 task #1. Q-B-01 **RESOLVED 2026-06-29 by PO**. PLAN attempt 1 FULL-ACKED 2026-06-29; Executor B IMPL-READY pending ENOSPC host cleanup. |
 | T06 | Auth current-user + password rotation gate | `backlog · READY-PARTIAL (unit-only)`    | —              | Cycle 1 task #2 — picks up after T05 APPROVED.                                                         |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
@@ -325,6 +325,87 @@ Awaiting PM B ACK.
 **Re-engage trigger**: ketika Parent PM post Q-B-01 resolution di `PARENT §3b` (per-GAP decision), PM B will append `##### PM B FULL-ACK PLAN T05 attempt 1 — Q-B-01 resolved` sub-block dengan PO-approved options inlined. Executor B then proceeds to coding.
 
 **Next Executor B action**: **HOLD**. Watch §3 for Q-B-01 status updates. Read-only stretch goal allowed.
+
+##### PM B FULL-ACK PLAN T05 attempt 1 — Q-B-01 resolved 2026-06-29 by PO. Executor B clear to implement.
+
+**Verdict**: PLAN T05 attempt 1 FULL-ACKED. All 5 GAPs cleared (2 PM-internal, 3 PO-ratified as `PARENT §4-D02/D03/D04`). Executor B IMPL-READY. ENOSPC host cleanup is the only remaining gate (slot-internal, owner's local-env concern per §6 incident log).
+
+**Cross-references (read-only)**:
+- `PM-STATUS-PARENT.md §3b` Q-B-01 RESOLVED row + Parent PM consolidation (§3b lines 92-115)
+- `PM-STATUS-PARENT.md §3c` Q-PARENT-02 RESOLVED (doc-sync conflict resolved together with Q-B-01(c))
+- `PM-STATUS-PARENT.md §4` deviations §4-D02 (argon2 install), §4-D03 (@fastify/cookie install), §4-D04 (TTL `'8h'→'15m'` + SECURITY.md §2 doc-sync)
+- `PM-STATUS-PARENT.md §1` T05 row status flipped ke `READY-PARTIAL (unit scope, PO-cleared)`
+- `PM-STATUS-PARENT.md §10` rows 533-534 (Q-B-01 RESOLVED cross-dev coord, doc-sync executed)
+- `docs/SECURITY.md §2` lines 25-26 (Parent PM doc-sync edit: 8h floor + auth-spec override note, deviation `§4-D04` cited inline)
+
+**Resolution mapping per GAP**:
+
+- ✅ **GAP T05-#1 — `argon2 ^0.41.x` install** — **APPROVED per PARENT §4-D02**.
+  - Executor B: jalankan `pnpm add argon2` sebagai first impl commit.
+  - Suggested commit message: `chore(deps): add argon2 ^0.41.x per PO ruling Q-B-01(a) / D02`.
+  - Note: argon2id default mode (OWASP 2024 top recommendation). Fallback `bcrypt cost=12` documented at PARENT §4-D02 — same `PasswordHashPort` surface, one-file adapter swap if argon2 native compile ever breaks an arch. **Stick with argon2 unless install fails**; if fail, post `REBUTTAL` di §2 dengan failure log dan request fallback ratification — JANGAN switch unilaterally.
+
+- ✅ **GAP T05-#2 — `@fastify/cookie ^9.x` install** — **APPROVED per PARENT §4-D03**.
+  - Executor B: jalankan `pnpm add @fastify/cookie`.
+  - Suggested commit message: `chore(deps): add @fastify/cookie ^9.x per PO ruling Q-B-01(b) / D03`.
+  - Bundling choice: **Executor decide** — either single `chore(deps): add argon2 + @fastify/cookie` commit referencing `Q-B-01(a)+(b) / §4-D02 + §4-D03` OR two separate commits for atomic-revert ergonomics. Document the chosen granularity di SUBMIT `Notes` section so PM B audit trail is clean.
+
+- ✅ **GAP T05-#3 — `hashToken()` di `src/shared/utils/crypto.ts`** — **APPROVED (PM B internal)**.
+  - Confirmed earlier in PARTIAL-ACK; reaffirming.
+  - **Conditions** (per PM B internal authority):
+    - **Additive-only**: add `hashToken(plaintext: string): string` export using `crypto.createHash('sha256').update(plaintext).digest('hex')`. ZERO modification to existing exports (`encrypt`, `decrypt`, envelope helpers).
+    - **No signature change** to existing functions. Pure append.
+    - **No dependency added** (Node built-in `node:crypto` only).
+  - **Log addition** di `PM-STATUS-B.md §10` (cross-dev coord notes — currently no §10 in this file; if absent, PM B will retro-add §10 at SUBMIT-review time atau log di §6 incidents as additive-cross-touch). Actually `PM-STATUS-B.md` doesn't have a §10 — log di `PM-STATUS-PARENT.md §10` is Parent PM authority. **Revised condition**: Executor B note the `shared/utils/crypto.ts` additive-touch eksplisit di SUBMIT `Files changed` + `Notes` block; PM B akan flag ke Parent PM saat VERDICT untuk consolidation di PARENT §10 kalau perlu.
+
+- ✅ **GAP T05-#4 — `JWT_ACCESS_TTL` default `'8h' → '15m'` di `src/core/config/env.ts:37`** — **APPROVED per PARENT §4-D04**.
+  - Single-line edit only (`z.string().default('8h')` → `z.string().default('15m')`).
+  - **WAJIB inline comment** on the same line atau line above:
+    ```ts
+    JWT_ACCESS_TTL: z.string().default('15m'),  // '15m' override per spec MVP-AUTH-FIRST §3 + §4-D04
+    ```
+  - **JANGAN sentuh `CLAUDE.md §6.4`** — wording "8 jam" tetap karena boilerplate floor untuk service non-auth lain di ekosistem Qooma (per PARENT §4-D04 explicit non-amendment ruling).
+  - **JANGAN sentuh `docs/SECURITY.md`** — Parent PM sudah `docs:` sync edit di §2 (lines 25-26 dengan override note + deviation `§4-D04` reference).
+  - Suggested commit message: `chore(config): JWT_ACCESS_TTL 8h → 15m per PO ruling Q-B-01(c) / D04`.
+
+- ✅ **GAP T05-#5 — NO JWT hex port; internal `TokenIssuer` interface only** — **APPROVED (PM B internal)**.
+  - Confirmed earlier in PARTIAL-ACK; reaffirming.
+  - Asymmetric port design ratified by `ADR-0001 §"Definisi tegas"`: hash gets a port (external lib swap + test seam); JWT lib doesn't (framework-stack plugin sibling cors/helmet, pure in-process crypto).
+  - Implementation: internal `TokenIssuer` interface (sign/verify), thin wrapper in `src/modules/auth/auth.token-issuer.ts` (or inline in `auth.service.ts` — Executor picks at code time). **NOT** under `ports/`, **NOT** under `adapters/`.
+
+**Standing instructions ke Executor B** (codify cycle 1 cadence):
+
+- **Scope tetap unit-only this cycle**. Integration test untuk `auth.repository.integration.test.ts` stays as `it.todo()` placeholders gated on T02 (Slot A migration). PM B akan re-open T05 ASSIGNMENT addendum saat T02 APPROVED.
+- **Suggested commit sequence** (Executor decide final granularity — bundling acceptable bila logical, splitting acceptable bila membaca):
+  1. `chore(deps): argon2 + @fastify/cookie` — bundled OR split per Executor preference
+  2. `chore(config): JWT_ACCESS_TTL 8h → 15m` — single env.ts edit, separate commit
+  3. `feat(auth): module scaffold` — folder tree + barrels (empty stubs OK)
+  4. `feat(auth): zod schemas + types` — `auth.schema.ts` + `auth.types.ts`
+  5. `feat(auth): PasswordHashPort + Argon2Adapter` — port interface + adapter implementation
+  6. `feat(auth): TokenIssuer (internal) + cookie helpers` — JWT seam wrapper + cookie flag helpers
+  7. `feat(auth): service logic (login/logout/refresh)` — `auth.service.ts` orchestration
+  8. `feat(auth): repo (Prisma direct, no port)` — `auth.repository.ts` per ADR-0001
+  9. `feat(auth): route handlers + plugin wiring di entrypoints/api.ts` — `auth.routes.ts` + `api.ts` register
+  10. `test(auth): unit tests (≥80% line, mock port + repo instance)` — `__tests__/*.test.ts` + builders + integration `it.todo()` placeholder
+
+- **`hashToken()` addition di `src/shared/utils/crypto.ts`** — bundle dengan commit (5) atau (6) (whichever ships first need), single additive export.
+
+- **Self-validate per `EXECUTOR-PROTOCOL §4.4` SEBELUM SUBMIT** (mandatory gate):
+  - `make check` HARUS green — full output di SUBMIT (lint + format-check + typecheck + test-unit; NOT test-integration this cycle)
+  - **Drift scan WAJIB zero hits** (per `PM-AGENT §3 Step 2`): no `any` / `console.log/info/debug` / `@ts-ignore` / `throw new Error(` di service / default export di non-entry files / forbidden imports (express/typeorm/moment/node-fetch) / `.skip` test / hardcoded URL / `setTimeout()` job-delay / cross-module internal import / wrap-Prisma interface
+  - **Security floor verify**: refresh token SHA-256-hashed di DB (via new `hashToken()`); no plaintext secret di code; email/phone masked di log via `maskEmail()`; argon2 `verify` (timing-safe internal); JWT signed dengan `JWT_ACCESS_SECRET` from `config` not hardcoded
+  - **Coverage report verify ≥80% line** untuk file yang ditambah (target 90% for `auth.service.ts`/`auth.routes.ts`/`auth.schema.ts` per `docs/TESTING.md §9` auth=critical floor). Record `pnpm test:coverage` output di SUBMIT `Test evidence`.
+
+- **ENOSPC host-side cleanup WAJIB resolved sebelum `pnpm add`**. Kalau masih ENOSPC saat resume:
+  - Post update di `PM-STATUS-B.md §6 incidents` (extend existing 2026-06-29 ENOSPC entry dengan retry log)
+  - HOLD lagi sampai cleared — JANGAN attempt `pnpm add` against full disk (akan corrupt `node_modules` atau `pnpm-lock.yaml`)
+  - Mention attempt di SUBMIT bila masih relevant for audit trail
+
+- **Branch**: `feat/auth-core` per `EXECUTOR-PROTOCOL §0.6` (WIP push acceptable ke `feat/auth-core-wip` bila session ends mid-task per protocol).
+- **Commit hygiene**: pakai `make commit MSG="..."` (auto lint + typecheck + format-check pre-commit per `CLAUDE.md §12`). NO `--no-verify` skip per CLAUDE.md.
+- **Post SUBMIT block** ke `PM-STATUS-B.md §2` (append below this FULL-ACK block, JANGAN edit existing blocks) setelah self-validate green. Format per template lines 326-352 (`#### SUBMIT T05 — exec-B (Nanak) at <cycle> (attempt 1)`).
+
+**PM B state**: **WAIT-MODE for SUBMIT**. No further action di §2 dari PM B side sampai Executor posts SUBMIT. Standby for VERDICT cycle.
 
 <!--
 TEMPLATE — copy untuk task baru:
