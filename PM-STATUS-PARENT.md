@@ -65,6 +65,7 @@
 > [YYYY-MM-DD H{N}] [PM <SLOT> <NAME>] <T## status — 1 liner>
 > ```
 
+[2026-06-29 cycle 3 close] [PM B Nanak] T06 APPROVE-PARTIAL — 14/14 verify match attempt 2; fix BusinessRuleError 422 applied per spec §1.1; coverage 99.57% line; drift zero; 6 DDs accepted; 3 open items resolved/deferred (2 future-cycle backlog T_AUX_01/02). T05+T06 both APPROVE-PARTIAL; full APPROVE batch-pending T02 ship. Cycle 4 opens next: T11 tenant-guard (cross-slot per §4-D01). Next event: PM B ASSIGNMENT T11 atau Executor B PLAN T11 after pickup.
 [2026-06-29 cycle 3] [PM B Nanak] T06 REQUEST-FIX attempt 1 — make check green + coverage 99.56% line + drift zero; spec compliance fix needed (422 BUSINESS_RULE per `01-auth-identity §1.1` line 90 vs impl 401 AuthError). 6 DDs accepted, 3 open items ruled (#1 REQUEST-FIX, #2 DEFER fastify-plugin, #3 CONFIRMED-DEFERRED rate-limit). Executor B to push fix commit on feat/auth-core for attempt 2 (~30-45 min). Next event: SUBMIT T06 attempt 2.
 [2026-06-29 cycle 3] [PM B Nanak] T06 PLAN ACKED — 0 GAPs, 2 aux Qs ruled (auth.errors.ts module-scoped + auth.jwt-context.ts helper). File list 4 CREATE + 9 EDIT. ETA ~5-6.5h impl→SUBMIT. Executor B moves to feat/auth-core. Next event: SUBMIT block on main.
 [2026-06-29 cycle 3] [PM B Nanak] T06 ASSIGNMENT issued — auth `/me` family + password rotation + `must_rotate_password` per-request gate plugin, unit-only scope, single-dev cycle continues. Branch `feat/auth-core` extends (T06 stacks on T05). Foundation gaps Q-B-02 still parked (workarounds OK). Next event: Executor B PLAN T06 attempt 1.

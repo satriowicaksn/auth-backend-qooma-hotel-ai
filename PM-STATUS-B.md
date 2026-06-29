@@ -13,10 +13,11 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T06 — Auth current-user + password rotation gate · `assigned · REQUEST-FIX attempt 1 (spec compliance pending — wrong-current-password 422 vs impl 401)`. VERDICT posted cycle 3 (2026-06-29) attempt 1. 14/14 quality verifications match; 6 DDs ACCEPT; single fix required. Estimate 30-45 min impl → SUBMIT attempt 2.
-- **T05 status**: `APPROVE-PARTIAL` (cycle 2 unit-scope; full APPROVE held for T02) — re-open trigger waits for Slot A.
-- **Branch**: `feat/auth-core` (10 impl commits ahead of `main` post-rebase) — T06 stacks on T05 same branch.
-- **Cycle 3 sequence (PO-ratified)**: T06 → T11 → T07. Single-dev cycle still active (Slot A/C PARKED).
+- **T06 status**: `APPROVE-PARTIAL (cycle 3 close; full APPROVE held for T02 ship)` — VERDICT attempt 2 posted 2026-06-29. 14/14 quality verifications match; row #1 spec-compliance flipped ⛔→✅; fix delta clean (BusinessRuleError 422 per spec §1.1).
+- **T05 status**: `APPROVE-PARTIAL` (cycle 2 close) — re-open trigger waits for Slot A T02; will batch-upgrade with T06 to FULL APPROVE.
+- **Next focus**: **T11 pickup (cycle 4)** — tenant-guard middleware, cross-slot execution per `PARENT §4-D01` deviation (Slot A canonical owner; Slot B executes this cycle only). Status `READY-FULL` per PARENT §1.
+- **Cycle 4 sequence**: T11 → T07. Single-dev cycle still active (Slot A/C still PARKED). Branch `feat/auth-core` continues.
+- **Branch**: `feat/auth-core` (20 impl commits ahead of `main` post-fix-rebase) — T11 will stack on T06.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -31,7 +32,7 @@
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
-| T06 | Auth current-user + password rotation gate | `assigned · REQUEST-FIX attempt 1 (spec compliance pending)` | PM B — cycle 3 (2026-06-29) attempt 1 | Cycle 3 task. VERDICT attempt 1 → REQUEST-FIX: spec 422 BUSINESS_RULE vs impl 401 AuthError on wrong-current-password (`01-auth-identity §1.1` line 90 canonical). Quality + DoD + drift + security all green; 6 DDs ACCEPT. Single fix → SUBMIT attempt 2. |
+| T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4 deviation) | `backlog · READY-FULL`                   | —              | Cycle 1 task #3. Ownership of record = Slot A; execution by Slot B this cycle only.                    |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
 
@@ -1509,6 +1510,93 @@ $ grep -rnE "(: any[^a-z]| any[^a-z_])|console\.(log|info)|@ts-ignore|@ts-nochec
 **Pre-existing Q-B-02 workarounds reused verbatim** — no new workarounds, no new GAPs, no new package install asks.
 
 Requesting PM B VERDICT (expected: APPROVE-PARTIAL).
+
+##### VERDICT T06 attempt 2 — APPROVE-PARTIAL (cycle 3 close; full APPROVE held for T02 ship) by PM B (cycle 3, 2026-06-29)
+
+**Outcome**: ✅ **APPROVE-PARTIAL**. Fix delta clean (1 class + 1 service line + 2 test files); 14/14 quality verifications match attempt 2; row #1 spec-compliance flipped from ⛔ → ✅. T06 unit-scope complete for cycle 3. Full APPROVE held alongside T05 until T02 ships (Slot A foundation unparks).
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — re-run lighter on fix delta)**
+
+| Check | Executor klaim | PM B independent rerun | Status |
+|---|---|---|---|
+| `make check` exit code | exit 0 green | rerun via `nvm use 20 && make check` → exit 0 (lint 0/0, format, typecheck, test-unit all PASS) | ✅ MATCH |
+| Test counts (unchanged from attempt 1) | 73 pass + 16 todo + 2 skipped | identical: `Tests: 2 skipped, 16 todo, 73 passed, 91 total` | ✅ MATCH |
+| Coverage overall line | 99.57% (slight bump from 99.56% attempt 1) | exact: 98.76% stmt / 85% branch / 100% funcs / **99.57%** lines | ✅ MATCH |
+| `auth.errors.ts` coverage post-fix | 100% all (BusinessRuleError exercised by existing wrong-current test) | confirmed: 100/100/100/100 | ✅ MATCH |
+| `auth.service.ts` coverage | 100% line / 95% branch (uncovered line shift 210→214 from new throw + import) | confirmed: 100/95/100/100 uncovered line 214 | ✅ MATCH |
+| `BusinessRuleError` class definition | `extends AppError; statusCode=422; code='BUSINESS_RULE'` | confirmed `auth.errors.ts:18-21` (3-line class, inherits AppError abstract; no constructor override needed) | ✅ MATCH |
+| Barrel re-export check (DD5 consistency) | NOT re-exported in `index.ts` | confirmed: `grep "BusinessRuleError\|auth.errors" src/modules/auth/index.ts` → ZERO hits | ✅ MATCH (internal-only pattern preserved) |
+| Service swap target | line ~184/188 swap `AuthError` → `BusinessRuleError` for wrong-current-password | confirmed `auth.service.ts:188 throw new BusinessRuleError('Invalid current password')` + import added line 12 | ✅ MATCH |
+| AuthError preserved elsewhere | other auth paths (login wrong-cred, refresh paths, missing token) unchanged | confirmed `auth.service.ts` still uses AuthError at lines 61, 71, 116, 121, 126, 156, 175 (login/refresh paths — correct semantics: 401 = not authenticated) | ✅ MATCH |
+| Test assertion update — service test | `BusinessRuleError` expected | confirmed `auth.service.test.ts:9 import` + `:384 test name 'should throw BusinessRuleError (422) when current password verify fails per spec §1.1'` + `:391 rejects.toThrow(BusinessRuleError)` | ✅ MATCH |
+| Test assertion update — routes test | status 422 + code 'BUSINESS_RULE' | confirmed `auth.routes.test.ts:8 import` + `:328 test name '422 BUSINESS_RULE when service throws BusinessRuleError on wrong current (spec §1.1)'` + `:331 mockRejectedValue(new BusinessRuleError(...))` + `:341 expect(res.statusCode).toBe(422)` + `:342 error.code = 'BUSINESS_RULE'` | ✅ MATCH |
+| Old 401/AUTH_ERROR assertions on wrong-current REMOVED | zero hits expected | confirmed `grep -nE "401.*[Cc]urrent\|AUTH_ERROR.*[Cc]urrent\|[Cc]urrent.*401\|[Cc]urrent.*AUTH_ERROR" auth.routes.test.ts auth.service.test.ts` → ZERO hits | ✅ MATCH |
+| Drift scan fix files | zero hits | same 1 false-positive (`auth.errors.ts:2 // any AppError` comment prose, NOT type annotation). Zero actual drift. | ✅ MATCH |
+| Row #1 flip status from attempt 1 | ⛔ → ✅ | spec compliance confirmed (422 BUSINESS_RULE per `01-auth-identity §1.1` line 90) | ✅ FLIPPED |
+
+`make check` excerpt (PM B rerun, abbreviated):
+```
+> @qooma/auth-backend@0.1.0 lint    → PASS (0/0 with --max-warnings 0)
+> @qooma/auth-backend@0.1.0 format:check → All matched files use Prettier
+> @qooma/auth-backend@0.1.0 typecheck → tsc --noEmit clean
+> @qooma/auth-backend@0.1.0 test:unit → Tests: 2 skipped, 16 todo, 73 passed, 91 total | Time: 0.762 s
+```
+
+**14/14 verification checks PASS independently on attempt 2. Row #1 flipped from ⛔ REQUEST-FIX to ✅ RESOLVED.**
+
+---
+
+**6 Design Decision rulings — UNCHANGED from attempt 1 (all ACCEPT)**
+
+No new code-time design decisions emerged from the fix (single-target swap of AuthError → BusinessRuleError; new error class follows the established `PasswordRotationRequiredError` pattern in `auth.errors.ts`). DDs 1-6 (plugin factory shape, preHandler hook, tokenIssuer decorator, jest collectCoverageFrom expansion, AUX-Q1 module-scoped errors home, AUX-Q2 shared jwt-context helper) all stand as-ruled.
+
+---
+
+**3 Open Item rulings — closed/deferred**
+
+| # | Topic | Final ruling |
+|---|---|---|
+| **#1** | Spec status code 422 vs 401 (wrong-current-password) | ✅ **RESOLVED** — REQUEST-FIX applied per attempt 1 VERDICT; `BusinessRuleError 422` lands cleanly with 1 class + 1 service line + 2 test file updates. Coverage holds. |
+| **#2** | `fastify-plugin` dep follow-up | 📋 **DEFER** — cycle-4+ backlog `T_AUX_02` (paired with T11 plugin design next cycle). Logged at `PM-STATUS-B.md §8 future-cycle backlog`. No PO action. |
+| **#3** | Rate-limit lockout (T05 + T06 shared deferral) | 📋 **CONFIRMED-DEFERRED** — cycle-4+ backlog `T_AUX_01`. Needs Redis lockout state machine; pairs with T05 login rate-limit. No PO action. |
+
+---
+
+**Conditions for APPROVE-PARTIAL → FULL APPROVE upgrade (batch with T05)**
+
+Both T05 and T06 stay APPROVE-PARTIAL until ALL of:
+1. Slot A T02 (initial Prisma migration) APPROVED + `prisma migrate dev` applied locally
+2. Executor B re-opens BOTH `auth.repository.integration.test.ts` placeholders (T05 had 10 `it.todo` + T06 added 5 = 15 total to fill in with testcontainers Postgres assertions per `docs/TESTING.md §5`)
+3. PM B re-validate full integration suite green + repo coverage ≥ 80% line per TESTING.md §9
+4. Drift re-scan clean across `auth.repository.ts` (now extended with T06's `findUserById`/`updateUserPassword`/`updateUserLanguage`/`rotateCsrfToken`/`revokeAllOtherSessions` methods)
+5. Re-issue VERDICT as **`APPROVE (full)`** — single block covering both T05 and T06 batch
+6. Branch `feat/auth-core` then merges to `main` (no merge until full APPROVE)
+
+---
+
+**Cycle 3 close — sequence next**
+
+Per ASSIGNMENT T05/T06 + PARENT §10 cycle-1 sequence: **T05 → T06 → T11 → T07**.
+
+- T05: APPROVE-PARTIAL (cycle 2 close) ✓
+- T06: APPROVE-PARTIAL (cycle 3 close) ✓ — this VERDICT
+- **T11**: tenant-guard middleware — Slot A canonical, Slot B execution per `PARENT §4-D01` deviation; status `READY-FULL` per PARENT §1; **CYCLE 4 PICKUP**
+- T07: per-hotel users CRUD — gated by T11 ship; CYCLE 5 PICKUP
+
+**Executor B**: clear to pick T11 in cycle 4. PM B akan author ASSIGNMENT T11 (cycle 4 opening) — either same session continuation OR fresh cycle window (see PM B recommendation in brief).
+
+**Branch `feat/auth-core` stays open** — no merge to `main` until T02 lands and T05+T06+T11 batch reach full APPROVE.
+
+---
+
+**Roll-up + cross-references**:
+- `PM-STATUS-B.md §1` task tracker row T06 → status flag `approved-partial · cycle 3 close · full APPROVE held (T02)`
+- `PM-STATUS-B.md §0` current focus → next focus T11 cycle 4 (cross-slot per §4-D01)
+- `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` APPROVE entry format)
+
+PM B exits to **wait-mode for cycle-4 opening**: either (a) PM B authors ASSIGNMENT T11 sub-block (after PM/user signal), or (b) Slot A unparks + T02 lands → PM B re-opens T05+T06 batch for PARTIAL→FULL upgrade cycle (whichever first).
 
 <!--
 TEMPLATE — copy untuk task baru:
