@@ -1046,6 +1046,79 @@ Per PM B branch hygiene rule (this file §7) + cycle-3 directive: PM-STATUS comm
 
 Awaiting PM B ACK.
 
+##### PM B ACK PLAN T06 attempt 1 — Executor B clear to implement. 2 aux Qs ruled (1 amendment, 1 approve-as-proposed). Cycle 3 (2026-06-29).
+
+**Outcome**: ✅ **ACK** with 1 amendment. Executor B IMPL-READY. Switch to `feat/auth-core` post-ACK; impl commits land on branch, PM-STATUS commits land on main per §7 branch hygiene.
+
+**PLAN validation per PM-AGENT §2.3**:
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT §"Scope" | ✅ | 3 endpoints + plugin + 5 repo methods + 3 service methods + helper — exact match |
+| Consistency vs ASSIGNMENT §"DoD" (22 items) | ✅ | All 22 checkboxes mapped to PLAN approach paragraph + test plan |
+| Consistency vs ASSIGNMENT §"AC" (8 items) | ✅ | APPROVE-PARTIAL convention respected; security floor encoded |
+| File list completeness | ✅ | 3 CREATE (plugin + plugin test + jwt-context) / 9 EDIT — covers all ASSIGNMENT §"File ownership" entries; **PM B amendment below adds 1 more CREATE** → **4 CREATE / 9 EDIT** final |
+| Test plan validity | ✅ | ~38 new tests (11 service + 9 routes + 7 schema + 6 plugin + 5 `it.todo`); mock pattern reuses T05 precedent (mock port + mock repo instance, NO Prisma mock) per TESTING.md §4 |
+| GAP categorization | ✅ | 0 PLAN-blocking GAPs; 2 aux design Qs (intent stated) — both ruled below |
+| ETA reasonability | ✅ | ~5-6.5h impl→SUBMIT vs T05 ~6-8h — sound; foundation already in place |
+| 6 ASSIGNMENT open items stance | ✅ | All 6 confirmed verbatim per Executor (1: helper-a / 2: regex set / 3: plugin path-a inline + TODO(T11) / 4: revoke-others-keep-current / 5: rate-limit defer / 6: no schema change) |
+
+**2 auxiliary design Q rulings**:
+
+- **AUX-Q1 — `PasswordRotationRequiredError` AppError subclass placement** → ⚠️ **APPROVE-WITH-AMENDMENT**
+  - **Executor intent**: option (i) inline subclass in `src/plugins/must-rotate-password.plugin.ts`
+  - **PM B ruling**: option (ii) **NEW FILE `src/modules/auth/auth.errors.ts`** (module-scoped errors home) — extends `AppError` from `@core/errors/app-errors.js`; exports `PasswordRotationRequiredError` (statusCode 403, code `PASSWORD_ROTATION_REQUIRED`); plugin imports from this file. Module barrel `index.ts` does NOT re-export (internal-only — plugin is the only intra-module consumer).
+  - **Rationale**:
+    1. **SRP**: separates plugin transport logic from error domain definition
+    2. **Reusable for T07+**: future auth-domain errors (`UserNotFoundError`, `SessionExpiredError`, etc.) have a single home — avoids ad-hoc inlining across files later
+    3. **Respects Q-B-02 ethos**: NO touch to `src/core/errors/` (Slot A territory); `src/modules/auth/auth.errors.ts` is module's own surface
+    4. **Low cost**: ~10 LOC new file; cleaner than inline-in-plugin
+  - **File count update**: **4 CREATE / 9 EDIT** (was 3 CREATE per PLAN line 996). If Executor also extracts optional `auth.password-policy.ts` at code-time → 5 CREATE; document at SUBMIT.
+
+- **AUX-Q2 — `extractJwtClaims` helper at `src/modules/auth/auth.jwt-context.ts`** → ✅ **APPROVE as proposed**
+  - **Executor intent**: option (B) extract to own file `src/modules/auth/auth.jwt-context.ts` (shared between routes + plugin)
+  - **PM B ruling**: APPROVE (no amendment)
+  - **Rationale**:
+    1. DRY across `auth.routes.ts` + `must-rotate-password.plugin.ts` (two consumers — avoids 2-LOC drift between copies)
+    2. Module-scoped helper file (not core/) — respects Q-B-02
+    3. Pure function (no port needed — ADR-0001 aligned)
+    4. `TODO(T11)` marker keeps refactor surface visible for next-cycle tenant-guard work
+  - **No change**: 1 of the 3 CREATE from PLAN baseline.
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Switch branch**: `git checkout feat/auth-core && git rebase main` — sync latest hygiene rule + ASSIGNMENT + PLAN + ACK context onto branch via rebase. PLAN content already on main (commit `16c9706`) so rebase will replay branch impl commits on top of latest main without touching PM-STATUS-*.md (those are append-only on main).
+- **Suggested commit sequence** (Executor decide final granularity):
+  1. `feat(auth): module errors home (auth.errors.ts) + PasswordRotationRequiredError`
+  2. `feat(auth): jwt-context helper (auth.jwt-context.ts) — shared route + plugin extractor`
+  3. `feat(auth): schemas extension (PatchMe, RotatePassword, MeResponse, PasswordChangeResponse)`
+  4. `feat(auth): repository extension (findUserById, updatePassword, updateLanguage, rotateCsrfToken, revokeAllOtherSessions)`
+  5. `feat(auth): service extension (getMe, updateMeLanguage, rotatePassword)`
+  6. `feat(auth): routes extension (GET/PATCH /me, POST /me/password)`
+  7. `feat(plugins): must-rotate-password plugin — 403 gate for non-allow-list paths`
+  8. `feat(auth): wire mustRotatePasswordPlugin di entrypoints/api.ts (after @fastify/jwt, before authRoutes)`
+  9. `test(auth): unit suite extension (service + routes + schema + plugin + it.todo placeholders)`
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT** (same as T05):
+  - `make check` HARUS green (lint + format-check + typecheck + test-unit; NOT test-integration this cycle)
+  - **Drift scan zero hits** scoped to T06 touched files (per `PM-AGENT §3 Step 2`): no `any` / `console.log` / `@ts-ignore` / `throw new Error(`-in-service / default export / forbidden imports / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+  - **Coverage report** ≥80% line floor on new + extended files; target 90% on service/routes/schema/plugin per TESTING.md §9 critical
+  - **Security floor verify**: argon2 timing-safe verify for `current_password`; no plaintext password leak in log or error response; CSRF rotation on `GET /me`; `must_rotate_password=false` cleared atomically with hash update; allow-list verbatim per spec §4.2 (`POST /api/auth/me/password`, `GET /api/auth/me`, `POST /api/auth/logout`)
+- **Best-effort `revokeAllOtherSessions`**: per Executor PLAN stance #4 — catch + log warning, do NOT throw; password rotation must succeed even if session sweep hits DB hiccup (max 15min access TTL per D04 caps stale-token window).
+- **Session invalidation**: confirmed option (ii) — revoke ALL OTHER sessions, keep current alive (`WHERE userId=$1 AND id<>$2 AND revokedAt IS NULL`).
+- **Rate-limit deferral**: noted di SUBMIT Notes per Executor stance #5; PM B akan track as cycle-4+ follow-up backlog item (not Q-B-02 — that's Slot A foundation; this is a separate Slot B deferral).
+- **TODO(T11) markers** on plugin's inline JWT-verify + repo lookup — when T11 lands (next-next cycle), refactor to `request.session.user.mustRotatePassword`. Document refactor surface in SUBMIT Notes.
+- **4 pre-existing Q-B-02 workarounds OK untuk reuse** — jest.config.json + Prisma cast + eslint-disable on adapter import + inline setErrorHandler. Don't re-fight, don't re-document — Q-B-02 already logged.
+- **Branch hygiene per §7**: impl commits 1-9 above land on `feat/auth-core`. SUBMIT block (PM-STATUS-B.md edit only) commits on `main` setelah self-validate green. Then PM B will re-checkout branch for independent verify, back to main for VERDICT.
+
+**Risks acknowledged from PLAN — no PLAN-blocking concerns**:
+- Inline JWT-verify + repo lookup per plugin request = 1 DB hit per request → optimization deferred to T11 (acceptable for unit-only cycle)
+- `req.routerPath` Fastify 4 path-field assumption — Executor will verify at code-time; fallback `req.url.split('?')[0]` documented
+- `revokeAllOtherSessions` non-transactional vs `updatePassword` — by-design per Executor stance #4; OWASP-aligned
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T06 attempt 1 block (PM-STATUS-B.md §2 append, on `main` per hygiene rule), PM B akan run independent verify per PM-AGENT §3 Steps 1-7 → VERDICT (APPROVE-PARTIAL / REJECT / ESCALATE).
+
+**PM B state**: **WAIT-MODE for SUBMIT T06**. No further action di §2 sampai Executor posts SUBMIT.
+
 <!--
 TEMPLATE — copy untuk task baru:
 

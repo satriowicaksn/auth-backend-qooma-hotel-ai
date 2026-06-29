@@ -65,6 +65,7 @@
 > [YYYY-MM-DD H{N}] [PM <SLOT> <NAME>] <T## status — 1 liner>
 > ```
 
+[2026-06-29 cycle 3] [PM B Nanak] T06 PLAN ACKED — 0 GAPs, 2 aux Qs ruled (auth.errors.ts module-scoped + auth.jwt-context.ts helper). File list 4 CREATE + 9 EDIT. ETA ~5-6.5h impl→SUBMIT. Executor B moves to feat/auth-core. Next event: SUBMIT block on main.
 [2026-06-29 cycle 3] [PM B Nanak] T06 ASSIGNMENT issued — auth `/me` family + password rotation + `must_rotate_password` per-request gate plugin, unit-only scope, single-dev cycle continues. Branch `feat/auth-core` extends (T06 stacks on T05). Foundation gaps Q-B-02 still parked (workarounds OK). Next event: Executor B PLAN T06 attempt 1.
 [2026-06-29 cycle 2] [PM B Nanak] T05 APPROVE-PARTIAL — unit-scope complete (98.56% stmt, 100% line, drift zero, 5 DD accepted, 13/13 independent verifications match). 4 foundation gaps surfaced as Q-B-02 (Slot A territory, no PO needed). Full APPROVE held until T02 ships. Branch `feat/auth-core`, 11 commits ahead of `main` (no merge). Next: Executor B pickup T06 per PM B ruling.
 [2026-06-29 cycle 2] [PM B Nanak] T05 FULL-ACK — PLAN attempt 1 cleared, Executor B IMPL-READY. Implementation start pending ENOSPC host-side cleanup. Next event: SUBMIT block in PM-STATUS-B.md §2.
