@@ -16,14 +16,15 @@
 - **Phase**: Bootstrap / pre-T01 — repo just forked from `core-backend-qooma-hotel-ai` infra + adapted to Auth scope.
 - **Active gate**: G1 — Boilerplate ready (default `PM-AGENT.md §5` criteria; no deviations). Includes: `make check` green, `make start` jalan, `seed-super-admin` CLI berfungsi, tier seed migration up.
 - **Active devs (this cycle)**: **only B (Nanak) online**. A (Nathan) + C (Satrio) sessions not active — see §10 cross-dev coord. T01..T04 (Slot A foundation) + T08..T10 (Slot C admin surface) PARKED until re-assign.
-- **Progress (global)**: 0 / 10 MVP scope items approved (T01..T10 authored §1, scope source `docs/spec/MVP-AUTH-FIRST.md §1`).
+- **Progress (global)**: 0 / 11 tasks approved (T01..T10 from MVP-AUTH-FIRST.md §1 10-row scope + T11 tenant-guard middleware per Q-PARENT-01 resolution).
 
-> **Canonical task source**: `docs/spec/MVP-AUTH-FIRST.md §1` (10-row endpoint scope table) + `docs/SERVICE-CHARTER.md §3` slot routing. Backend belum punya `docs/DEVELOPMENT-PLAN.md` formal — MVP-AUTH-FIRST.md adalah source-of-truth Phase 1.
+> **Canonical task source**: `docs/spec/MVP-AUTH-FIRST.md §1` (10-row endpoint scope table) + `docs/SERVICE-CHARTER.md §3` slot routing. T11 added as cross-cutting infra task (Q-PARENT-01 resolution). Backend belum punya `docs/DEVELOPMENT-PLAN.md` formal — MVP-AUTH-FIRST.md adalah source-of-truth Phase 1.
 >
-> **T01..T10 routing recap** (full rows in §1):
+> **T01..T11 routing recap** (full rows in §1):
 > - **T01..T04 → Slot A (foundation)**: pnpm install verify · initial Prisma migration · tiers seed · seed-super-admin CLI
 > - **T05..T07 → Slot B (Auth core)**: `/api/auth/*` · `/api/users` (gm_admin)
 > - **T08..T10 → Slot C (Auth admin surface)**: `/api/admin/*` · `/api/hotels/me` · `/api/settings/hotel`
+> - **T11 → Slot A canonical, Slot B execution this cycle (per §4 deviation)**: tenant-guard middleware. T07 depends.
 
 ---
 
@@ -47,10 +48,11 @@
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`)                                                         | A    | —     | `PARKED · unowned-this-cycle`                   | —           | Spec: `MVP-AUTH-FIRST §3` step 6 + `01-auth-identity §1.3` last paragraph. Reads `SEED_SUPER_ADMIN_EMAIL` + `SEED_SUPER_ADMIN_PASSWORD` env; idempotent INSERT one row (`role='super_admin'`, `hotel_id=NULL`). Deps: T01, T02. Gate: **G1**. |
 | T05 | Auth core endpoints: `POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh` + sessions/JWT/CSRF plumbing | B    | —     | `backlog · READY-PARTIAL (unit-only)`           | —           | Spec: `MVP-AUTH-FIRST §1` row 1 + `01-auth-identity §1.1`+§3 sessions table + §6 tenant-guard. Deps: T01 (install) for typecheck; T02 (migration) for integration tests. ADR-0001 (port for password-hash + JWT lib if external), 0006 (Fastify), 0007 (Prisma direct, no repo interface). Gate: **G2/G3**. Audit: schema + service + route shell + unit tests can ship now; integration deferred. **Open Q**: tenant-guard ownership (see §3c Q-PARENT-01). |
 | T06 | Auth current-user: `GET/PATCH /api/auth/me` + `POST /api/auth/me/password` + `must_rotate_password` per-request gate | B    | —     | `backlog · READY-PARTIAL (unit-only)`           | —           | Spec: `MVP-AUTH-FIRST §1` rows 2–3 + §4.2 + `01-auth-identity §1.1` + §3 must-rotate enforcement. Deps: T01; logical dep on T05 (session lookup); runtime dep on T02. ADR-0001 (password hash port), 0003. Gate: **G2/G3**. Audit: rotation-gate plugin + route shells + service unit tests doable now; e2e flow deferred. |
-| T07 | Per-hotel users CRUD: `GET/POST/PATCH /api/users` + `POST /api/users/:id/reset-password` (gm_admin scope) | B    | —     | `backlog · READY-PARTIAL (unit-only)`           | —           | Spec: `MVP-AUTH-FIRST §1` row 6 + `01-auth-identity §1.2` + §4.7 email uniqueness + §1.2 server-enforced constraints (role∉{gm_admin,super_admin}, last-gm guard, soft-delete only). Deps: T01; runtime dep on T02 + T03; **needs tenant-guard middleware (see Q-PARENT-01)**. ADR-0001, 0008. Gate: **G3**. Audit: service + zod schemas + generate-password helper + unit tests doable with mocked Prisma + stubbed tenantScope. |
+| T07 | Per-hotel users CRUD: `GET/POST/PATCH /api/users` + `POST /api/users/:id/reset-password` (gm_admin scope) | B    | —     | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —           | Spec: `MVP-AUTH-FIRST §1` row 6 + `01-auth-identity §1.2` + §4.7 email uniqueness + §1.2 server-enforced constraints (role∉{gm_admin,super_admin}, last-gm guard, soft-delete only). Deps: T01; **T11 (tenant-guard) before SUBMIT-APPROVE**; runtime dep on T02 + T03. ADR-0001, 0008. Gate: **G3**. Audit: service + zod schemas + generate-password helper + unit tests doable now with stubbed tenantScope; full SUBMIT needs T11 wired. |
 | T08 | Cross-hotel admin users CRUD + Tier catalog read: `/api/admin/users` family + `GET /api/admin/tiers[:name]` | C    | —     | `PARKED · unowned-this-cycle` (also depends T02..T04) | —           | Spec: `MVP-AUTH-FIRST §1` rows 5 + 7 + `01-auth-identity §1.3` + §1.4 + §4.6 last-super_admin guard + §4.4 mutual-exclusion. Deps: T01, T02, T03 (tiers exist), T04 (first super_admin to test). ADR-0001, 0008. Gate: **G3**. |
 | T09 | Admin hotels CRUD + atomic GM-create + suspend cascade: `/api/admin/hotels` family + `/:id/status`        | C    | —     | `PARKED · unowned-this-cycle` (also depends T02..T03) | —           | Spec: `MVP-AUTH-FIRST §1` row 9 + §4.3 suspend cascade + §4.5 atomic GM-create + `01-auth-identity §1.5` + `SERVICE-CHARTER §2`. Single-transaction insert(hotels)+insert(users[gm]) + generate-and-return password. Deps: T01, T02, T03. ADR-0001, 0007 (tx). Gate: **G3**. |
 | T10 | Hotel context + settings: `GET /api/hotels/me` + `GET/PUT /api/settings/hotel`                            | C    | —     | `PARKED · unowned-this-cycle` (also depends T02..T03) | —           | Spec: `MVP-AUTH-FIRST §1` rows 8 + 10 + `01-auth-identity §1.5` + §5 super_admin `/hotels/me` open behavior Q (recommend option (b) `{ id:null, tier:null }` per spec). Deps: T01, T02, T03. ADR-0001, 0007. Gate: **G3**. |
+| T11 | tenant-guard middleware (Fastify plugin) — inject `req.tenantScope` from JWT + enforce row-level isolation | A    | —     | `backlog · READY-FULL (Slot B execution per §4 deviation)` | —           | Spec: `01-auth-identity §6` + `MVP-AUTH-FIRST §4.1` + `SERVICE-CHARTER §3` (Slot A canonical owner). Lives in `src/plugins/` (cross-cutting infra). Deps: T01 (typecheck); full SUBMIT needs T02 (hotel_id columns exist in DB for integration test). ADR-0001 (middleware ≠ port — direct Fastify plugin), 0008 (multi-hotel scoping intent). Gate: **G2**. **Resolves Q-PARENT-01**. **Ownership of record = Slot A**; execution = Slot B this cycle (see §4 deviation). **T07 depends on T11** ship before SUBMIT-APPROVE. |
 
 ---
 
@@ -93,7 +95,7 @@ _(kosong — belum ada activity)_
 
 | ID            | Question                                                                                                                                                                                                  | Raised by | Source                                                  | Status | Resolution |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | ------ | ---------- |
-| Q-PARENT-01   | Tenant-guard middleware ownership + sequencing. `SERVICE-CHARTER §3` lists it under Slot A foundation, but PO's explicit T01..T04 list does not include it. T05/T06/T07 (Slot B) all need it at runtime. Should it be (a) added as T0_aux Slot A foundation task, (b) absorbed into T05 (first Slot B endpoint), or (c) inlined as a util in T07 since that's the first hotel-scoped read? | Parent PM | `SERVICE-CHARTER §3` + `MVP-AUTH-FIRST §4.1` + `01-auth §6` | open   | —          |
+| Q-PARENT-01   | Tenant-guard middleware ownership + sequencing. `SERVICE-CHARTER §3` lists it under Slot A foundation, but PO's explicit T01..T04 list does not include it. T05/T06/T07 (Slot B) all need it at runtime. Should it be (a) added as T0_aux Slot A foundation task, (b) absorbed into T05 (first Slot B endpoint), or (c) inlined as a util in T07 since that's the first hotel-scoped read? | Parent PM | `SERVICE-CHARTER §3` + `MVP-AUTH-FIRST §4.1` + `01-auth §6` | **resolved** 2026-06-29 | **PO ruling**: option (1) — author **T11** as Slot A canonical task (see §1 T11 row); Slot B executes this cycle via §4 deviation (2026-06-29). Rationale: preserve Charter ownership of record, avoid cross-modul leak from inlining, keep tenant-guard as single source of truth for security review (CLAUDE.md §6). |
 
 ---
 
@@ -101,10 +103,10 @@ _(kosong — belum ada activity)_
 
 > Parent PM mencatat tiap perubahan ke planning docs yang dilakukan untuk sync (per `PM-AGENT.md §0.6`), serta deviasi one-off yang di-approve PO. PM A/B/C tidak edit row di sini — propose via §3 atau direct ke Parent PM.
 
-| Tanggal    | Doc / lokasi                                                       | Perubahan singkat                                                                                 | Driver task    | Disetujui oleh |
-| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | -------------- | -------------- |
-| 2026-06-12 | docker-compose.yml, .env.example, README.md, .claude/settings.json | Shift host port Postgres 5432→5433 & Redis 6379→6380 untuk hindari bentrok dengan service lokal | (pre-T01 fix)  | PO             |
-| —          | —                                                                  | —                                                                                                 | —              | —              |
+| Tanggal    | Doc / lokasi                                                       | Perubahan singkat                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Driver task    | Disetujui oleh |
+| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | -------------- |
+| 2026-06-12 | docker-compose.yml, .env.example, README.md, .claude/settings.json | Shift host port Postgres 5432→5433 & Redis 6379→6380 untuk hindari bentrok dengan service lokal                                                                                                                                                                                                                                                                                                                                                                          | (pre-T01 fix)  | PO             |
+| 2026-06-29 | PM-STATUS-PARENT.md §1 row T11                                     | **T11 cross-slot execution deviation**: tenant-guard middleware canonical-owned by Slot A per `SERVICE-CHARTER §3`; Slot A PARKED this cycle. Slot B (Nanak) absorbs T11 **execution** as one-off foundation contribution because T07 soft-blocks without it. **Ownership of record stays Slot A**; Slot B SUBMIT carries note "cross-slot execution per §4 deviation 2026-06-29". Slot A re-takes future tenant-guard amendments. Resolves Q-PARENT-01.                  | T07, T11       | PO             |
 
 ---
 
@@ -187,22 +189,25 @@ Dev C (Satrio) — belum onboard, awaiting kickoff
 
 > Parent PM rewrite list ini ketika roadmap berubah. Each task **wajib** kolom Slot (A/B/C) untuk routing. PM A/B/C baca queue ini untuk lihat upcoming work — PM A/B/C tidak edit queue.
 
-### Unblock audit — Slot B (cycle 1, 2026-06-29)
+### Unblock audit — Slot B (cycle 1, 2026-06-29, updated post-Q-PARENT-01 resolve)
 
-Per PO ruling: only Slot B (Nanak) online this cycle. Audited T05..T07 against parked T01..T04 (Slot A foundation):
+Per PO ruling: only Slot B (Nanak) online this cycle. Audited T05..T07 + T11 against parked T01..T04 (Slot A foundation):
 
 ```
 Unblock audit Slot B (cycle 1):
   T05 (auth core endpoints)        — READY-PARTIAL (unit scope: schema + service + route shell + JWT/CSRF plumbing unit tests)
   T06 (auth current-user + rotate) — READY-PARTIAL (unit scope: rotation-gate plugin + service unit tests; e2e deferred)
-  T07 (users CRUD gm_admin)        — READY-PARTIAL (unit scope: service + zod + generate-password helper + unit tests; needs tenant-guard stub — see Q-PARENT-01)
+  T11 (tenant-guard middleware)    — READY-FULL (Slot B via §4 deviation; plugin shell + unit tests doable now; integration test placeholder until T02)
+  T07 (users CRUD gm_admin)        — READY-PARTIAL (unit scope: gated by T11 ship — Slot B sequences T11 before T07 full SUBMIT)
 ```
 
-**Integration-test scope deferred** for all 3 until T02 (initial migration) ships. **Tenant-guard middleware** (Q-PARENT-01 in §3c) blocks T07 full-DoD; Slot B can stub it in unit tests but cannot complete T07 SUBMIT without resolution.
+**Slot B cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**.
+
+**Integration-test scope deferred** for all four until T02 (initial migration) ships. Q-PARENT-01 RESOLVED — T11 added as canonical Slot A task, Slot B executes per §4 deviation.
 
 Slot C (T08..T10): not audited this cycle — no Slot C exec/PM session online (`PARKED · unowned-this-cycle`).
 
-If Slot B exhausts READY-PARTIAL scope on T05/T06/T07 before T01..T04 unparks, escalate back to PO for deviation decision (Slot B absorbs T01..T04 as one-off, recorded in §4 with reason "single-dev cycle; foundation bootstrap absorbed by Slot B").
+If Slot B exhausts READY-PARTIAL scope on T05/T06/T07 + T11 before T01..T04 unparks, escalate back to PO for further deviation decision (Slot B absorbs T01..T04 as one-off, recorded in §4 with reason "single-dev cycle; foundation bootstrap absorbed by Slot B").
 
 ---
 
@@ -269,14 +274,61 @@ If Slot B exhausts READY-PARTIAL scope on T05/T06/T07 before T01..T04 unparks, e
 
 ---
 
+### T11 — tenant-guard middleware (Fastify plugin)
+
+- **Slot**: A (canonical, per `SERVICE-CHARTER §3`)
+- **Execution this cycle**: B (Nanak) per §4 deviation 2026-06-29
+- **Owner**: TBD (PM B claims via PM-STATUS-B.md §2 ASSIGNMENT with cross-slot execution note)
+- **Started**: —
+- **Status**: `READY-FULL (Slot B execution per §4 deviation)`
+- **Spec**: `docs/spec/01-auth-identity.md §6` (pseudocode) + `docs/spec/MVP-AUTH-FIRST.md §4.1` (critical-correctness check) + `SERVICE-CHARTER §3` (ownership)
+- **Dependencies**: T01 (typecheck environment). **No hard dep** — plugin shell + unit tests authorable now against typed JWT claim shape. Integration test needs T02 (`hotels` + `users` tables exist).
+- **ADR refs**: 0001 (middleware is **NOT** a port — direct Fastify plugin per Hexagonal Disiplin "TIDAK pakai port" list), 0008 (multi-hotel scoping intent — `hotel_id` is intra-service FK after H11)
+- **Gate**: **G2**
+- **Resolves**: Q-PARENT-01
+
+#### Scope
+- Fastify plugin at `src/plugins/tenant-guard.ts` (or `src/plugins/tenant-guard/` if it grows). Registered globally in `src/entrypoints/api.ts`.
+- Reads JWT from httpOnly cookie (delegate verify to T05's auth plumbing — coordinate at PLAN; if T05 hasn't shipped JWT verify util, T11 ships its own lightweight verify and T05 reuses).
+- Sets `req.session = { user_id, role, hotel_id, dept_id }` per `01-auth-identity §6`.
+- Sets `req.tenantScope`:
+  - `super_admin` → `{ type: 'all-hotels' }` (bypass `WHERE hotel_id = ...`)
+  - else → `{ type: 'single-hotel', hotel_id: session.hotel_id }`
+- **Deny-by-default**: missing/invalid cookie → `401 UNAUTHENTICATED` per `AppError` hierarchy.
+- Route-opt-out mechanism for public endpoints (`POST /api/auth/login` should NOT trip the guard) — Fastify per-route hook OR plugin `excludeRoutes` config. Slot B picks pattern in PLAN.
+
+#### Files (suggested — Slot B finalizes in PLAN)
+- `src/plugins/tenant-guard.ts` — the plugin
+- `src/plugins/__tests__/tenant-guard.test.ts` — unit tests
+- `src/entrypoints/api.ts` — wire plugin (modify)
+- (optional) `src/shared/types/session.ts` — `Session` + `TenantScope` types if not yet defined
+
+#### T11 DoD (full)
+- [ ] Plugin authored + registered in `api.ts`
+- [ ] `req.session` + `req.tenantScope` populated correctly for all 4 roles (super_admin, gm_admin, dept_head, staff)
+- [ ] Public routes (login, healthcheck) bypass the guard cleanly
+- [ ] Unit tests cover: valid cookie → next() · invalid cookie → 401 · missing cookie → 401 · super_admin bypass scope · gm_admin/dept_head/staff single-hotel scope
+- [ ] Integration test placeholder file exists with `it.todo()` referencing T02 dependency (so T02 ship triggers fill-in)
+- [ ] Security floor (CLAUDE.md §6): deny-by-default, no PII in logs, correlation ID propagated
+- [ ] `make check` green
+- [ ] No `any`, no `console.log`, `throw AppError` (UnauthorizedError / AuthError)
+
+#### Parent PM notes for PM B
+- **Cross-slot execution per §4 deviation 2026-06-29** — note this verbatim in ASSIGNMENT block when claiming. Ownership of record stays Slot A; Slot B execution only this cycle.
+- **Sequence**: T05 → T06 → T11 → T07. T05/T06 don't require T11 for their endpoints (login is public; `/me` authenticates via session cookie directly, can read user from JWT without scoped queries). T07 absolutely needs T11.
+- Coordinate JWT verify util with T05 — duplication is worse than tight coupling here. If T05 already shipped a `verifyJwt()` helper, T11 imports it; otherwise T11 ships first and T05 imports.
+- Plugin registration order in `api.ts`: tenant-guard AFTER cookie parser, BEFORE route plugins.
+
+---
+
 ### T07 — Per-hotel users CRUD (gm_admin scope)
 
 - **Slot**: B (Nanak)
 - **Owner**: TBD
 - **Started**: —
-- **Status**: `READY-PARTIAL (unit-only)` — **soft-blocked on Q-PARENT-01 (tenant-guard)**
+- **Status**: `READY-PARTIAL (unit-only) — gated by T11`
 - **Spec**: `MVP-AUTH-FIRST §1` row 6 + `01-auth-identity §1.2` + §4.7 email uniqueness + §1.2 server-enforced constraints
-- **Dependencies**: runtime T02 + T03; Q-PARENT-01 resolution before SUBMIT
+- **Dependencies**: T11 (must ship before T07 SUBMIT-APPROVE); runtime T02 + T03
 - **ADR refs**: 0001, 0008 (`users.dept_id` opaque UUID — Hotel Core's `departments` table not yet shipped, treat as nullable+unenforced)
 - **Gate**: G3
 
@@ -288,8 +340,8 @@ If Slot B exhausts READY-PARTIAL scope on T05/T06/T07 before T01..T04 unparks, e
 - `users.dept_id` validation: opaque UUID, nullable, no FK check at this layer (Hotel Core owns departments)
 
 #### Parent PM notes for PM B
-- Generate-password helper: 16-char alphanumeric+symbols, crypto-secure. Add to `src/shared/utils/password.ts` or modul-scoped helper — PLAN decides.
-- Tenant-guard: needed at runtime. For unit tests, stub `req.tenantScope = { type: 'single-hotel', hotel_id: '<uuid>' }`. **Cannot SUBMIT for APPROVE until Q-PARENT-01 resolved** — file structure + service + zod can ship; routes wiring tenant-guard blocked.
+- Generate-password helper: 16-char alphanumeric+symbols, crypto-secure. Add to `src/shared/utils/password.ts` or modul-scoped helper — PLAN decides. Coordinate with T05 (logout/refresh uses session table) and T08 (`/api/admin/users` reuses helper).
+- Tenant-guard: ships in **T11** (Q-PARENT-01 resolved). T07 routes WIRE the T11 plugin; unit tests stub `req.tenantScope = { type: 'single-hotel', hotel_id: '<uuid>' }` for handler-level testing. **T11 must SUBMIT-APPROVE before T07 SUBMIT** — sequence enforced.
 
 ---
 
@@ -404,8 +456,9 @@ ke §2 / §6 di sini, **bukan** ke PO langsung.
 
 | Tanggal    | Topic                                                                | Affects     | Action / decision                                                                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-29 | Single-dev cycle 1: only Slot B (Nanak) online                       | A, B, C     | T01..T04 (Slot A foundation) + T08..T10 (Slot C admin surface) marked `PARKED · unowned-this-cycle` in §1. Slot B runs unblock audit on T05..T07 — see §8. If Slot B exhausts READY-PARTIAL scope, escalate to PO for deviation (Slot B absorbs T01..T04). |
-| 2026-06-29 | Tenant-guard middleware ownership (Q-PARENT-01)                      | A, B, C     | Charter §3 puts it under Slot A; PO's T01..T04 explicit list excludes it. T05/T06/T07 need it at runtime; T07 soft-blocks SUBMIT-APPROVE without it. Pending PO resolution — see §3c Q-PARENT-01.                                                              |
+| 2026-06-29 | Single-dev cycle 1: only Slot B (Nanak) online                       | A, B, C     | T01..T04 (Slot A foundation) + T08..T10 (Slot C admin surface) marked `PARKED · unowned-this-cycle` in §1. Slot B runs unblock audit on T05..T07 + T11 — see §8. If Slot B exhausts READY-PARTIAL scope, escalate to PO for further deviation (Slot B absorbs T01..T04).                                                                |
+| 2026-06-29 | Tenant-guard middleware ownership (Q-PARENT-01)                      | A, B, C     | **RESOLVED**: PO ruling option (1) — T11 authored as Slot A canonical task (see §1). Slot B executes T11 this cycle per §4 deviation. Charter ownership preserved.                                                                                                                                                                       |
+| 2026-06-29 | Slot B cycle 1 execution sequence (PO-ratified)                      | B           | **T05 → T06 → T11 → T07**. T05/T06 don't need T11 (login public, `/me` reads user from JWT directly). T11 before T07 because T07 wires tenant-guard. Integration tests across all four deferred until T02 ships. T07 SUBMIT-APPROVE blocked until T11 APPROVED.                                                                          |
 
 <!-- Contoh:
 2026-06-30 | core/queue/ Bull factory pattern decision | B, C | A ship dulu (T05), B & C unblocked H+1
