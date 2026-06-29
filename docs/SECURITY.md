@@ -21,6 +21,7 @@
 ### User auth (kalau service expose login)
 - Login: email + password (bcrypt, cost 12)
 - Output: JWT access (8h, signed `JWT_ACCESS_SECRET`) + refresh token (30d, hashed in DB)
+  - **Note**: 8h is a generic floor untuk service non-auth di ekosistem Qooma. Auth-spec service di repo ini override per spec `docs/spec/01-auth-identity.md §3`: 15-min access token + 30-day refresh token (ratified PO 2026-06-29, deviation `PM-STATUS-PARENT.md §4-D04`).
 - Refresh: rotate refresh token tiap pemakaian (invalidate old)
 - Logout: tandai refresh token revoked
 - Password policy: min 12 char, 1 angka, 1 simbol
