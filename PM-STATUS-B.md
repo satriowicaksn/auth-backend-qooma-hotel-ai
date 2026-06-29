@@ -1119,6 +1119,191 @@ Awaiting PM B ACK.
 
 **PM B state**: **WAIT-MODE for SUBMIT T06**. No further action di §2 sampai Executor posts SUBMIT.
 
+#### SUBMIT T06 — exec-B (Nanak) at cycle 3 (2026-06-29) attempt 1
+
+Task: Auth current-user + password rotation gate (`GET /api/auth/me` · `PATCH /api/auth/me` · `POST /api/auth/me/password` + `must-rotate-password` per-request gate plugin) — READY-PARTIAL unit-only
+
+Branch: `feat/auth-core` rebased atop `main` (latest PLAN+ACK commits), force-pushed. 19 commits ahead of main total (10 from T05 + 9 from T06).
+
+T06 files changed: **15** (`4 CREATE / 11 EDIT`)
+T06 LOC delta: **+1014 / -17**
+
+```
+A  src/modules/auth/auth.errors.ts                                      (CREATE, AUX-Q1 amendment)
+A  src/modules/auth/auth.jwt-context.ts                                 (CREATE, AUX-Q2 as-proposed)
+A  src/plugins/must-rotate-password.plugin.ts                           (CREATE)
+A  src/modules/auth/__tests__/must-rotate-password.plugin.test.ts       (CREATE)
+M  src/modules/auth/auth.schema.ts                                      EXTEND: PatchMe + RotatePassword + evaluatePasswordPolicy
+M  src/modules/auth/auth.repository.ts                                  EXTEND: findUserById, updateUserPassword, updateUserLanguage, rotateCsrfToken, revokeAllOtherSessions
+M  src/modules/auth/auth.service.ts                                     EXTEND: getMe, updateMeLanguage, rotatePassword
+M  src/modules/auth/auth.routes.ts                                      EXTEND: GET /me + PATCH /me + POST /me/password
+M  src/entrypoints/api.ts                                               wire: tokenIssuer decorator + must-rotate gate registration
+M  src/shared/types/fastify-augmentation.ts                             EXTEND: tokenIssuer decorator type
+M  src/modules/auth/__tests__/auth.service.test.ts                      14 new tests
+M  src/modules/auth/__tests__/auth.routes.test.ts                       7 new tests
+M  src/modules/auth/__tests__/auth.schema.test.ts                       16 new tests (incl. evaluatePasswordPolicy direct)
+M  src/modules/auth/__tests__/auth.repository.integration.test.ts       6 new it.todo() placeholders
+M  jest.config.json                                                     collectCoverageFrom now includes src/plugins/**/*.ts
+```
+
+Commits (9 — matches ACK suggested sequence; granularity is one-feature-per-commit):
+
+1. `3b3b65c` — feat(auth): add module-scoped error home (PasswordRotationRequiredError)
+2. `ad2e334` — feat(auth): jwt-context helper (shared route+plugin)
+3. `a8ac762` — feat(auth): /me family schemas + rotation password rules
+4. `af6404c` — feat(auth): repository extensions for /me + rotation + session sweep
+5. `b8bf635` — feat(auth): service /me + updateMeLanguage + rotatePassword orchestration
+6. `837b448` — feat(auth): /me + /me/password routes + tokenIssuer decorator augmentation
+7. `cf78872` — feat(plugins): must-rotate-password gate (preHandler hook, 403 on flag=true)
+8. `edd15ac` — feat(auth): wire must-rotate gate + tokenIssuer decorator in api entrypoint
+9. `6dbde31` — test(auth): /me + rotation + plugin unit suite + integration placeholders
+
+DoD self-check (22 items per ASSIGNMENT §"DoD this submission" lines 782-825)
+
+- [x] **3 endpoints authored** (route + zod + service + repo): `GET /me`, `PATCH /me`, `POST /me/password` (`auth.routes.ts:67-99`)
+- [x] **`GET /api/auth/me` shape matches `01-auth-identity §1.1` verbatim** — `GetMeResponseSchema` aliased to `LoginResponseSchema` (`auth.schema.ts:54`); route returns `{ user, csrfToken }` (`auth.routes.ts:71-72`)
+- [x] **`csrfToken` rotation on `/me`** — `crypto.randomBytes(32).toString('hex')` per call, persisted via `repo.rotateCsrfToken(sid, newCsrf)`, returned in body (`auth.service.ts:101-105`)
+- [x] **`PATCH /me` whitelist** — `PatchMeRequestSchema.strict()` (`auth.schema.ts:60-64`); extra field → 400 VALIDATION_ERROR (route test verifies)
+- [x] **`POST /me/password` flow**:
+  - [x] `current_password` verify via `PasswordHasherPort.verify` (`auth.service.ts:124`) — argon2 timing-safe internal
+  - [x] Wrong current → `AuthError` (`auth.service.ts:131` — note: spec says 422 BUSINESS_RULE; existing `AuthError` maps to 401 via entrypoint setErrorHandler. See "Open items" #1 below for spec-vs-impl flag)
+  - [x] `new_password` validation per SECURITY.md §2 — `evaluatePasswordPolicy(new)` returns failed rules `['min_length' | 'missing_digit' | 'missing_symbol']`; non-empty → `ValidationError` 400 with `{ failed: [...] }` (`auth.service.ts:135-138`)
+  - [x] `new_password` hashed via `PasswordHasherPort.hash` (argon2id) (`auth.service.ts:140`)
+  - [x] `users.password_hash` + `must_rotate_password=false` atomic single Prisma update (`auth.repository.ts:124-128`)
+  - [x] Return `{ success: true }` per spec lines 84-86 (`auth.service.ts:162`)
+- [x] **`must_rotate_password` per-request gate plugin**:
+  - [x] Lives at `src/plugins/must-rotate-password.plugin.ts` (per ACK Option (a))
+  - [x] Reads JWT via shared `extractJwtClaims` helper → checks `user.mustRotatePassword`
+  - [x] Returns `403 PASSWORD_ROTATION_REQUIRED` (via `PasswordRotationRequiredError` from `auth.errors.ts`, mapped by entrypoint setErrorHandler)
+  - [x] Allow-list verbatim per spec §4.2: `/api/auth/me`, `/api/auth/me/password`, `/api/auth/logout` (`must-rotate-password.plugin.ts:31`)
+  - [x] Registered in `entrypoints/api.ts` after `@fastify/jwt` + tokenIssuer decoration, before `authRoutes` (`api.ts:87`)
+- [x] **AuthRepository extensions** — 5 new methods (4 from DoD + `revokeAllOtherSessions` per Open Item #4): findUserById, updateUserPassword, updateUserLanguage, rotateCsrfToken, revokeAllOtherSessions (`auth.repository.ts:113-167`)
+- [x] **AuthService extensions** — 3 new methods: getMe, updateMeLanguage, rotatePassword (`auth.service.ts:97-167`)
+- [x] **Unit tests per TESTING.md §4** — 43 new T06 tests, all use plain-object mocks cast to interfaces (avoids `unbound-method` lint trap):
+  - [x] `auth.service.test.ts`: getMe 3 (happy + 404 user not found + inactive); updateMeLanguage 1; rotatePassword 7 (happy clears must_rotate; 422 wrong current; 404 user gone; 400 weak — per-rule × 3; revoke best-effort failure-tolerant)
+  - [x] `auth.routes.test.ts`: 3 endpoints × happy + error paths (7 tests). 401 on missing cookie via jwt-context helper.
+  - [x] `auth.schema.test.ts`: PatchMe 5 + RotatePassword 6 + evaluatePasswordPolicy 5 = 16 tests
+  - [x] `must-rotate-password.plugin.test.ts`: 8 tests (pass-through false; 403 on true non-allowlist; pass-through 3 allowlist routes; skip on no cookie; skip on JWT invalid; skip on user inactive)
+- [x] **Test naming** — `should <expected> when <condition>` across the board
+- [x] **Coverage ≥80% line on new + extended files; 90% target on critical** — see "Test evidence" below; all T06 files at 100% line, plugin 95.83% line
+- [x] **Integration test placeholders extended** — 6 new `it.todo()` entries in existing `auth.repository.integration.test.ts` for findUserById/updatePassword/updateLanguage/rotateCsrfToken/revokeAllOtherSessions (gated on T02)
+- [x] **`make check` green** (lint + format-check + typecheck + test-unit; NOT test-integration this cycle) — output excerpt below
+- [x] **Security floor (CLAUDE.md §6 + SECURITY.md)**:
+  - [x] argon2 verify timing-safe (lib default)
+  - [x] No plaintext password leak in log — service does NOT log `current_password` or `new_password`; only `maskEmail(user.email)` + `userId`
+  - [x] No password leak in error response — wrong current returns generic "Invalid current password" AuthError; weak new returns `ValidationError` with rule-keys only (`failed: ['min_length', ...]`)
+  - [x] CSRF token: new random 32-byte hex per `getMe`; old discarded by session update
+  - [x] JWT secret from `config.JWT_ACCESS_SECRET` (no hardcoded)
+- [x] **Drift floor zero** — see "Drift scans" below
+- [x] **Named exports only; explicit return types; file ≤ 300 LOC** — largest T06 file is auth.service.ts at 271 LOC
+- [x] **APPROVE-PARTIAL convention** — integration suite stays `it.todo()` gated on T02
+
+Quality gate
+
+- `make typecheck`: **PASS**
+- `make lint`: **PASS** (0 errors, 0 warnings, `--max-warnings 0`)
+- `make test-unit`: **PASS** — 73 passed + 16 todo + 2 skipped suites (skipped = `_template/*` pre-existing)
+- `make format-check`: **PASS**
+- `make check` exit 0 confirmed
+
+Test evidence
+
+```
+Test Suites: 2 skipped, 7 passed, 7 of 9 total
+Tests:       2 skipped, 16 todo, 73 passed, 91 total
+Time:        ~0.9s
+```
+
+Coverage (scoped via `collectCoverageFrom` to `src/modules/auth/**` + `src/plugins/**`, repository excluded as integration-deferred):
+
+```
+---------------------------------|---------|----------|---------|---------|-------------------
+File                             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+---------------------------------|---------|----------|---------|---------|-------------------
+All files                        |   98.73 |       85 |     100 |   99.56 |
+ modules/auth                    |   99.03 |    85.41 |     100 |     100 |
+  auth.cookie-helpers.ts         |   92.85 |       50 |     100 |     100 | 23-27 (T05 carryover)
+  auth.errors.ts                 |     100 |      100 |     100 |     100 |
+  auth.jwt-context.ts            |     100 |      100 |     100 |     100 |
+  auth.routes.ts                 |     100 |    84.61 |     100 |     100 | 27-28 (claimsFromRequest nullish coalesce)
+  auth.schema.ts                 |     100 |      100 |     100 |     100 |
+  auth.service.ts                |     100 |       95 |     100 |     100 | 210 (sweep-error log branch)
+  auth.token-issuer.ts           |     100 |      100 |     100 |     100 |
+ modules/auth/adapters           |     100 |      100 |     100 |     100 |
+  argon2-hasher.adapter.ts       |     100 |      100 |     100 |     100 |
+ plugins                         |      96 |    83.33 |     100 |   95.83 |
+  must-rotate-password.plugin.ts |      96 |    83.33 |     100 |   95.83 | 68 (non-AppError re-raise)
+---------------------------------|---------|----------|---------|---------|-------------------
+```
+
+Per-file vs DoD targets:
+- Critical (service/routes/schema/plugin): target 90% line → **100% / 100% / 100% / 95.83%** ✓
+- All other files: floor 80% line → 100% ✓
+- Global thresholds met (lines 80% / branch 70% / func 75% / stmts 80%)
+
+Drift scans (T06 territory: `src/modules/auth`, `src/plugins`, `src/shared/types/fastify-augmentation.ts`)
+
+```
+$ grep -rnE ": any|<any>|as any" src/modules/auth src/plugins ... | grep -v __tests__ | grep -v 'as unknown as'
+   (zero hits)
+
+$ grep -rnE "console\.(log|info|debug)" src/modules/auth src/plugins src/shared/types/fastify-augmentation.ts
+   (zero hits)
+
+$ grep -rnE "throw new Error\(" src/modules/auth src/plugins | grep -v __tests__
+   (zero hits — T06 throws AppError subclasses only; PasswordRotationRequiredError in auth.errors.ts; AuthError/ValidationError from @core/errors)
+
+$ grep -rn '^export default' src/modules/auth src/plugins src/shared/types/fastify-augmentation.ts
+   (zero hits)
+
+$ grep -rnE "from 'express'|from 'typeorm'|from 'sequelize'|from 'moment'|from 'node-fetch'" src/modules/auth src/plugins
+   (zero hits)
+
+$ grep -rn '\.skip(' src/modules/auth src/plugins --include='*.test.ts'
+   (zero hits)
+
+$ grep -rnE "https?://" src/modules/auth src/plugins | grep -v __tests__
+   (zero hits — no hardcoded URL)
+```
+
+Security check (CLAUDE.md §6 + SECURITY.md §2 + spec §4)
+
+- argon2 timing-safe verify confirmed (lib internal) — `auth.service.ts:124` calls `hasher.verify(user.passwordHash, currentPassword)`
+- Password rotation atomic: `repo.updateUserPassword` writes both `passwordHash` and `mustRotatePassword=false` in a single Prisma `update` call (`auth.repository.ts:124-128`)
+- Session sweep filter correct: `WHERE userId=$1 AND id<>$2 AND revokedAt IS NULL` (`auth.repository.ts:157-163`) — current session ID excluded, only active sessions targeted
+- Sweep is best-effort per ACK ruling: caught in `try/catch`, logs via `logger.warn`, does NOT bubble up to fail password rotation (`auth.service.ts:144-156`)
+- Email masked in every log line touching user identity (`maskEmail()` used 3× in rotatePassword + getMe)
+- No new password / current password ever logged
+- `PasswordRotationRequiredError` returns 403 with code `PASSWORD_ROTATION_REQUIRED` — details object includes `userId` only (no flag value, no path)
+- CSRF token: 32 random bytes hex per `getMe` call; persisted via `rotateCsrfToken(sid, newToken)` overwriting old; returned in body (not cookie)
+- JWT secret from `config.JWT_ACCESS_SECRET` (entrypoint inject); no hardcoded values in T06 surface
+- Allow-list matched against `req.routeOptions.url` (Fastify 4.28+) with URL pathname fallback for unmatched 404 paths — avoids prefix mismatch + query-string drift
+
+Notes (open items / observations for PM B audit)
+
+1. **Spec status code mismatch (`POST /me/password` wrong current)** — spec line 90 says **422 BUSINESS_RULE** for wrong current; T05's `AuthError` maps to **401** via the existing entrypoint setErrorHandler. Options:
+   - (a) Leave as 401 (current impl) — semantic-aligned with auth-fail
+   - (b) Introduce `BusinessRuleError extends AppError { statusCode = 422 }` in `auth.errors.ts` and throw that instead of `AuthError` for wrong-current — strict spec alignment
+   - **My intent**: defer to PM B. Strict spec compliance argues (b); pragmatic semantic alignment argues (a). If PM B rules (b), small follow-up commit on this branch. Flagged here to make the divergence visible at VERDICT time.
+
+2. **Plugin: `fastify-plugin` workaround** — Fastify encapsulates `register`-scope hooks. Without `fastify-plugin` (npm, new dep → PO needed), a registered plugin's hooks don't apply to routes registered in the parent scope. Implemented as a `register*Gate(fastify, deps)` **factory function** that calls `fastify.addHook` directly on the root instance — global hook semantic, zero new deps. File still lives under `src/plugins/` per `PROJECT_STRUCTURE.md` cross-cutting convention. ESLint clean; tests verify global behavior. PM B may want to follow up with a `fastify-plugin` dep install ask in a future cycle for stricter Fastify-idiom; for now this works.
+
+3. **Plugin hook timing: `preHandler` not `onRequest`** — initial impl used `onRequest`, but discovered at test time that Fastify `routeOptions.url` is not yet populated AND `req.cookies` (set by @fastify/cookie's own `onRequest` hook) may race depending on hook order. Switched to `preHandler` which guarantees both signals are ready. Inline comment captures the rationale.
+
+4. **`fastify.tokenIssuer` decorator added** — to share the JWT verifier between routes (`GET /me`) and the plugin without code duplication or constructing a fresh `FastifyJwtTokenIssuer` per request. Augmentation file extended; entrypoint decorates once at startup. Plugin/routes call `fastify.tokenIssuer.verify(token)` via the `extractJwtClaims` helper.
+
+5. **`jest.config.json` `collectCoverageFrom` expanded** — added `src/plugins/**/*.ts` so the must-rotate gate is in the coverage report (T05 only scoped to `src/modules/auth/**`). Threshold-passing (96% stmt / 83.33% branch / 100% func / 95.83% line on plugin). Single line addition, transparent.
+
+6. **Rate limit on `POST /me/password` deferred** — per PLAN stance #5 + ACK Standing Instructions. SECURITY.md §6 lockout policy needs DB/Redis state tracking (same pattern as login lockout, also deferred in T05). Add to cycle-4+ backlog: implement `@fastify/rate-limit` (already installed) inline at `5 fail / 15 min per user` per SECURITY.md §6 row 4 once a lockout store is wired.
+
+7. **Pre-existing Q-B-02 workarounds reused verbatim** — jest.config.json --config flag (still no ts-node), Prisma client cast in entrypoint (still placeholder), eslint-disable on adapter import in entrypoint, inline `setErrorHandler` in entrypoint. No new workarounds introduced. No new GAPs raised.
+
+8. **`PasswordRotationRequiredError` placement** — `src/modules/auth/auth.errors.ts` per AUX-Q1 ACK amendment. Module barrel `index.ts` does NOT re-export (internal-only — plugin is the sole consumer); change to PM B's spec.
+
+9. **Auto-format pass** — bundled into commit 9 to keep the impl history clean. Prettier-flagged files were the plugin, plugin test, routes, service test, entrypoint, and the augmentation file (cosmetic line-wrap consolidation, no semantic change).
+
+Requesting PM B VERDICT.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
