@@ -3,16 +3,16 @@ import { randomBytes } from 'node:crypto';
 import type { Logger } from 'winston';
 
 import type { AppConfig } from '@core/config/env.js';
-import { AuthError } from '@core/errors/app-errors.js';
+import { AuthError, ValidationError } from '@core/errors/app-errors.js';
 
 import { hashToken } from '@shared/utils/crypto.js';
 import { maskEmail } from '@shared/utils/masking.js';
 
 import { ttlToSeconds } from './auth.cookie-helpers.js';
 import type { AuthRepository, SessionCreateInput, UserRow } from './auth.repository.js';
-import type { LoginRequestDto } from './auth.schema.js';
+import { evaluatePasswordPolicy, type LoginRequestDto } from './auth.schema.js';
 import type { TokenIssuer } from './auth.token-issuer.js';
-import type { AuthUser, JwtClaims, SessionContext } from './auth.types.js';
+import type { AuthUser, JwtClaims, Language, SessionContext } from './auth.types.js';
 import type { PasswordHasherPort } from './ports/password-hasher.port.js';
 
 export interface LoginResult {
@@ -23,6 +23,19 @@ export interface LoginResult {
 }
 
 export type RefreshResult = LoginResult;
+
+export interface MeResult {
+  readonly user: AuthUser;
+  readonly csrfToken: string;
+}
+
+export interface UpdateMeLanguageResult {
+  readonly user: AuthUser;
+}
+
+export interface RotatePasswordResult {
+  readonly success: true;
+}
 
 const REFRESH_TOKEN_BYTES = 32;
 const CSRF_TOKEN_BYTES = 32;
@@ -134,6 +147,71 @@ export class AuthService {
       refreshToken: newRefresh,
       csrfToken: newCsrf,
     };
+  }
+
+  async getMe(claims: JwtClaims): Promise<MeResult> {
+    const user = await this.repo.findUserById(claims.sub);
+    if (user === null || !user.isActive) {
+      throw new AuthError('Invalid session');
+    }
+    const csrfToken = generateOpaqueToken(CSRF_TOKEN_BYTES);
+    await this.repo.rotateCsrfToken(claims.sid, csrfToken);
+    return { user: this.toAuthUser(user), csrfToken };
+  }
+
+  async updateMeLanguage(claims: JwtClaims, language: Language): Promise<UpdateMeLanguageResult> {
+    const user = await this.repo.updateUserLanguage(claims.sub, language);
+    return { user: this.toAuthUser(user) };
+  }
+
+  async rotatePassword(
+    claims: JwtClaims,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<RotatePasswordResult> {
+    const user = await this.repo.findUserById(claims.sub);
+    if (user === null || !user.isActive) {
+      throw new AuthError('Invalid session');
+    }
+
+    const ok = await this.hasher.verify(user.passwordHash, currentPassword);
+    if (!ok) {
+      this.logger.info('auth.rotatePassword.rejected', {
+        email: maskEmail(user.email),
+        userId: user.id,
+        reason: 'wrong_current',
+      });
+      throw new AuthError('Invalid current password');
+    }
+
+    const failedRules = evaluatePasswordPolicy(newPassword);
+    if (failedRules.length > 0) {
+      throw new ValidationError('new_password fails policy', { failed: failedRules });
+    }
+
+    const newHash = await this.hasher.hash(newPassword);
+    await this.repo.updateUserPassword(user.id, newHash);
+
+    try {
+      const { revokedCount } = await this.repo.revokeAllOtherSessions(user.id, claims.sid);
+      this.logger.info('auth.rotatePassword.success', {
+        email: maskEmail(user.email),
+        userId: user.id,
+        sessionId: claims.sid,
+        revokedSessions: revokedCount,
+      });
+    } catch (err) {
+      // Best-effort sweep per ACK ruling: log + continue. Password rotation
+      // must succeed even if the sweep hiccups; max access-TTL caps stale
+      // tokens at 15min per D04.
+      this.logger.warn('auth.rotatePassword.sweep_failed', {
+        userId: user.id,
+        sessionId: claims.sid,
+        error: err instanceof Error ? err.message : 'unknown',
+      });
+    }
+
+    return { success: true };
   }
 
   private buildSessionInput(
