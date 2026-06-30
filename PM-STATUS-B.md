@@ -13,10 +13,10 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T11 — tenant-guard middleware · `assigned · READY-FULL (cross-slot per §4-D01, cycle 4 single-dev)` — ASSIGNMENT issued cycle 4 (2026-06-29). **CROSS-SLOT execution** per PARENT §4-D01 (Slot A canonical owner; Slot B execution one-off). 5 open items for PLAN. Estimate ~3-5h impl→SUBMIT.
-- **T05+T06 status**: both `APPROVE-PARTIAL` (cycle 2 + cycle 3 close). Re-open trigger waits for Slot A T02; will batch-upgrade alongside T11 to FULL APPROVE when T02 ships.
-- **Cycle 4 sequence (PO-ratified)**: T11 (this) → T07 (per-hotel users CRUD, depends on T11).
-- **Branch**: `feat/auth-core` (20 impl commits ahead of `main` post-fix-rebase) — T11 will stack on T06; same branch per §7 hygiene.
+- **T05+T06+T11 status**: all three `APPROVE-PARTIAL` (cycle 2 + 3 + 4 closes). VERDICT T11 attempt 1 posted 2026-06-30; cross-slot mandate fully satisfied (5/5 commits + SUBMIT header + plugin file header all carry §4-D01 marker); 14/14 verifications match; 15/15 DoD + 8 AC + bonus AC#9 cross-slot all ✓; 4 DDs ACCEPT; Open #1 defensive-branch coverage ACCEPT (Option A — no test add).
+- **Next focus**: **T07 pickup (cycle 5)** — per-hotel users CRUD, wires T11 tenant-guard plugin. Last Slot B sequence item. After T07 APPROVE-PARTIAL → entire Slot B sequence complete; await T02 for batch FULL upgrade.
+- **Cycle 5 sequence**: T07 (final). Single-dev cycle still active (Slot A/C still PARKED).
+- **Branch**: `feat/auth-core` (25 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11) — T07 will stack on T11; NO merge to `main` until batch FULL APPROVE.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -32,7 +32,7 @@
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
-| T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `assigned · READY-FULL (cross-slot per §4-D01, cycle 4 single-dev)` | —              | Cycle 4 task. ASSIGNMENT issued 2026-06-29. Ownership of record = Slot A; execution by Slot B this cycle only. Scope: `src/plugins/tenant-guard.ts` factory + 4-role unit coverage + 5 open items for PLAN. Cross-slot commit ceremony WAJIB. |
+| T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
 | T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
 
 ---
@@ -2222,6 +2222,190 @@ Notes (open items / observations for PM B VERDICT consideration)
 5. **Integration placeholder count = 4** — slightly above ASSIGNMENT minimum of 3+. Extra entry (`it.todo` for "JWT refresh interplay") anticipates the rotation-aware test that T07/T08 might want when scoped routes start re-rotating sessions.
 
 Requesting PM B VERDICT (expected: APPROVE-PARTIAL — full APPROVE batches with T05+T06 on T02 ship).
+
+##### VERDICT T11 attempt 1 — APPROVE-PARTIAL (cycle 4 close; full APPROVE batched with T05+T06 pending T02). CROSS-SLOT execution per §4-D01. by PM B (cycle 4, 2026-06-30)
+
+**Outcome**: ✅ **APPROVE-PARTIAL**. Cross-slot mandate fully satisfied (5/5 commits + SUBMIT header + plugin file header all carry §4-D01 marker). 14/14 independent verifications match Executor klaim. All 15 DoD items ✓; 4 DDs ACCEPT; 4 open items resolved (Option A on #1 — defensive branch coverage accepted). T05+T06+T11 trio now in APPROVE-PARTIAL holding pattern, batched for FULL APPROVE upgrade pending Slot A T02 ship.
+
+---
+
+**Cross-slot marker audit (MANDATORY per §4-D01)** — ALL PASS
+
+| Mandate | Audit method | Result |
+|---|---|---|
+| **Per-commit footer (5/5)** | `git log --format="===%n%h %s%n%b" c9413e8..origin/feat/auth-core` — verify each commit body contains literal `Cross-slot execution per §4-D01 (Slot A canonical territory).` | ✅ **5/5 commits** carry exact footer: `48e1e55` (TenantScopeViolationError) + `188946a` (types) + `dbb2f0d` (plugin factory) + `403ce77` (unit tests) + `99bb0cb` (integration placeholders) |
+| **SUBMIT block header** | grep `^#### SUBMIT T11` in PM-STATUS-B.md §2 | ✅ Line 2068: `#### SUBMIT T11 — exec-B (Nanak) cycle 4 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D01.` |
+| **Plugin file header comment** | `git show origin/feat/auth-core:src/plugins/tenant-guard.ts \| head -20` | ✅ Lines 4-6: `Cross-slot execution per PARENT §4-D01 (Slot A canonical territory; Slot B execution one-off for single-dev cycle). Future amendments return to Slot A.` |
+| **SUBMIT heritage section** | scan §2 SUBMIT block body | ✅ Heritage section present (refer SUBMIT block lines above); audit trail + canonical ownership + future amendment note all stated |
+
+**Cross-slot heritage canonical record** (for Slot A future re-take):
+- ASSIGNMENT block (cycle 4 open) ✓
+- PLAN block (cycle 4 attempt 1) ✓
+- ACK block (cycle 4) ✓
+- SUBMIT block (cycle 4 attempt 1) ✓
+- **This VERDICT** ✓
+- 5 impl commits on `feat/auth-core` (chain `48e1e55..99bb0cb`) ✓
+- Plugin file `src/plugins/tenant-guard.ts` header comment ✓
+
+Audit trail complete for Slot A handoff.
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — re-run on my session)**
+
+| Check | Executor klaim | PM B independent rerun | Status |
+|---|---|---|---|
+| `make check` exit | exit 0 green | rerun via `nvm use 20 && make check` → exit 0 (lint 0/0, format, typecheck, test-unit all PASS) | ✅ MATCH |
+| Test counts | 86 pass + 20 todo + 2 skipped | identical: `Tests: 2 skipped, 20 todo, 86 passed, 108 total` | ✅ MATCH |
+| Coverage overall | 98.22 stmt / 81.94 branch / 100 funcs / 98.9 line | exact same | ✅ MATCH |
+| `tenant-guard.ts` coverage | 94.44%/66.66%/100%/94.44% (uncovered 102-103) | identical | ✅ MATCH (line ≥90% target MET; branch 66.66% per Open Item #1 — see ruling below) |
+| `auth.errors.ts` coverage post-T11 | 100% all (TenantScopeViolationError exercised by deny test) | identical: 100/100/100/100 | ✅ MATCH |
+| Other auth.* files unchanged | T05/T06 coverage unchanged | confirmed all 100% line on auth.service/routes/schema/jwt-context/token-issuer; no regression | ✅ MATCH |
+| `plugins/` folder | 95.08% stmt / 75% branch / 100% func / 95% line | identical | ✅ MATCH |
+| Drift T11 territory | zero hits | rerun: 1 false-positive only (auth.errors.ts:2 `// any AppError` comment prose — same as T06 verify, NOT new). Zero T11-attributable drift. | ✅ MATCH |
+| Fail-closed semantics | throw on missing hotelId non-super_admin | confirmed `tenant-guard.ts:113-128` — `if (claims.hotelId === null) { fastify.log.warn + done(new TenantScopeViolationError) }`; no false-pass path | ✅ MATCH |
+| Status 403 only (no 404 mix) | consistent | confirmed `auth.errors.ts:38 statusCode = 403` for TenantScopeViolationError; NO 404 emission anywhere as deny status (404 references in comments are path-fallback context, NOT deny status) | ✅ MATCH |
+| Audit log shape (7-field) | exact spec per PLAN line 1862-1872 | confirmed `tenant-guard.ts:114-122` — `{ msg: 'tenant_deny', correlationId: req.id, userId: claims.sub, role: claims.role, claimHotelId: null, path: matchedPath(req), method: req.method }`. NO raw token, NO cookie value, NO email | ✅ MATCH |
+| `routeOptions.url ?? req.url.split('?')[0] ?? ''` | T06 isAllowlisted parity | confirmed `tenant-guard.ts:151-156` matchedPath helper — Fastify 4.28+ canonical + safe fallback | ✅ MATCH |
+| super_admin bypass branch order | BEFORE hotelId-null check | confirmed `tenant-guard.ts:105-111` (super_admin → all-hotels) BEFORE line 113 (null hotelId check) — correct ordering since super_admin's hotelId IS null per User model | ✅ MATCH |
+| Unit tests 4-role + edge cases | 11 tests | confirmed: 11 `it()` blocks in plugin test file; covers super_admin (hotelId null + non-null both bypass), gm_admin/dept_head/staff (same-hotel allow, missing-hotelId deny), missing cookie skip, empty cookie skip, invalid JWT skip, allowlist passthrough, audit log shape verification | ✅ MATCH |
+| Integration placeholders | 4 it.todo (above 3+ min) | confirmed: 4 `it.todo()` in integration placeholder file (PLAN target 3+; extra entry for "JWT refresh interplay" forward-looking) | ✅ MATCH |
+
+`make check` excerpt (PM B rerun):
+```
+> @qooma/auth-backend@0.1.0 lint    → PASS (0/0 with --max-warnings 0)
+> @qooma/auth-backend@0.1.0 format:check → All matched files use Prettier
+> @qooma/auth-backend@0.1.0 typecheck → tsc --noEmit clean
+> @qooma/auth-backend@0.1.0 test:unit → Tests: 2 skipped, 20 todo, 86 passed, 108 total | Time: 0.861 s
+```
+
+**14/14 verification checks PASS independently. Zero Executor claim discrepancies.**
+
+---
+
+**15 DoD items mapping** (per ASSIGNMENT lines 1665-1692)
+
+| # | DoD item | Status | Evidence |
+|---|---|---|---|
+| 1 | Plugin CREATE `src/plugins/tenant-guard.ts` factory pattern (T06 DD1 precedent) | ✓ | `registerTenantGuard(fastify, deps): void` factory at line 75; no `register()` call; `addHook('preHandler', ...)` directly on root instance |
+| 2 | Plugin uses `preHandler` hook | ✓ | line 78 `fastify.addHook('preHandler', ...)` |
+| 3 | JWT context reuse `extractJwtClaims` | ✓ | line 10 import + line 95 invocation — NO duplication |
+| 4 | Allowlist mechanism per PLAN (b) | ✓ | `deps.allowlist: readonly string[]` accepted at factory line 67; `Set` constructed once at registration line 76; lookup `isAllowlisted(req, allowlist)` line 80 |
+| 5 | Deny-by-default missing/invalid hotelId | ✓ | line 113 `if (claims.hotelId === null) throw TenantScopeViolationError` (after super_admin bypass branch) |
+| 6 | Cross-tenant access reject (Open #4 (a) ruling — handler-side, NOT plugin-side URL param diff) | ✓ | Plugin sets `req.tenantScope` only; row-level enforcement deferred to T07 per spec §6 line 388-398 `scopedTickets` pattern — PM B Open #4 ACK ruling honored |
+| 7 | super_admin global bypass per PLAN (a) | ✓ | line 105-111: `if (claims.role === 'super_admin') { req.tenantScope = { type: 'all-hotels' }; done(); return; }` — no per-route opt-in |
+| 8 | `req.session` populated (claims-only, Amendment 2) | ✓ | `sessionFromClaims(claims)` at line 134 — `{ userId, role, hotelId, deptId }` shape; NO DB lookup |
+| 9 | `req.tenantScope` populated | ✓ | super_admin → `{ type: 'all-hotels' }` (line 109); non-super_admin → `{ type: 'single-hotel', hotelId }` (line 132 with `satisfies TenantScope`) |
+| 10 | Types extension `src/shared/types/fastify-augmentation.ts` additive | ✓ | `Session` + `TenantScope` types + FastifyRequest module augmentation added; existing `tokenIssuer` decorator preserved |
+| 11 | NEW AppError subclass `TenantScopeViolationError` in `auth.errors.ts` (DD5 pattern: not re-exported in barrel) | ✓ | `auth.errors.ts:30-40` class def (3 lines + jsdoc); barrel `index.ts` grep ZERO hits for `TenantScopeViolationError` — internal-only consumer is plugin |
+| 12 | Unit test file CREATE in `src/modules/auth/__tests__/` (T06 precedent) | ✓ | `tenant-guard.plugin.test.ts` — 11 `it()` blocks covering 4 roles + allowlist + missing cookie + invalid JWT + audit log shape + super_admin both hotelId variants |
+| 13 | Integration placeholder ≥3 `it.todo()` | ✓ | `tenant-guard.plugin.integration.test.ts` — **4 `it.todo()` entries** (1 above minimum) |
+| 14 | Coverage ≥80% line on plugin + types + new error class; target ≥90% on plugin (critical) | ✓ | plugin 94.44% line (≥90% target MET); auth.errors.ts 100% line; types-only file excluded by coverage config (acceptable) |
+| 15 | `make check` green + drift zero + security floor (fail-closed, status consistency, no PII/secret leak) | ✓ | rerun confirmed green; drift T11 zero (1 false-positive comment same as T06); security verified per checks above |
+
+**Bonus DoD line items**:
+- ✓ Named exports only (`registerTenantGuard` + `TenantGuardDeps` named export)
+- ✓ Public function explicit return type (`registerTenantGuard(...): void`)
+- ✓ File ≤ 300 LOC — `tenant-guard.ts` ≈ 160 LOC
+- ✓ NO `entrypoints/api.ts` touch (Amendment 3 honored)
+- ✓ NO new package install (no `fastify-plugin`)
+- ✓ Q-B-02 workarounds reused verbatim, no new workarounds introduced
+
+---
+
+**8 AC items + AC#9 cross-slot bonus** (per ASSIGNMENT)
+
+| # | AC | Status |
+|---|---|---|
+| 1 | Plugin functional via factory pattern, no new dep | ✓ |
+| 2 | 4-role unit coverage PASS | ✓ (super_admin × 2 hotelId variants, gm_admin/dept_head/staff parametric same-hotel + cross-hotel deny via missing claim) |
+| 3 | Allowlist mechanism works | ✓ (test #267 allowlist passthrough + #287 cookie-present-still-skip + line 309 audit log shape) |
+| 4 | Cross-tenant access rejected with consistent status code (403) | ✓ (single status across all deny paths) |
+| 5 | `make check` green | ✓ |
+| 6 | Drift zero T11 territory | ✓ |
+| 7 | Coverage threshold met | ✓ (plugin 94.44% line ≥ 90% target; global 98.9% line ≥ 80%) |
+| 8 | APPROVE-PARTIAL convention (full APPROVE held for T02) | ✓ (this VERDICT — batched with T05+T06) |
+| **9** | **Cross-slot heritage documented eksplisit** di SUBMIT + VERDICT blocks + every commit + plugin file header dengan §4-D01 reference | ✓ (cross-slot audit above all PASS) |
+
+---
+
+**4 Design Decision rulings — ALL ACCEPT**
+
+| DD | Topic | PM B ruling | Verification |
+|---|---|---|---|
+| **DD1** | Sync hook signature `(req, _reply, done)` (NOT async) | ✅ **ACCEPT** | `tenant-guard.ts:78-82` uses 3-arg sync `addHook('preHandler', (req, _reply: FastifyReply, done: HookHandlerDoneFunction) => {...})`. Avoids `require-await` lint trap (route body has no awaits — Fastify hook contract supports both forms). T07 wiring can use same form. |
+| **DD3** | `matchedPath(req)` shared helper for allowlist + audit log path field | ✅ **ACCEPT** | `tenant-guard.ts:150-156` returns `req.routeOptions.url ?? req.url.split('?')[0] ?? ''`. Benefit: audit log shows route PATTERN (`/users/:id`, not concrete `/users/abc-123`) → better aggregation + no PII via param values. Sound design. |
+| **DD5** | `req.session` + `req.tenantScope` undefined on skip paths (no sentinel value) | ✅ **ACCEPT** | Handlers can do `if (req.tenantScope === undefined) throw new AuthError('Guarded route called without scope')` for defense-in-depth on guarded routes. Cleaner than assigning a `{ type: 'none' }` sentinel that consumers would have to filter. |
+| **DD6** | `fastify.log.warn` direct (NOT winston injection) | ✅ **ACCEPT for cycle 4** | Fastify's built-in pino is sufficient for plugin-level warn audit; route correlation via `req.id` works end-to-end. **Note for future**: when T07 wires the plugin at `entrypoints/api.ts`, can revisit and route via winston if service-wide audit centralization demands a single logger instance. Document as cycle-5+ optional follow-up. |
+
+**All 4 DDs ACCEPT. No rework required.**
+
+---
+
+**4 Open Item rulings**
+
+- ✅ **Open #1 — Plugin branch coverage 66.66% (lines 102-103 uncovered, defensive non-Error catch)** → **ACCEPT as-is (Option A)**
+
+  **Decision**: NO additional test required. Accept defensive branch as unreachable in normal flow.
+
+  **Rationale**:
+  1. **Plugin line coverage 94.44% ≥ 90% target** (TESTING.md §9 critical security surface floor) MET
+  2. **Global branch 81.94% > 70% threshold** — well above floor; plugin's 66.66% is a single-file outlier on defensive code
+  3. **Defensive catch is contract assumption**: `extractJwtClaims` currently throws ONLY `AuthError` per `auth.jwt-context.ts:14-21`. Lines 102-103 (`done(err instanceof Error ? err : new Error(String(err)))`) handle the hypothetical non-Error throw — genuinely unreachable in current code path
+  4. **Test-for-test-sake risk**: forcing a test that mocks `extractJwtClaims` to throw a string/number would test the language runtime, not application logic
+  5. **Documentation hedge**: defensive code stays as fail-closed insurance against future contract widening
+
+  **Audit hedge added to VERDICT**: "Defensive non-Error catch branch (`tenant-guard.ts:102-103`) unreachable per current `extractJwtClaims` contract (only `AuthError`). Revisit kalau upstream contract widens (e.g., adds non-AuthError exception type) — then add explicit test for non-Error throw handling."
+
+- ✅ **Open #2 — Open Item #4 (a) shallow-claim ruling honored** → **ACK CONFIRM**
+
+  Verified: plugin does NOT compare `req.params.hotelId` vs `claims.hotelId`. Row-level cross-tenant enforcement delegated to handler-side via `req.tenantScope` consumption (T07 territory). PLAN line 1802 + 1858 interpretation matches PM B ACK Open #4 ruling. Implementation clean.
+
+- ✅ **Open #3 — Integration placeholder count 4 (above 3+ min)** → **ACK**
+
+  Extra `it.todo('JWT refresh interplay')` is sound forward-looking capture for T07/T08 when scoped routes start re-rotating sessions. Worth keeping.
+
+- ✅ **Open #4 — Q-B-02 workarounds reused verbatim** → **ACK**
+
+  No new workaround surface introduced. Clean.
+
+---
+
+**Conditions for APPROVE-PARTIAL → FULL APPROVE upgrade (batched with T05 + T06)**
+
+T05 + T06 + T11 all stay APPROVE-PARTIAL until ALL of:
+1. Slot A T02 (initial Prisma migration) APPROVED + `prisma migrate dev` applied locally
+2. Executor B re-opens BOTH `*.integration.test.ts` placeholder files (14 total `it.todo()` entries now: T05 had 10 + T06 added 5 + T11 added 4 = 19 total; some overlap may dedupe). Fill with testcontainers Postgres assertions per `docs/TESTING.md §5`. Note: actual count = 10 (T05) + 5 (T06) + 4 (T11) = 19 individual placeholders.
+3. PM B re-validate full integration suite green + repo coverage ≥ 80% line per TESTING.md §9
+4. Drift re-scan clean across all auth-domain code post-integration
+5. Re-issue VERDICT as **`APPROVE (full)`** — **single block covering ALL THREE** T05+T06+T11 batch
+6. Branch `feat/auth-core` merges to `main` (no merge until full APPROVE batch)
+
+**Branch `feat/auth-core` stays open** — 25 impl commits ahead of `main` post-T11 (10 T05 + 9 T06 + 1 fix + 5 T11). No merge until full APPROVE batch.
+
+---
+
+**Cycle 4 close — sequence next**
+
+Per ASSIGNMENT T05/T06/T11 + PARENT §10 cycle-1 sequence: **T05 → T06 → T11 → T07**.
+
+- T05: APPROVE-PARTIAL (cycle 2 close) ✓
+- T06: APPROVE-PARTIAL (cycle 3 close) ✓
+- T11: APPROVE-PARTIAL (cycle 4 close) ✓ — this VERDICT, cross-slot per §4-D01
+- **T07**: per-hotel users CRUD — wires tenant-guard plugin (T11 deferred wiring per Amendment 3 lands here); CYCLE 5 PICKUP
+
+**Executor B**: clear to pickup T07 in cycle 5 (last Slot B sequence item). After T07 APPROVE-PARTIAL → entire Slot B sequence complete; await Slot A T02 ship for batch FULL APPROVE upgrade + `feat/auth-core` merge to `main`.
+
+**Branch hygiene**: T07 will follow same pattern (impl on `feat/auth-core`, PM-STATUS on `main`).
+
+---
+
+**Roll-up + cross-references**:
+- `PM-STATUS-B.md §1` task tracker row T11 → status flag `approved-partial · cycle 4 close · full APPROVE held (T02)`; Verified-by = `PM B — cycle 4 (2026-06-30) attempt 1`
+- `PM-STATUS-B.md §0` current focus → T05+T06+T11 all APPROVE-PARTIAL; next focus T07 cycle 5
+- `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` APPROVE entry format + cross-slot completion marker)
+
+PM B exits to **wait-mode for cycle-5 opening**: either (a) PM B authors ASSIGNMENT T07 sub-block (after user signal — same chain-or-wait question as cycle-3→4 transition), or (b) Slot A unparks + T02 lands → PM B re-opens T05+T06+T11 batch for PARTIAL→FULL upgrade cycle (whichever first).
 
 <!--
 TEMPLATE — copy untuk task baru:
