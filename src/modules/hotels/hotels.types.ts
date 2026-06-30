@@ -65,9 +65,14 @@ export interface HotelSettings {
  * Patch shape for PUT /api/settings/hotel — all fields optional; branding
  * and dnd accept null to clear the JSONB column. Whitelist enforced
  * upstream by zod `.strict()` in hotels.schema.ts.
+ *
+ * `| undefined` on each field matches the zod-inferred Dto shape under
+ * `exactOptionalPropertyTypes: true` (tsconfig strict) — zod outputs
+ * `field?: T | undefined` for `.optional()`, and this interface must
+ * accept that shape to flow through the service → repo layer.
  */
 export interface HotelSettingsPatch {
-  readonly timezone?: string;
-  readonly branding?: Record<string, unknown> | null;
-  readonly dnd?: Record<string, unknown> | null;
+  readonly timezone?: string | undefined;
+  readonly branding?: Record<string, unknown> | null | undefined;
+  readonly dnd?: Record<string, unknown> | null | undefined;
 }

@@ -3,6 +3,7 @@
 // paths. Routes/service/repository land in subsequent scaffold commits.
 
 export { HotelsRepository } from './hotels.repository.js';
+export { HotelsService } from './hotels.service.js';
 export { UpdateSettingsRequestSchema } from './hotels.schema.js';
 
 export type { UpdateSettingsRequestDto } from './hotels.schema.js';
