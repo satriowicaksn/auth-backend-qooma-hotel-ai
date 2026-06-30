@@ -13,11 +13,11 @@
 ## 0. Current focus (slot A)
 
 - **Day**: cycle 1 — Slot A ONLINE (Nathan hadir, 2026-06-30). First Slot A session.
-- **Active task**: **T03 (tiers seed)** — ASSIGNMENT issued §2, awaiting Executor A PLAN. (T01 ✅ approved · adopt-T02 ✅ · adopt-T11 ✅.)
-- **Branch**: foundation verify done on `feat/auth-core`; **code work (T03/T04) on `feat/seed-foundation`** off `feat/auth-core` (§2 decision).
+- **Active task**: **T04 (seed-super-admin CLI)** — ASSIGNMENT issued §2, awaiting Executor A PLAN. (T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · **T03 ✅ APPROVED**.)
+- **Merge-ready (notify Nathan)**: **T03** — branch `fix/prisma-client-tsx-resolve` @ `22009e8` (Option-A 1-line tsconfig fix; seed code already on main via PR#2). Nathan merges.
 - **Next gate (global)**: G1 (criteria-based, no deadline) — lihat `PM-STATUS-PARENT.md §5`.
-- **My queue**: ~~T01~~ ✅ → ~~adopt T02~~ ✅ → ~~adopt T11~~ ✅ → **T03 (active)** → **T04 (un-blocked, next)**.
-- **Progress**: 3 / 5 signed-off (T01 approved, T02 + T11 adopted). T03 active, T04 next. G1 foundation nearly closed for Slot A (pending T03+T04 seeds).
+- **My queue**: ~~T01~~ ✅ → ~~adopt T02~~ ✅ → ~~adopt T11~~ ✅ → ~~T03~~ ✅ → **T04 (active)** → Q-A-04 `tsc-alias` prod-boot fix (queued).
+- **Progress**: 4 / 5 signed-off (T01 · T02 · T11 · **T03**). T04 active = last foundation task. G1 foundation nearly closed for Slot A.
 
 ---
 
@@ -30,7 +30,7 @@
 | T01 | pnpm install verify + `make check` green | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED + GAP T01-#1 ratified (Option A — make-binary absent, underlying recipe equiv, CI runs literal make). DB verified independently (5 tables, migration applied). VERDICT §2. Gate **G1**. |
 | T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D05, no re-exec). All constraints verified (UNIQUE/FK ON DELETE/mutual-exclusion CHECK proven live). Ownership-of-record = Slot A. Full APPROVE rides Slot B batch+CI. VERDICT §2. |
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
-| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🟠 `wip · fix authorized (Option A)` | — | Code green (152 unit + 35 integ incl tiers-seed 2/2). GAP T03-#2: `prisma-client.ts:25` `.prisma/client` import crashes at runtime. **RE-RULING §2** (rebuttal upheld — PM A verified): Option B (`@prisma/client`) WITHDRAWN (throws under `node-linker=isolated`); **Option A AUTHORIZED** = `tsconfig.json` paths `.prisma/client`→real client (verified instantiates + typecheck real types). 4-pt verify (seed/typecheck+lint/tests/dev:api). Code change → branch, Nathan merges. Prod-dist boot = Q-A-04 (tsc-alias, separate). Gate **G1**. |
+| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · READY (un-blocked, next)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT after T03 PLAN (single-focus). Branch `feat/seed-foundation`. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
 
 ---
@@ -457,7 +457,74 @@ Nothing shipped on `fix/prisma-client-esm-import` (B reverted; branch clean, no 
 
 _Awaiting Executor A: apply Option A (tsconfig path) + 4-point verify + SUBMIT T03. I'll then VERDICT + tell Nathan T03 is merge-ready._
 
+#### SUBMIT T03 — exec-A (Nathan) at cycle 1 (2026-06-30) (attempt 1)
+
+Task: Tiers seed (4 rows, idempotent) + the Option-A foundation fix that unblocks `pnpm seed` (per RE-RULING).
+
+**Branches / merge:**
+- **Seed code already on `main`** via PR#2 (`prisma/seeds/{load-env,tiers,index}.ts` + `src/core/prisma/__tests__/tiers-seed.integration.test.ts`, commit `bf5517b`).
+- **Dev fix (this SUBMIT) — `fix/prisma-client-tsx-resolve` @ `22009e8`** (pushed): 1 line in `tsconfig.json` paths `".prisma/client": ["node_modules/.prisma/client"]` (approved Option A). **Merging this branch → T03 complete on `main`.**
+
+**DoD self-check (ASSIGNMENT T03):**
+- [x] Seed in `prisma/seeds/`, uses real singleton `@core/prisma/prisma-client.js` (`.prisma/client` import preserved — only runtime *resolution* fixed via tsconfig path).
+- [x] 4 rows idempotent `upsert` by unique `name`: `lite`/`professional`/`luxury`/`enterprise` — re-run stays 4.
+- [x] Columns per §1.4: `displayName`, outbound (2000/4000/8000/-1), agentCap (1/3/5/-1), agentMinimum=3 all, userCap (2/4/6/-1), departmentCap (1/3/5/-1), `isCustom` enterprise-only, `features={}` (GAP T03-#1 Option A / Q-A-02).
+- [x] `pnpm seed` exit 0 + idempotent · integration test (`*.integration.test.ts`) asserts 4 + idempotent.
+- [x] `make check` equiv green + integration green · drift floor · diff scoped (seed files + 1-line tsconfig; no `src/modules`/schema/migration).
+
+**4-POINT VERIFY (RULING):**
+1. **seed exit 0** — `pnpm seed` → `[seed] tiers: 4 canonical rows upserted (idempotent)`; `SELECT count(*)`=4; re-run → still 4. psql values exact: lite `2000/1/3/2/1/f/{}` · professional `4000/3/3/4/3/f/{}` · luxury `8000/5/3/6/5/f/{}` · enterprise `-1/-1/3/-1/-1/t/{}`.
+2. **typecheck + lint clean, no new `any`** — `pnpm typecheck` exit 0; `pnpm lint` 0 errors/0 warnings. (Real `.prisma/client` types preserved — the withdrawn Option-B's 190 `no-unsafe-*` errors are absent.) `format:check` clean.
+3. **unit + integration green** — `pnpm test:unit` 152 passed (1 skip `_template`) · `pnpm test:integration` 35 passed (1 skip `_template`) incl. `tiers-seed.integration.test.ts` **2/2**.
+4. **dev:api boots** — `pnpm dev:api` (tsx) boots **past the singleton import** (no `ERR_INVALID_MODULE_SPECIFIER`), **LISTENING on `0.0.0.0:3000`** (lsof), HTTP probe answered by Fastify (404 on non-route paths). Proves G1 "api boots" under tsx. (First attempt hit `EADDRINUSE` from a stray process — freed port, clean boot confirmed.)
+
+**Drift scans (seed files + tsconfig):** `any` 0 · `console.log` 0 (only `console.warn/error`, allowed in `prisma/seeds/**` per eslintrc override) · `throw new Error` 0 (runner uses `process.exitCode`) · forbidden imports 0 · default export outside entry 0 · `.skip` 0.
+
+**Security:** N/A (no auth/webhook/crypto; no secrets; `.env` untracked).
+
+**Notes:**
+- **`features={}`** per ratified Option A (Q-A-02); backfill via the same `upsert` when the 19-key matrix lands.
+- **Comment-strip hook**: this env strips comments from files I Write/Edit, so the in-code `features` rationale comment you'd expect was removed — rationale lives here + Q-A-02; the data self-documents (`features` omitted → schema default). Flagging so it doesn't read as an oversight.
+- **Prod `node dist`** not covered (Option A is tsx/dev only) — separate `tsc-alias` task (Q-A-04 §4-D06), queued after T03/T04. Will need a `pnpm add -D tsc-alias` (your approval at that time per CLAUDE §11).
+
+**T03 READY TO MERGE — branch `fix/prisma-client-tsx-resolve` @ `22009e8`.** Requesting PM A VERDICT.
+
+##### VERDICT T03 — ✅ APPROVED (cycle 1, attempt 1) by PM A — independently verified
+
+All DoD + 4 verify points **re-run by PM A** (not accepted from the table — given this task's history I checked out `fix/prisma-client-tsx-resolve` @ `22009e8` and ran everything):
+- **Branch diff** = exactly the 1 authorized line in `tsconfig.json` (`".prisma/client": ["node_modules/.prisma/client"]`), nothing else. Seed code already on main (PR#2).
+- **#1 seed** — `pnpm seed` exit 0; DB queried directly: **4 rows, exact §1.4 values** (lite 2000/1/3/2/1·false · professional 4000/3/3/4/3·false · luxury 8000/5/3/6/5·false · enterprise -1/-1/3/-1/-1·true), `features={}` all. Re-run → still 4 (idempotent ✓).
+- **#2 typecheck + lint** — `pnpm typecheck` exit 0, `pnpm lint` 0-warn. Real `.prisma/client` types (Option A working).
+- **#3 tests** — `pnpm test:unit` 152 passed; `pnpm test:integration` **35 passed** on a clean DB (incl tiers-seed 2/2). *(I briefly saw 30 failures — self-inflicted: I'd run `pnpm seed` first, and the canonical tiers collide with the integration fixtures' `createTestTier({name:'lite'})`. On a clean DB = 35 pass. See observation below.)*
+- **#4 dev:api** — booted it myself: **LISTENING `0.0.0.0:3000`** (lsof), Fastify answering HTTP (404 on non-routes) — boots past the singleton import. Closes the real G1 "api boots" check that T01 never exercised.
+- **Code review** — `tiers.ts` type-only Prisma import + named exports + idempotent upsert-by-name; `index.ts` loads env via side-effect import BEFORE the singleton (correct ESM order); `load-env.ts` = dep-free parser (per env amendment, no `--env-file-if-exists`). **Drift CLEAN** (no `any`/`console.log`/`throw new Error`/default-export; `console.warn` in script OK).
+
+**📌 Observation (non-blocking, NOT a T03 defect) — test-isolation footgun:** the integration fixtures (`createTestTier`, Slot B `integration-helpers.ts`) default to canonical tier names like `'lite'`, which collide with real seed data on a shared DB. CI is unaffected (fresh test DB, no seed), but `make start-fresh` (seeds) followed by `make test-integration` on the same DB would fail. **Recommend** (future, Slot B fixture or test-hygiene): integration fixtures use UUID-suffixed tier names (like the smoke test already does) OR reset tiers in `beforeAll`. Logged for Parent §10 / Slot B awareness — not blocking T03.
+
+→ §1 T03 → `approved`. → roll-up PARENT §2 + §1. → **T03 verified-ready to merge** — PM A notifies Nathan (branch `fix/prisma-client-tsx-resolve` @ `22009e8`; merging it lands the Option-A fix so the seed already on main works). → ASSIGNMENT T04 issued below.
+
 ---
+
+### ASSIGNMENT T04 — routed to exec-A (Nathan) by PM A at cycle 1 (2026-06-30) — final Slot A foundation task
+- **Task**: `seed-super-admin` CLI (`pnpm seed:super-admin`).
+- **Branch**: off **`fix/prisma-client-tsx-resolve`** (stacks on the Option-A fix — the singleton must resolve at runtime; branching off plain `main` would still crash until Nathan merges T03). Suggest `feat/seed-super-admin`. Code → branch, **Nathan merges** (after T03).
+- **Deps satisfied**: T01 ✓ · adopt-T02 ✓ (users table + mutual-exclusion CHECK) · `argon2` present · `load-env.ts` present (reuse) · singleton resolves (T03 fix). Containers up (5433/6380).
+- **Spec**: `MVP-AUTH-FIRST §3` step 6 + `01-auth-identity §1.3`.
+
+**DoD T04:**
+- [ ] `package.json` script `"seed:super-admin": "tsx prisma/seeds/super-admin.ts"` (script entry — NOT a new dep).
+- [ ] CLI `prisma/seeds/super-admin.ts`: side-effect import `./load-env.js` **FIRST** (reuse; same ESM ordering as `index.ts`), then singleton `db`.
+- [ ] Read `SEED_SUPER_ADMIN_EMAIL` + `SEED_SUPER_ADMIN_PASSWORD` from env; **fail clearly** (non-zero exit + message, no stack-dump of the password) if either missing/empty.
+- [ ] Idempotent: one row `role='super_admin'`, `hotelId=NULL`, `mustRotatePassword` per spec (`01-auth-identity §1.3` — confirm true/false for seeded root admin), `name` default, `language='id'`. Idempotency by `email` (upsert-by-email or check-then-insert — justify in PLAN). Must satisfy `users_role_hotel_mutual_exclusion` (hotel_id NULL) + `users_role_check`.
+- [ ] **HARD — password hash**: hash with the SAME argon2 config as login (`src/modules/auth/adapters/argon2-hasher.adapter.ts` / `ports/password-hasher.port.ts`). Reuse `Argon2Hasher`, do NOT hand-roll different params (else super-admin can't log in). **Verify in SUBMIT**: seed → then `Argon2Hasher.verify(storedHash, password)` returns true.
+- [ ] **Security floor**: never log the password/hash; mask email in any log (`maskEmail`); no secret in commit.
+- [ ] `pnpm seed:super-admin` exit 0; **re-run idempotent** (no dupe, no throw); DB-verify: 1 super_admin, hotel_id NULL, password verifies.
+- [ ] `.env.example`: add `SEED_SUPER_ADMIN_EMAIL=` + `SEED_SUPER_ADMIN_PASSWORD=` placeholders (env template = in-scope for the task introducing them). This resolves your deferred T04 GAP — go ahead, no separate escalation. (If you also spot the `JWT_ACCESS_TTL` 8h-vs-15m `.env.example` mismatch, flag it as a one-line note; don't fix it under T04 unless trivial — it ties to §4-D04.)
+- [ ] `pnpm typecheck` + `pnpm lint` clean; add a test for the seed logic if branching (integration, DB up). Drift floor (no `any`/`console.log`/`throw new Error`/default-export). No schema change. git diff scoped to the CLI + script + `.env.example`.
+
+**Catatan PM A**: This closes Slot A foundation (T01–T04 + adopts). After T04 APPROVE I notify Nathan that the full Slot A foundation is merge-ready, then the queued `tsc-alias` prod-boot task (Q-A-04 §4-D06) is next. On argon2 reuse: importing `Argon2Hasher` from `@modules/auth/adapters/` into a seed script is a justified exception (script ≠ module; correctness > the cross-module-import guideline) — state it in PLAN. Raise GAP if `01-auth-identity §1.3` is ambiguous on `must_rotate_password` for the seeded super-admin.
+
+_Awaiting Executor A PLAN T04._
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
@@ -615,6 +682,27 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 >
 > Format: per `PM-AGENT.md §7`.
 
+### cycle 1 (update 3) — 2026-06-30 (T03 APPROVED after P0 detour; T04 issued)
+
+```
+QOOMA BE A (Nathan) — Standup — cycle 1
+
+✅ Approved today
+- T03 (tiers seed) — APPROVED, PM A independently re-verified all 4 points (seed 4 exact rows idempotent · typecheck+lint · 152 unit+35 integ · dev:api LISTENING :3000). MERGE-READY (branch fix/prisma-client-tsx-resolve).
+
+🔄 In progress
+- T04 (seed-super-admin CLI) — ASSIGNMENT issued, awaiting PLAN. Last Slot A foundation task.
+
+📉 Detour handled (P0)
+- GAP T03-#2: `.prisma/client` ESM runtime crash on main (api couldn't boot). My first fix-ruling (@prisma/client) was WRONG — exec-A rebutted with evidence, I re-verified + re-ruled to Option A (tsconfig path). Rebuttal protocol worked.
+
+🚨 Escalations to Parent/PO
+- Q-A-04 (prod node-dist boot, tsc-alias) — PO Nathan APPROVED, queued post-T04. Q-A-02 (tier features matrix) still open to PO.
+
+📅 Gate: G1 — 4/5 Slot A signed-off; T04 = last. 
+🎯 Next: T04 PLAN→VERDICT → notify Nathan full Slot A foundation merge-ready → tsc-alias task.
+```
+
 ### cycle 1 (update 2) — 2026-06-30 (T01 APPROVED + adopt-T02/T11 ADOPTED + T03 issued)
 
 ```
@@ -730,10 +818,10 @@ QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 | T01 | pnpm install verify + `make check` green | ✅ `approved` (GAP T01-#1 ratified) | none | G1 |
 | T02 | Initial Prisma migration | ✅ `adopted` (PM A canonical) | T01 | G1 |
 | T11 | tenant-guard middleware | ✅ `adopted` (PM A canonical) | T01 | G2 |
-| T03 | Tiers seed (4 rows) | 🔵 `ACTIVE` — ASSIGNMENT §2, awaiting PLAN | T02 ✓ | G1 |
-| T04 | `seed-super-admin` CLI | `READY (un-blocked, next)` | T02 ✓ | G1 |
+| T03 | Tiers seed (4 rows) | ✅ `approved` (PM A verified) — **MERGE-READY** branch `fix/prisma-client-tsx-resolve` | T02 ✓ | G1 |
+| T04 | `seed-super-admin` CLI | 🔵 `ACTIVE` — ASSIGNMENT §2, awaiting PLAN | T02 ✓ | G1 |
 
-Sequence: ~~T01~~ ✅ → ~~adopt-T02~~ ✅ → ~~adopt-T11~~ ✅ → **T03 (active)** → **T04 (next)** → **Q-A-04 prod-boot fix** (`tsc-alias`, PO-approved §4-D06, Slot A foundation task, queued AFTER T03/T04).
+Sequence: ~~T01~~ ✅ → ~~adopt-T02~~ ✅ → ~~adopt-T11~~ ✅ → ~~T03~~ ✅ → **T04 (active)** → **Q-A-04 prod-boot fix** (`tsc-alias`, PO-approved §4-D06, Slot A foundation task, queued AFTER T03/T04).
 
 > **Note**: T03 dev unblock = `tsconfig.json` path `.prisma/client` (no dep, Option A). Separate from the prod `tsc-alias` task above. Both Slot A; both code → branch → Nathan merges (I notify when each verified-ready).
 
