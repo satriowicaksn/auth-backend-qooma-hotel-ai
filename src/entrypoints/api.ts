@@ -2,40 +2,115 @@
  * Entrypoint: HTTP API server (Fastify).
  *
  * Tanggung jawab:
- * - Register Fastify plugins (auth, hmac-validator, rate-limit, cors, error-handler)
- * - Wire up adapter → port → service (manual DI)
+ * - Register Fastify plugins (cookie, jwt, cors, helmet, rate-limit, error-handler)
+ * - Wire up adapter -> port -> service (manual DI per CLAUDE.md §4 + ADR-0001)
  * - Register module routes
  * - Graceful shutdown
  */
 
-export {}; // ESM module marker — prevents global scope collision with worker.ts
+import cookiePlugin from '@fastify/cookie';
+import jwtPlugin from '@fastify/jwt';
+import Fastify, { type FastifyInstance } from 'fastify';
+import { createLogger, format, transports } from 'winston';
 
-// TODO(boilerplate): implementasi setelah dependencies install + core modules siap.
-//
-// import Fastify from 'fastify';
-// import { loadConfig } from '@core/config/env.js';
-// import { createLogger } from '@core/logger/logger.js';
-// ... wire up
+import { loadConfig, type AppConfig } from '@core/config/env.js';
+import { AppError } from '@core/errors/app-errors.js';
+import { db } from '@core/prisma/prisma-client.js';
+
+// eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary that instantiates adapters per CLAUDE.md §4 + ADR-0001 (services consume the port).
+import { Argon2Hasher } from '@modules/auth/adapters/argon2-hasher.adapter.js';
+import { AuthRepository } from '@modules/auth/auth.repository.js';
+import { authRoutes } from '@modules/auth/auth.routes.js';
+import { AuthService } from '@modules/auth/auth.service.js';
+import { FastifyJwtTokenIssuer } from '@modules/auth/auth.token-issuer.js';
+import { UsersRepository } from '@modules/users/users.repository.js';
+import { usersRoutes } from '@modules/users/users.routes.js';
+import { UsersService } from '@modules/users/users.service.js';
+import { registerMustRotatePasswordGate } from '@plugins/must-rotate-password.plugin.js';
+import { registerTenantGuard } from '@plugins/tenant-guard.js';
+
+// Side-effect: pull Fastify augmentations (fastify.services, fastify.appConfig, cookie + jwt).
+import '@shared/types/fastify-augmentation.js';
+
+const TENANT_GUARD_ALLOWLIST: readonly string[] = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/refresh',
+  '/health',
+];
+
+export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
+  const fastify = Fastify({
+    logger: false,
+    trustProxy: true,
+  });
+
+  fastify.decorate('appConfig', config);
+
+  // TODO(slot-A): replace with src/plugins/error-handler.plugin.ts when foundation
+  // ships. Inline mapping keeps auth routes returning correct status codes today.
+  fastify.setErrorHandler((err, _req, reply) => {
+    if (err instanceof AppError) {
+      void reply.code(err.statusCode).send({ error: err.toJson() });
+      return;
+    }
+    if (err.validation !== undefined) {
+      void reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: err.message, details: err.validation },
+      });
+      return;
+    }
+    void reply.code(500).send({ error: { code: 'INTERNAL', message: 'Internal server error' } });
+  });
+
+  await fastify.register(cookiePlugin);
+  await fastify.register(jwtPlugin, {
+    secret: config.JWT_ACCESS_SECRET,
+    sign: { expiresIn: config.JWT_ACCESS_TTL },
+    cookie: { cookieName: 'token', signed: false },
+  });
+
+  const logger = createLogger({
+    level: config.LOG_LEVEL,
+    format: format.combine(format.timestamp(), format.json()),
+    transports: [new transports.Console()],
+  });
+
+  // `db` is the typed PrismaClient singleton from `@core/prisma/prisma-client.js`
+  // (T02 cycle-6 Q-B-02(b) inline resolution). Repositories consume it directly.
+  const authRepo = new AuthRepository(db);
+  const usersRepo = new UsersRepository(db);
+  const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
+  const hasher = new Argon2Hasher();
+
+  const authService = new AuthService(authRepo, hasher, tokenIssuer, config, logger);
+  const usersService = new UsersService(usersRepo, hasher, logger);
+
+  fastify.decorate('tokenIssuer', tokenIssuer);
+  fastify.decorate('services', { auth: authService, users: usersService });
+
+  // Plugin order (PM B ACK T07 Ruling #3 — tenant-guard FIRST):
+  //   1. tenant-guard — cheap claims-only filter; sets req.session +
+  //      req.tenantScope on every guarded request. Short-circuits
+  //      missing-hotelId requests BEFORE the must-rotate DB hit.
+  //   2. must-rotate-password — DB lookup (TODO(T_AUX_02) refactor when
+  //      fastify-plugin install ratified). 403s rotation-required users.
+  // Both run as `preHandler`; Fastify executes registered hooks in
+  // registration order. Route registration follows so the hooks apply
+  // to every route registered after this point.
+  registerTenantGuard(fastify, { allowlist: TENANT_GUARD_ALLOWLIST });
+  registerMustRotatePasswordGate(fastify, { repo: authRepo });
+
+  await fastify.register(authRoutes, { prefix: '/api/auth' });
+  await fastify.register(usersRoutes, { prefix: '/api/users' });
+
+  return fastify;
+}
 
 async function main(): Promise<void> {
-  // const config = loadConfig();
-  // const logger = createLogger({ service: 'api', level: config.LOG_LEVEL });
-  // const fastify = Fastify({ logger });
-  //
-  // await fastify.register(corsPlugin);
-  // await fastify.register(helmetPlugin);
-  // await fastify.register(rateLimitPlugin);
-  // await fastify.register(correlationIdPlugin);
-  // await fastify.register(authJwtPlugin);
-  //
-  // const services = await buildServices(config);
-  // fastify.decorate('services', services);
-  //
-  // await fastify.register(yourRoutes, { prefix: '/api' });
-  //
-  // await fastify.listen({ port: config.API_PORT, host: config.API_HOST });
-
-  console.warn('[api] Entrypoint stub — implementasi setelah core/plugins siap.');
+  const config = loadConfig();
+  const app = await buildApp(config);
+  await app.listen({ port: config.API_PORT, host: config.API_HOST });
 }
 
 main().catch((err) => {

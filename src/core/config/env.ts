@@ -34,7 +34,7 @@ const EnvSchema = z.object({
 
   // Security
   JWT_ACCESS_SECRET: z.string().min(32),
-  JWT_ACCESS_TTL: z.string().default('8h'),
+  JWT_ACCESS_TTL: z.string().default('15m'), // '15m' override per spec MVP-AUTH-FIRST §3 + PARENT §4-D04
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_REFRESH_TTL: z.string().default('30d'),
   ENCRYPTION_KEY: z.string().length(64),

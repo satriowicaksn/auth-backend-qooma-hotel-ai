@@ -1,0 +1,49 @@
+{
+  "preset": "ts-jest/presets/default-esm",
+  "testEnvironment": "node",
+  "rootDir": ".",
+  "roots": ["<rootDir>/src", "<rootDir>/scripts"],
+  "testMatch": ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.integration.test.ts"],
+  "moduleFileExtensions": ["ts", "js", "json"],
+  "extensionsToTreatAsEsm": [".ts"],
+  "moduleNameMapper": {
+    "^@core/(.*)\\.js$": "<rootDir>/src/core/$1",
+    "^@core/(.*)$": "<rootDir>/src/core/$1",
+    "^@modules/(.*)\\.js$": "<rootDir>/src/modules/$1",
+    "^@modules/(.*)$": "<rootDir>/src/modules/$1",
+    "^@plugins/(.*)\\.js$": "<rootDir>/src/plugins/$1",
+    "^@plugins/(.*)$": "<rootDir>/src/plugins/$1",
+    "^@shared/(.*)\\.js$": "<rootDir>/src/shared/$1",
+    "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "transform": {
+    "^.+\\.ts$": ["ts-jest", { "useESM": true, "tsconfig": "tsconfig.json" }]
+  },
+  "collectCoverageFrom": [
+    "src/modules/auth/**/*.ts",
+    "src/modules/users/**/*.ts",
+    "src/plugins/**/*.ts",
+    "src/shared/utils/crypto.ts",
+    "!src/modules/auth/**/index.ts",
+    "!src/modules/auth/**/__tests__/**",
+    "!src/modules/auth/auth.repository.ts",
+    "!src/modules/users/**/index.ts",
+    "!src/modules/users/**/__tests__/**",
+    "!src/modules/users/users.repository.ts"
+  ],
+  "coverageDirectory": "coverage",
+  "coverageReporters": ["text", "lcov", "html"],
+  "coverageThreshold": {
+    "global": {
+      "branches": 70,
+      "functions": 75,
+      "lines": 80,
+      "statements": 80
+    }
+  },
+  "clearMocks": true,
+  "restoreMocks": true,
+  "setupFilesAfterEnv": ["<rootDir>/src/shared/utils/test-setup.ts"],
+  "testTimeout": 10000
+}

@@ -46,6 +46,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
       - run: pnpm prisma:generate
       - run: pnpm test:unit -- --ci
 
@@ -86,6 +87,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
       - run: pnpm prisma:generate
       - run: pnpm prisma:migrate:deploy
       - run: pnpm test:integration -- --ci
