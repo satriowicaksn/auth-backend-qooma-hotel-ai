@@ -22,7 +22,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.json",
-    "test:unit": "jest --config jest.config.json --testPathPattern=__tests__/.*\\.test\\.ts",
+    "test:unit": "jest --config jest.config.json --testPathPattern='__tests__/.*(?<!\\.integration)\\.test\\.ts'",
     "test:integration": "jest --config jest.config.json --testPathPattern=__tests__/.*\\.integration\\.test\\.ts --runInBand",
     "test:coverage": "jest --config jest.config.json --coverage",
     "prisma:generate": "prisma generate",
