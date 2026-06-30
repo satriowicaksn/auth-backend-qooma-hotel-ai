@@ -154,9 +154,7 @@ export async function createTestUser(overrides: UserFixtureInput): Promise<UserF
  */
 export async function sweepByHotel(hotelId: string): Promise<void> {
   await db.session.deleteMany({ where: { user: { hotelId } } }).catch(() => undefined);
-  await db.passwordResetToken
-    .deleteMany({ where: { user: { hotelId } } })
-    .catch(() => undefined);
+  await db.passwordResetToken.deleteMany({ where: { user: { hotelId } } }).catch(() => undefined);
   await db.user.deleteMany({ where: { hotelId } }).catch(() => undefined);
   await db.hotel.deleteMany({ where: { id: hotelId } }).catch(() => undefined);
 }
