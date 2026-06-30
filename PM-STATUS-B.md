@@ -2767,6 +2767,169 @@ Note: the `fastify.decorate('services', ...)` call CURRENTLY only sets `{ auth: 
 
 Awaiting PM B ACK.
 
+##### PM B ACK PLAN T07 attempt 1 — Executor B clear to implement. 3 ACK rulings (file count 10/3, BusinessRuleError discriminator, wiring order amended tenant-guard-FIRST). 1 aux boundary confirmed (super_admin handler reject). Cycle 5 (2026-06-30). Final Slot B sequence item.
+
+**Outcome**: ✅ **ACK** with 1 amendment to wiring order (tenant-guard-FIRST override). Executor B IMPL-READY. Switch to `feat/auth-core` post-ACK; impl commits land on branch per §7 hygiene, PM-STATUS commits on main. **Canonical Slot B — no cross-slot marker required**.
+
+---
+
+**PLAN validation per PM-AGENT §2.3** — 8/8 criteria PASS:
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT §"Scope" | ✅ | 4 endpoints + tenant-guard wiring + generate-password + last-gm guard — exact match |
+| Consistency vs ASSIGNMENT §"DoD" (18 items) | ✅ | All 18 mapped; security floor + soft-delete + email uniqueness + role constraint all addressed |
+| Consistency vs ASSIGNMENT §"AC" (8 items) | ✅ | All 8 covered including cleartext password handling + APPROVE-PARTIAL convention |
+| File list completeness | ✅ | **10 CREATE / 3 EDIT** revised — see ACK Ruling #1 below |
+| Test plan validity | ✅ | ~50 unit tests across 4 files + 3-5 generatePassword tests + 5 it.todo integration placeholders; mock pattern reuses T05/T06/T11 precedent; coverage targets ≥90% line on service/routes/schema (critical) per TESTING.md §9 |
+| GAP categorization | ✅ | 0 PLAN-blocking GAPs; 3 ACK-time clarifications + 1 aux boundary statement — all addressed below |
+| ETA reasonability | ✅ | ~5-7h vs ASSIGNMENT estimate ~5-7h — matches; heavier than T11 (~3.5-5h) due to new module + 4 endpoints + first substantive api.ts edit |
+| Canonical Slot B (no cross-slot marker) | ✅ | Spec `SERVICE-CHARTER §3` confirms gm_admin scope = Slot B canonical territory; commits use plain conventional-commit format, no `§4-D01` footer |
+
+Verified PLAN's branch-side claims via `git show origin/feat/auth-core`:
+- `auth.errors.ts`: 3 classes (PasswordRotationRequiredError + BusinessRuleError + TenantScopeViolationError) ✅
+- `@core/errors/app-errors.ts`: full hierarchy (ValidationError/AuthError/ForbiddenError/NotFoundError/ConflictError/RateLimitError) ✅
+- `shared/utils/crypto.ts`: existing `hashToken` + stubs `encrypt`/`decrypt` ✅
+- `entrypoints/api.ts`: current chain confirmed (must-rotate-password gate registered + authRoutes only) ✅
+- `plugins/tenant-guard.ts`: `registerTenantGuard(fastify, deps)` signature ✅
+- `prisma/schema.prisma:78-101`: User row fields verified at ASSIGNMENT ✅
+
+---
+
+**3 ACK-time rulings**
+
+- ⚠️ **Ruling #1 — File count: 10 CREATE / 3 EDIT CONFIRMED** (Executor revised from ASSIGNMENT header "8 CREATE")
+
+  **Decision**: 10/3 stands.
+
+  **Rationale**: ASSIGNMENT header "8 CREATE" was a summary undercount — the §"File ownership" listing block in ASSIGNMENT actually enumerated 6 module files (`index.ts`/`users.routes.ts`/`users.service.ts`/`users.repository.ts`/`users.schema.ts`/`users.types.ts`) + 4 test files (`users.service.test.ts`/`users.routes.test.ts`/`users.schema.test.ts`/`users.repository.integration.test.ts`) = 10 actual files. The "8" was authored-block typo. Executor's actual enumeration is authoritative. EDIT count revised to 3 (api.ts + crypto.ts + fastify-augmentation.ts AppServices extension).
+
+  **Executor proceeds with 10/3**. No scope change, no re-PLAN.
+
+  Note: if Executor adds `src/shared/utils/__tests__/crypto.test.ts` for `generatePassword` (PLAN line 2718 mentioned "Verify at code-time whether existing test file exists; otherwise add"), file count becomes **11 CREATE / 3 EDIT**. Acceptable; document at SUBMIT.
+
+- ✅ **Ruling #2 — `BusinessRuleError` discriminator approach APPROVED (zero new error subclass)**
+
+  **Decision**: REUSE existing `BusinessRuleError` (T06) with `details.reason: 'LAST_GM_ADMIN_PROTECTED'` field. NO new `LastGmAdminGuardError` subclass.
+
+  **Rationale**:
+  1. **Aligns with PM B heavy-AppError-reuse principle** from ASSIGNMENT — entire AppError hierarchy (ValidationError/ConflictError/NotFoundError/BusinessRuleError/ForbiddenError) covers all T07 cases without new classes
+  2. **Semantic equivalence**: `error.code='BUSINESS_RULE'` + `error.details.reason='LAST_GM_ADMIN_PROTECTED'` gives client the same information as a new `LastGmAdminGuardError` with `code='LAST_GM_ADMIN_PROTECTED'`. FE routes on `details.reason` if needed.
+  3. **Lean inventory**: keeps `auth.errors.ts` at 3 classes (PasswordRotationRequiredError + BusinessRuleError + TenantScopeViolationError). Each new class deepens the surface area; reuse with discriminator is cheaper.
+  4. **Future-cycle compromise**: if spec compliance review later reveals mandatory top-level error `code` field `'LAST_GM_ADMIN_PROTECTED'` (mirror to T06's BusinessRuleError genesis), a small follow-up REQUEST-FIX cycle creates `LastGmAdminGuardError extends BusinessRuleError` (or extends AppError directly). For NOW, discriminator approach proceeds.
+
+  **Executor implementation**:
+  ```ts
+  throw new BusinessRuleError('Cannot demote the last gm_admin for this hotel', {
+    reason: 'LAST_GM_ADMIN_PROTECTED',
+    hotelId,
+  });
+  ```
+  Or similar shape consistent with existing `BusinessRuleError` constructor signature (verify shape at code-time).
+
+- ⚠️ **Ruling #3 — Wiring order AMENDED to tenant-guard-FIRST** (override Executor's PLAN default of must-rotate-first)
+
+  **Decision**: Final wiring chain order:
+  ```
+  setErrorHandler → @fastify/cookie → @fastify/jwt → tokenIssuer decorate →
+  services decorate → tenant-guard → must-rotate-password → authRoutes → usersRoutes
+  ```
+
+  **Override rationale** (counter to Executor PLAN line 2684):
+
+  1. **Cost asymmetry**: tenant-guard is CPU-only per Amendment 2 (claims-only, no DB lookup — sets `req.session` + `req.tenantScope` from JWT claims). must-rotate-password is DB-per-request (T11 TODO marker confirms inline `repo.findUserById(claims.sub)` until T_AUX_02 lands). **Cheap filter FIRST** reduces wasted DB work on tenant-violation paths — non-super_admin requests missing `hotelId` claim short-circuit at tenant-guard without ever hitting the DB for rotation check.
+  2. **Audit log correlation**: tenant-guard-first means EVERY request (including ones that subsequently fail must-rotate) has `req.session` + `req.tenantScope` populated before any later gate fires. Tenant context appears in audit trail consistently. Sets foundation for future audit logger that wants tenant scope on all events including 403-rotations.
+  3. **Defense-in-depth**: if must-rotate logic later assumes `req.tenantScope` is set (e.g., for tenant-scoped rotation history or per-tenant rotation policy), no order-surprise refactor needed. Current code doesn't depend on it, but the convention "tenant context first, then everything else" is cleaner.
+  4. **Trade-off accepted**: rotation-failing users pay tenant-guard CPU cost (negligible — claims-only). Executor's must-rotate-first argument (a) "efficiency for users needing rotation" is real but smaller than the DB-cost savings of guard-first for tenant violations (more common in audit scenarios).
+
+  **Executor: update PLAN line 2666 wiring snippet to put `registerTenantGuard(...)` BEFORE `registerMustRotatePasswordGate(...)` call in `src/entrypoints/api.ts`**. Mechanical change, no logic alteration.
+
+---
+
+**Aux boundary clarification — super_admin handler-side reject** ✅ **ACK**
+
+**PM B agrees with Executor's PLAN line 2654 + 2705**: tenant-guard global bypass for super_admin (T11 Open #3 ruling) + handler-side `req.session?.role === 'gm_admin'` check at `/api/users` route entry is correct boundary enforcement:
+- **tenant-guard layer**: tenant scope enforcement (not role gating) — sets `{ type: 'all-hotels' }` for super_admin per spec §6
+- **Handler layer**: role gating — gm_admin scope-only routes reject super_admin with `ForbiddenError('Use /api/admin/users instead', { actualRole: 'super_admin' })` (Slot C territory)
+- **SRP preserved**: each layer enforces its own concern; Slot C boundary explicit
+
+**Executor implementation**: each of the 4 handlers begins with role check:
+```ts
+if (req.session?.role !== 'gm_admin') {
+  throw new ForbiddenError('This endpoint is for gm_admin scope; super_admin use /api/admin/users instead', {
+    actualRole: req.session?.role,
+  });
+}
+```
+
+**PM B note for VERDICT**: will verify handler-side role check present in ALL 4 endpoints during independent verify.
+
+---
+
+**7 open items + auxiliary stances — all FINAL (no rebuttals)**
+
+| Item | Final stance | Source |
+|---|---|---|
+| #1 Module placement | NEW `src/modules/users/` | PM B + Executor PLAN |
+| #2 `generatePassword` placement | `src/shared/utils/crypto.ts` additive | PM B + Executor PLAN |
+| #3 Soft-delete | `User.isActive` flag flip (no DELETE) — pre-resolved at ASSIGNMENT | PM B verify + Executor confirm |
+| #4 Pagination | offset-based, `limit` default 50 / max 200, `offset` default 0 | PM B + Executor PLAN |
+| #5 tenant-guard allowlist | `['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health']` | PM B + Executor PLAN |
+| #6 Reset-password session handling | `revokeAllSessions(userId)` — NEW repo method (differs from T11's `revokeAllOtherSessions`) | PM B + Executor PLAN |
+| #7 Response shape | `{ user: SettingsUser, generated_password: string }` verbatim per spec line 126/127 | spec-pinned + Executor confirm |
+| **Aux: BusinessRuleError reuse** | `details.reason: 'LAST_GM_ADMIN_PROTECTED'` discriminator (Ruling #2) | PM B ACK ruling |
+| **Aux: wiring order** | tenant-guard-FIRST (Ruling #3 amendment) | PM B ACK ruling |
+| **Aux: super_admin handler reject** | `ForbiddenError` at each `/api/users` handler entry (Boundary ACK above) | PM B + Executor PLAN |
+| **Aux: last-gm guard atomicity** | `prisma.$transaction` wrap for race-free check-and-set (PLAN line 2703) | PM B agree |
+| **Aux: AppServices type extension** | `src/shared/types/fastify-augmentation.ts` additive — adds `users: UsersService` to `AppServices` interface | PM B approve (already touched additively in T05/T06/T11) |
+| **Aux: revokeAllSessions best-effort** | try/catch + `logger.warn` (T06 pattern) — defer "strict revoke" to backlog | PM B agree |
+
+---
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Switch branch**: `git checkout feat/auth-core && git rebase main` (sync ACK + PLAN context onto branch; current main HEAD = `ee1aa0b` PLAN; rebase replays 25 impl commits on top of main)
+- **Suggested commit sequence** (Executor decide final granularity, ~9-11 atomic commits):
+  1. `chore(types): extend AppServices augmentation with users: UsersService`
+  2. `feat(crypto): generatePassword helper (length=16, charset+rejection-sample for digit+symbol guarantee)`
+  3. `feat(users): module scaffold + barrel (index.ts, empty stubs OK as starting point)`
+  4. `feat(users): schemas + types (snake_case generated_password response field per spec §1.2)`
+  5. `feat(users): repository (Prisma direct — listByHotel, countByHotel, findById, insertUser, updateUser, setPassword, countActiveGmAdmins, revokeAllSessions)`
+  6. `feat(users): service orchestration (listUsers, createUser, updateUser w/ last-gm tx guard, resetUserPassword)`
+  7. `feat(users): routes (4 handlers + zod parse + handler-side gm_admin role check + super_admin reject)`
+  8. `feat(api): wire tenant-guard FIRST + must-rotate-password + register usersRoutes (per Ruling #3)`
+  9. `test(users): unit suite — service tests`
+  10. `test(users): unit suite — routes + schema tests`
+  11. `test(users): integration placeholder ≥ 5 it.todo (T02-gated) + crypto.ts generatePassword tests`
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT** (same as T05/T06/T11 standard):
+  - `make check` HARUS green (lint + format-check + typecheck + test-unit; NOT test-integration this cycle)
+  - **Drift scan zero hits** scoped to T07 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error(`-in-service / default export / forbidden imports / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+  - **Coverage**: target ≥ 90% line on `users.service.ts` + `users.routes.ts` + `users.schema.ts` (critical security per TESTING.md §9); `users.repository.ts` excluded from coverage scope per integration deferral; ≥ 80% on `crypto.ts` `generatePassword` addition
+  - **Security floor verify** (CLAUDE.md §6 + SECURITY.md §2 + §5):
+    - Cleartext password returned ONLY in response body, NEVER logged
+    - Email masked at log lines via `maskEmail()` (T05 reuse)
+    - Argon2id stored hash via `PasswordHasherPort.hash` (T05 `Argon2Hasher`)
+    - `generatePassword` charset compliance: length ≥ 12, ≥ 1 digit, ≥ 1 symbol — verify via 100-sample regex test
+    - tenant-guard wired FIRST per Ruling #3 — verify via api.ts diff
+    - Handler-side gm_admin role check present in ALL 4 endpoints — verify via grep in routes file
+    - Last-gm guard atomicity via `prisma.$transaction` — verify single-tx wrap
+    - revokeAllSessions best-effort (try/catch + `logger.warn`) matches T06 pattern
+- **Wiring order WAJIB tenant-guard-FIRST per Ruling #3** — PLAN line 2666 wiring snippet must update to: `tenant-guard → must-rotate-password → routes`
+- **Handler-side super_admin reject WAJIB di all 4 `/api/users` handlers** — explicit `ForbiddenError` throw with `{ actualRole }` details
+- **`generatePassword` charset + rejection-sample loop cap** at 10 iterations with deterministic fallback per PLAN risk-mitigation (line 2740) — document in JSDoc
+- **AppServices augmentation** at `src/shared/types/fastify-augmentation.ts` — additive only, no signature change to existing `tokenIssuer` augmentation
+- **Branch hygiene per §7**: impl commits 1-11 land on `feat/auth-core`. SUBMIT block (PM-STATUS-B.md edit only, append-only below this ACK) commits on `main` setelah self-validate green. Then PM B checkout feat/auth-core for independent verify, back to main for VERDICT.
+
+**Risks acknowledged from PLAN — no PLAN-blocking concerns**:
+- `generatePassword` rejection-sample loop hard-capped at 10 with deterministic fallback (PLAN line 2740) — sound risk mitigation
+- `revokeAllSessions` best-effort matches T06 pattern; "strict revoke" deferred to T_AUX_01 rate-limit backlog (paired concern)
+- Last-gm guard atomicity via `$transaction` wrap addresses race condition cleanly
+- `entrypoints/api.ts` substantive edit OK — eslint-disable comment for `UsersRepository`/`UsersService` imports NOT needed (module barrel imports are public, not adapter imports per Q-B-02)
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T07 attempt 1 block (PM-STATUS-B.md §2 append below this ACK, on `main` per §7), PM B akan checkout `feat/auth-core` for independent verify per PM-AGENT §3 Steps 1-7 → VERDICT block on main.
+
+**PM B state**: **WAIT-MODE for SUBMIT T07 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Final Slot B sequence item.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
