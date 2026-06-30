@@ -13,10 +13,11 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **T05+T06+T11 status**: all three `APPROVE-PARTIAL` (cycle 2 + 3 + 4 closes). VERDICT T11 attempt 1 posted 2026-06-30; cross-slot mandate fully satisfied (5/5 commits + SUBMIT header + plugin file header all carry §4-D01 marker); 14/14 verifications match; 15/15 DoD + 8 AC + bonus AC#9 cross-slot all ✓; 4 DDs ACCEPT; Open #1 defensive-branch coverage ACCEPT (Option A — no test add).
-- **Next focus**: **T07 pickup (cycle 5)** — per-hotel users CRUD, wires T11 tenant-guard plugin. Last Slot B sequence item. After T07 APPROVE-PARTIAL → entire Slot B sequence complete; await T02 for batch FULL upgrade.
-- **Cycle 5 sequence**: T07 (final). Single-dev cycle still active (Slot A/C still PARKED).
-- **Branch**: `feat/auth-core` (25 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11) — T07 will stack on T11; NO merge to `main` until batch FULL APPROVE.
+- **Active task**: T07 — per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring at `entrypoints/api.ts` · `assigned · READY-PARTIAL (unit-only, single-dev cycle 5)` — ASSIGNMENT issued cycle 5 (2026-06-30). **FINAL Slot B sequence item**. After APPROVE-PARTIAL → entire Slot B quartet (T05+T06+T11+T07) in APPROVE-PARTIAL holding pattern, awaiting T02 batch FULL upgrade.
+- **T05+T06+T11 status**: all three `APPROVE-PARTIAL` (cycle 2 + 3 + 4 closes). VERDICT T11 cross-slot mandate fully satisfied.
+- **Cycle 5 = final Slot B cycle**: no cycle 6 unless T02 unparks; then PM B re-opens quartet for PARTIAL→FULL batch upgrade + `feat/auth-core` merge.
+- **Branch**: `feat/auth-core` (25 impl commits ahead of `main`) — T07 will stack on T11; NO merge to `main` until batch FULL APPROVE.
+- **Schema verification (PM B at ASSIGNMENT time)**: `User.isActive Boolean` soft-delete column ✓, `@@unique([hotelId, email])` ✓, all needed fields present at `prisma/schema.prisma`. NO GAP, NO schema change.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -33,7 +34,7 @@
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
-| T07 | Per-hotel users CRUD (gm_admin scope) | `backlog · READY-PARTIAL (unit-only) — gated by T11` | —     | Cycle 1 task #4 — wires T11. Sequence: T05 → T06 → T11 → T07.                                          |
+| T07 | Per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring | `assigned · READY-PARTIAL (unit-only, single-dev cycle 5)` | —              | Cycle 5 task. ASSIGNMENT issued 2026-06-30. **Final Slot B sequence item**. T11 dependency RESOLVED (APPROVE-PARTIAL cycle 4). Scope: 4 endpoints + tenant-guard wiring (T11 Amendment 3 deferred) + generate-password helper + 7 open items for PLAN. Schema verified: `User.isActive` + `UNIQUE(hotel_id, email)` exist; AppError hierarchy covers all error cases (likely zero new subclasses). |
 
 ---
 
@@ -2406,6 +2407,179 @@ Per ASSIGNMENT T05/T06/T11 + PARENT §10 cycle-1 sequence: **T05 → T06 → T11
 - `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` APPROVE entry format + cross-slot completion marker)
 
 PM B exits to **wait-mode for cycle-5 opening**: either (a) PM B authors ASSIGNMENT T07 sub-block (after user signal — same chain-or-wait question as cycle-3→4 transition), or (b) Slot A unparks + T02 lands → PM B re-opens T05+T06+T11 batch for PARTIAL→FULL upgrade cycle (whichever first).
+
+### ASSIGNMENT T07 — claimed by exec-B (Nanak) cycle 5 (2026-06-30). Final Slot B sequence item. Canonical Slot B (gm_admin scope owned by Slot B per `SERVICE-CHARTER §3` — no cross-slot marker required).
+
+- **Spec row pointer**: `docs/spec/MVP-AUTH-FIRST.md §1` row 6 + `docs/spec/01-auth-identity.md §1.2` (canonical shapes + server-enforced constraints) + `§4.7` (email uniqueness) + spec §1.2 line 135 (last-gm-admin guard — PATCH self-demote 422 BUSINESS_RULE)
+- **Routed from**: PARENT §1 T07 row + §8 T07 detail
+- **Branch**: `feat/auth-core` (continues — T07 stacks on T05+T06+T11; same branch per §7 hygiene)
+- **Status flag**: `READY-PARTIAL (unit-only, single-dev cycle 5)`
+- **Gate target**: G3 (auth admin surface — T07 + Slot C's T08+T09+T10 collectively close G3 once they unpark)
+- **Final Slot B sequence item**: after T07 APPROVE-PARTIAL → entire Slot B sequence (T05→T06→T11→T07) COMPLETE. Await Slot A T02 ship for batch FULL APPROVE upgrade of the quartet + `feat/auth-core` merge to `main`.
+
+#### Cycle context
+
+- **Sequence completion**: T07 is the **final** Slot B item per PARENT §10 cycle-1 sequence. T05+T06+T11 all APPROVE-PARTIAL pending T02; T07 will join them after this cycle.
+- **First tenant-guard wiring event**: T11 Amendment 3 deferred plugin wiring at `src/entrypoints/api.ts` — **NOW EXECUTED** in T07 (since `/api/users` is the first true scoped consumer per spec §6 + ADR-0008).
+- **Single-dev cycle** still active (Slot A/C PARKED). No parallel work.
+- **Integration deferred** to T02 ship — same APPROVE-PARTIAL convention as T05/T06/T11.
+
+#### PM B notes — Scope this cycle (PARTIAL — unit-only)
+
+**In scope this submission** (4 endpoints + tenant-guard wiring):
+
+1. **`GET /api/users`** — list users in own hotel only (gm_admin scope via `req.tenantScope`). Query params per spec §1.2 line 122: `?role=`, `?dept_id=`, `?is_active=`. Pagination: offset-based (limit/offset query params) — Open Item #4. Response: list of `SettingsUser` shape per spec §1.2 lines 108-119.
+2. **`POST /api/users`** — create dept_head/staff for own hotel. Body: `{ email, name, role, dept_id?, language? }`. Service generates 16-char alphanumeric+symbol password (Open Item #2 helper placement), hashes via existing `Argon2Hasher`, inserts user with `must_rotate_password: true`, returns `201 { user: SettingsUser, generated_password: string }` per spec §1.2 line 126. Server-enforced: `role ∈ {gm_admin, super_admin}` → `400 ValidationError` per spec line 134; duplicate `(hotel_id, email)` → `409 ConflictError` (use existing `ConflictError` from `@core/errors/app-errors.js`).
+3. **`PATCH /api/users/:id`** — update name / role / dept_id / is_active / language. **Email immutable** per spec line 103. Server-enforced: `role ∈ {gm_admin, super_admin}` rejected → `400 ValidationError`; **last-gm-admin guard** per spec line 135 — if PATCH would set role to non-`gm_admin` OR `is_active: false` AND target user is the only active `gm_admin` for this hotel → `422 BusinessRuleError` (REUSE existing `BusinessRuleError` from T06 — code `'LAST_GM_ADMIN_PROTECTED'` or similar; Executor decide name at PLAN); user not found → `404 NotFoundError`. **Soft-delete only**: `is_active: false` flips flag, NEVER hard-deletes row per spec line 136 (referential integrity for tickets/escalation tree).
+4. **`POST /api/users/:id/reset-password`** — admin-initiated reset. Generate new password, hash via `Argon2Hasher`, update `users.password_hash` + `users.must_rotate_password = true` atomically (single Prisma update). Response 200 `{ user: SettingsUser, generated_password: string }` per spec §1.2 line 127. Session handling per Open Item #6 ruling (PM B recommends revoke ALL sessions for target user — admin-initiated reset = security-sensitive, full re-login required). Differ from T06 `rotatePassword` which revokes all OTHER (current user stays signed in).
+5. **`tenant-guard` plugin wiring** at `src/entrypoints/api.ts` — call `registerTenantGuard(fastify, { allowlist: ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health'] })` AFTER `@fastify/jwt` registration + `fastify.tokenIssuer` decoration, BEFORE `usersRoutes` registration. T11 Amendment 3 deferred-wiring NOW EXECUTED. Verify allowlist starter set against current routes via grep (Open Item #5).
+6. **Generate-password helper** — `generatePassword(length: number = 16): string` in `src/shared/utils/crypto.ts` additive (Open Item #2 ruling, PM B prefer this location for Q-B-02 ethos consistency with `hashToken`). Uses `crypto.randomBytes` + charset `[a-zA-Z0-9!@#$%^&*]` minimum (covers alphanumeric + symbol per spec line 126 + SECURITY.md §2 floor: min 12 char, ≥1 digit, ≥1 symbol). Default length 16 per spec.
+7. **Module structure**: NEW `src/modules/users/` (Open Item #1 ruling — PM B prefer NEW module for domain separation). Auth domain (login/sessions/me) ≠ users management domain (admin CRUD on users).
+8. **Unit tests** — service + routes + schema + repo class mocks per TESTING.md §4 pattern (mock port + mock repo instance, NOT mock Prisma).
+
+**Explicitly OUT-of-scope this cycle**:
+- Integration tests for `UsersRepository` — deferred until T02 ships. Placeholder `it.todo()` entries (≥5: list, create, update, reset, last-gm-check).
+- Bulk user import — separate task (not in MVP).
+- Advanced search/filter beyond spec §1.2 line 122 query params — basic offset pagination + sort by `createdAt DESC` sufficient.
+- Email notification on create / reset — out of MVP per spec line 129 (no SMTP wired).
+- 2FA enrollment — not MVP.
+- Full audit-log event sourcing — basic `logger.info` per action OK; full audit trail = backlog `T_AUX_03` if needed later.
+- Cross-hotel admin CRUD (`/api/admin/users`) — that's Slot C T08 territory per SERVICE-CHARTER §3.
+- Self-service profile management (`/api/auth/me/*`) — that's T06 (already APPROVE-PARTIAL).
+
+#### PM B notes — DoD this submission (~18 items)
+
+- [ ] **GET /api/users** functional — route + zod request (query params) + zod response + service `listUsers(hotelId, filters, pagination)` + repo `listByHotel(hotelId, filters, take, skip)` + Prisma `User.findMany` scoped by `WHERE hotel_id = ? AND is_active = ?` (when filter present); response paginated `{ users: SettingsUser[], total: number, limit: number, offset: number }` (or similar — Executor finalize at PLAN per Open Item #4)
+- [ ] **POST /api/users** functional — 201 response shape `{ user, generated_password }` matches spec §1.2 line 126 verbatim
+- [ ] **PATCH /api/users/:id** functional — partial update; email immutable; last-gm guard implemented
+- [ ] **POST /api/users/:id/reset-password** functional — generates + hashes + atomic update + revokes target sessions per Open Item #6 ruling
+- [ ] **`tenant-guard` plugin wired** at `src/entrypoints/api.ts` — allowlist starter set verified against current routes (Open Item #5); registration order: AFTER `@fastify/jwt` + `tokenIssuer` decoration, BEFORE `usersRoutes`
+- [ ] **`generatePassword(length=16)` helper** in `src/shared/utils/crypto.ts` (additive, no signature change to existing `hashToken`/`encrypt`/`decrypt` stubs)
+- [ ] Generate-password output complies SECURITY.md §2: length ≥ 12 (default 16), contains ≥ 1 digit + ≥ 1 symbol. Verify via unit test (regex on 100 samples)
+- [ ] **NEW module** at `src/modules/users/` (Open Item #1 ruling) — separate from auth module
+- [ ] **Server-enforced role constraint** (spec §1.2 line 134): POST + PATCH reject `role ∈ {gm_admin, super_admin}` → `ValidationError` 400
+- [ ] **Email uniqueness** (spec §4.7): catch Prisma `P2002` unique constraint violation on POST → `ConflictError` 409
+- [ ] **Last-gm-admin guard** (spec §1.2 line 135): PATCH that would transition the only active gm_admin out (role change OR `is_active=false`) → `BusinessRuleError` 422 (REUSE T06's class; code candidate `'LAST_GM_ADMIN_PROTECTED'`)
+- [ ] **Soft-delete only** (spec §1.2 line 136): PATCH with `is_active: false` flips flag; NEVER hard DELETE row
+- [ ] **Tenant scoping in repo queries** — every query consumes `req.tenantScope.hotelId` via service-layer pass-through; super_admin path NOT relevant here (gm_admin scope endpoint; super_admin uses `/api/admin/users` Slot C)
+- [ ] **Unit tests per TESTING.md §4 + §11**:
+  - Service tests mock repo class instance + mock `PasswordHasherPort` (reuse T05 pattern); coverage: happy paths × 4 endpoints + role constraint + duplicate email + last-gm guard + tenant scoping (cross-hotel deny — mocked req.tenantScope)
+  - Route tests via Fastify `inject()` with mocked service decorator (reuse T05/T06 pattern)
+  - Schema tests for zod parse (request + response shapes)
+  - `generatePassword` helper tests: length compliance, charset coverage, randomness (statistical check across 100 samples)
+- [ ] **Test naming** `should <expected> when <condition>` per CLAUDE.md §8
+- [ ] **Coverage line ≥ 80%** for added files; target **≥ 90%** on service/routes/schema (critical security surface)
+- [ ] **Integration placeholder** `src/modules/users/__tests__/users.repository.integration.test.ts` with ≥ 5 `it.todo()` entries gated on T02 dependency
+- [ ] **`make check` green** (lint + format-check + typecheck + test-unit; NOT test-integration this cycle)
+- [ ] **Security floor** (CLAUDE.md §6 + SECURITY.md):
+  - Cleartext password returned ONLY in response body, NEVER logged (no `req.body` log, no error log carrying password)
+  - `maskEmail()` applied to all log lines touching user email
+  - Argon2id hash for stored password (reuse T05's `Argon2Hasher` via `PasswordHasherPort`)
+  - tenant-guard active — `req.tenantScope` populated in all `/api/users` routes (assert in tests by checking route reached + scope present)
+  - `gm_admin` scope enforced: handler-side role check via `req.session.role` (tenant-guard plugin populates `req.session`; handler verifies `role === 'gm_admin'`)
+- [ ] **Drift floor zero** scoped to T07 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error(` / default export / forbidden imports / `.skip` / hardcoded URL / `setTimeout()` job-delay / wrap-Prisma interface
+
+#### PM B notes — File ownership
+
+**CREATE — new module + 1 helper test** (8 files):
+```
+src/modules/users/
+├── index.ts                          (barrel — export usersRoutes + UsersService type; NO repo/error export)
+├── users.routes.ts                   (Fastify plugin — GET/POST/PATCH /api/users + POST reset-password)
+├── users.service.ts                  (orchestrator: hash port + repo + scope filter + password gen)
+├── users.repository.ts               (Prisma direct — listByHotel + insertUser + updateUser + setPassword + lastGmCheck + sessionRevokeAllForUser)
+├── users.schema.ts                   (zod: ListQuery, CreateUserRequest/Response, UpdateUserRequest, ResetPasswordResponse + SettingsUser shape)
+├── users.types.ts                    (SettingsUser domain type + Role re-export from auth.types)
+└── __tests__/
+    ├── users.service.test.ts         (unit — mock port + mock repo instance)
+    ├── users.routes.test.ts          (unit — Fastify inject)
+    ├── users.schema.test.ts          (unit — zod parse)
+    └── users.repository.integration.test.ts  (PLACEHOLDER ≥5 it.todo entries — T02-gated)
+```
+
+**EDIT additive only** (3 files):
+- `src/entrypoints/api.ts` — wire `registerTenantGuard(fastify, { allowlist: [...] })` after `tokenIssuer` decoration; register `usersRoutes` plugin with prefix `/api/users`; decorate `fastify.services.users = new UsersService(...)`. **T11 Amendment 3 deferred wiring NOW EXECUTED.**
+- `src/modules/auth/auth.errors.ts` — IF Executor needs new error subclass (e.g. `LastGmAdminGuardError`), add here per AUX-Q1 module-scoped pattern. **Recommendation**: REUSE existing `BusinessRuleError` (T06) for last-gm guard since both are 422 BUSINESS_RULE per spec; no new class needed unless code-level discrimination is required. Executor decide at PLAN.
+- `src/shared/utils/crypto.ts` — additive `generatePassword(length: number = 16): string` export. ZERO modification to existing `hashToken`/`encrypt`/`decrypt` (Q-B-02 ethos consistent with T05's `hashToken` add).
+
+**NO TOUCH ZONES**:
+- `src/modules/auth/` (other than `auth.errors.ts`) — users domain ≠ auth domain
+- `src/plugins/tenant-guard.ts` — T11 plugin, use as-is, NO modification
+- `src/plugins/must-rotate-password.plugin.ts` — T06 plugin, use as-is
+- `src/modules/auth/auth.jwt-context.ts` — reuse verbatim via tenant-guard's `req.session`
+- `prisma/schema.prisma` — schema verified by PM B: `User.isActive Boolean` (soft-delete column exists), `@@unique([hotelId, email])`, all needed fields present. **NO GAP for schema** (see Open Item #3 below — RESOLVED at ASSIGNMENT time)
+- `package.json` / `pnpm-lock.yaml` — NO new dep expected
+- Q-B-02 workarounds — reuse verbatim; do not re-fight
+
+**File count**: **8 CREATE / 3 EDIT** baseline. If Executor adds `LastGmAdminGuardError` subclass instead of reusing `BusinessRuleError` → 8 CREATE / 4 EDIT (count `auth.errors.ts` separately if it gets new class; otherwise edit collapses).
+
+#### PM B notes — Parent doc refs (WAJIB baca executor sebelum PLAN)
+
+- **`docs/spec/MVP-AUTH-FIRST.md §1` row 6** — endpoint list
+- **`docs/spec/01-auth-identity.md §1.2`** (lines 95-136) — canonical shapes + server-enforced constraints + generate-and-return password ruling H11
+- **`docs/spec/01-auth-identity.md §4.7`** — email uniqueness UNIQUE(hotel_id, email)
+- **`docs/spec/01-auth-identity.md §6`** — tenant-guard pseudocode (T07 will consume `req.tenantScope` in service layer)
+- **`docs/SERVICE-CHARTER.md §3`** — gm_admin scope canonical Slot B (no cross-slot marker; this IS Slot B's domain)
+- **`docs/MODULE_TEMPLATE.md §1-§4`** — new module structure (THIS time creating a new module unlike T06/T11 which extended)
+- **`docs/SECURITY.md §2`** — password floor for `generatePassword` (min 12, ≥1 digit, ≥1 symbol)
+- **`docs/SECURITY.md §5`** — PII masking (email at log lines)
+- **`docs/TESTING.md §4`** + **`§9`** — unit pattern + coverage targets (auth = critical 90% recommended/80% floor)
+- **`docs/decisions/0001-hexagonal-disiplin.md`** — Prisma direct in repo (no IUserRepository wrap); ports only for external IO
+- **`docs/decisions/0008-repo-scope-auth.md`** — multi-hotel scoping (hotel_id post-H11 semantics)
+- **`PARENT §1` T07 row** + **`§8` T07 detail** — Parent PM-authored baseline
+- **`src/modules/auth/auth.*` files on `feat/auth-core`** — reference patterns (service mock test pattern, routes inject pattern, repo Prisma pattern, error subclass module-scoped pattern, generate-password helper precedent via `hashToken`)
+- **`src/plugins/tenant-guard.ts`** — `registerTenantGuard(fastify, deps): void` signature for T07's wiring; `req.session` + `req.tenantScope` shapes
+- **`src/entrypoints/api.ts`** — current wiring chain (T05/T06 patterns); T11 plugin NOT yet wired (T07 adds the call)
+
+#### PM B notes — Acceptance criteria (8 items)
+
+1. 4 endpoints functional + tenant-guard wired at `entrypoints/api.ts`
+2. Cleartext password returned ONCE per spec §1.2 line 126; never logged; hash stored via Argon2
+3. Server-enforced constraints: role restriction (400), email uniqueness (409), last-gm guard (422), soft-delete only
+4. tenant-guard `req.tenantScope` consumed in service layer (NO cross-hotel access — verify via mocked scope test)
+5. APPROVE-PARTIAL convention (full APPROVE batched with T05+T06+T11 pending T02)
+6. `make check` green; drift zero; coverage threshold met (≥80% line floor; ≥90% target service/routes/schema)
+7. Security floor: cleartext password handling correct, email masked in log, no plaintext secret leak
+8. `generatePassword` helper format compliance (length ≥ 12, ≥1 digit, ≥1 symbol per SECURITY.md §2)
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 5 = FINAL Slot B sequence item** per PARENT §10 cycle-1 sequence (T05 → T06 → T11 → T07 ✓)
+- **Single-dev cycle still active** — Slot A/C PARKED
+- **Branch hygiene per §7**: impl commits on `feat/auth-core`; PM-STATUS commits on `main`
+- **After T07 APPROVE-PARTIAL**: entire Slot B quartet (T05+T06+T11+T07) in APPROVE-PARTIAL holding pattern; await Slot A T02 ship for **batch FULL APPROVE upgrade** + `feat/auth-core` merge to `main` (single merge event for all 4 tasks)
+- **No cycle 6 for Slot B** unless T02 lands first; then PM B re-opens all 4 for PARTIAL→FULL upgrade
+
+#### PM B notes — 7 Open items untuk Executor B raise di PLAN
+
+1. ✅ **Module placement** → **NEW `src/modules/users/`** (PM B ruling at ASSIGNMENT — domain separation justified: gm_admin admin management ≠ auth identity self-service). Executor confirm at PLAN; rebut OK if compelling rationale for extending `src/modules/auth/` instead.
+2. ✅ **`generatePassword` helper placement** → **`src/shared/utils/crypto.ts` additive** (PM B ruling — consistent with T05's `hashToken` Q-B-02 ethos: zero-dep Node built-in, additive export, no module-coupling). Executor confirm.
+3. ✅ **Soft-delete column** — **RESOLVED at ASSIGNMENT time**: PM B verified `User.isActive Boolean @default(true) @map("is_active")` exists at `prisma/schema.prisma:87`. NO GAP, NO schema change needed. Use `isActive` flag flip for soft-delete per spec §1.2 line 136. (Open Item #3 effectively pre-answered — Executor confirm at PLAN.)
+4. **Pagination strategy** — offset-based (`limit`, `offset` query params) OR cursor-based?
+   - **PM B recommend offset-based** — simpler, sufficient for hotel scale (<500 users per hotel per tier `user_cap`); FE-friendly for "page 2 of N" UX
+   - Cursor-based = overkill for this domain
+   - Executor confirm + define default `limit` (recommend 50) + max `limit` cap (recommend 200)
+5. **tenant-guard allowlist starter set** — PM B verified current public routes via `git show origin/feat/auth-core:src/entrypoints/api.ts`:
+   - Currently registered: `authRoutes` at `/api/auth` (login/logout/refresh/me/me/password)
+   - **Verified allowlist set**: `['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health']`
+   - **NOTE**: `/api/auth/me` + `/api/auth/me/password` are AUTHENTICATED endpoints (require cookie); they should NOT bypass tenant-guard — but they need a valid JWT with claims. Since `/me` is self-targeted (no hotel scope needed), super_admin's `hotelId: null` works fine via super_admin global bypass. For non-super_admin (gm_admin/dept_head/staff), claims include hotelId, so tenant-guard passes through with `{ type: 'single-hotel', hotelId }`. **Don't include `/me` in allowlist.**
+   - **`/health`**: verify if exists; if not yet (Slot A foundation), add as future-proof entry (won't crash plugin since no claims expected). Executor confirm via grep at PLAN.
+   - Executor confirm or counter at PLAN.
+6. **Reset-password session handling** — revoke target user's sessions?
+   - **PM B recommend revoke ALL sessions for target user** — admin-initiated reset is harder security event than self-rotate (T06's rotatePassword revoked OTHER sessions but kept current). Here, the actor is NOT the target user; full re-login required for target = sound security default (admin can't "forget" to log target out elsewhere)
+   - Differ from T06 explicitly (revokeAllSessions vs revokeAllOtherSessions methods on repo)
+   - Executor confirm + finalize repo method signature
+7. **Cleartext password response shape** — confirm with spec §1.2 line 126: `{ user: SettingsUser, generated_password: string }`
+   - PM B confirms spec already pinned the shape; this is verification not decision
+   - Executor confirm exact field name `generated_password` (snake_case per spec) — match verbatim
+
+**Notes for Executor B**:
+- **Domain-shift cycle** — T05/T06/T11 all extended `auth` module or `plugins/`. T07 introduces NEW `users` module + first true cross-module consumer of `req.tenantScope` (from T11) + first `entrypoints/api.ts` substantive edit (T11 Amendment 3 deferred wiring). Expect slightly more cross-cutting touches than prior cycles.
+- **No new external IO** — argon2 reused (T05), no new HTTP ports, no new package deps. Repo = Prisma direct per ADR-0001.
+- **AppError reuse heavy** — existing `ValidationError` (400), `ConflictError` (409), `NotFoundError` (404), `BusinessRuleError` (422 from T06) cover all T07 error cases. **Likely zero new error subclasses needed** in `auth.errors.ts` (Executor confirm at PLAN; if you want code-level discrimination via `code` field, e.g. `'LAST_GM_ADMIN_PROTECTED'` vs generic `'BUSINESS_RULE'`, that's a discriminator inside `BusinessRuleError` constructor — no new class needed).
+- **Estimate**: ~5-7h impl + test + self-validate. Slightly longer than T11 (~3.5-5h) because: new module = more file scaffolding; 4 endpoints (T11 was 1 plugin); first tenant-guard wiring = mild integration friction; last-gm guard logic + lastGmCheck query is the only genuinely-new business logic. Faster than T05 (~6-8h) because foundation patterns thoroughly established by cycles 2-4.
+
+Awaiting Executor B PLAN T07 attempt 1.
 
 <!--
 TEMPLATE — copy untuk task baru:
