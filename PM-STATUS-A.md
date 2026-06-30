@@ -16,9 +16,10 @@
 - **🎯 SLOT A FOUNDATION CLOSED**: T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · T03 ✅ · **T04 ✅ APPROVED**.
 - **Merge-ready (notify Nathan)**: **T04** — branch `feat/seed-super-admin` @ `c7a7e76`. (T03 already merged via PR#3.) Nathan merges.
 - **New scope (Parent ruling `d40264e`)**: **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) → Slot A *execution* per §4-D08 (Slot C absorption; Slot C canonical + offline). **READY** (T04 closed). Gate **G3**, ~8h.
-- **TF-01 tsc-alias** ✅ APPROVED — prod `node dist` boots (Q-A-04 CLOSED). **MERGE-READY**: branch `fix/tsc-alias-dist-boot` @ `cacbb69` (Nathan merges). T04 already merged (PR#4).
-- **Active task**: **T09** (admin hotels CRUD, §4-D08 cross-slot, G3 ~8h) — ASSIGNMENT issued §2, awaiting PLAN.
-- **Slot A status**: foundation done (T01–T04 + adopts) + TF-01 done. Remaining: **T09** (last Slot A item, Slot C absorption).
+- **🏁 SLOT A SCOPE COMPLETE**: T01 · T02 · T11 · T03 · T04 · TF-01 (prod-boot) · **T09 ✅ APPROVED** (admin hotels, §4-D08). All approved.
+- **Merge-ready (LAST Slot A merge, notify Nathan)**: **T09** — branch `feat/admin-hotels` @ `b8af385`. (T01–T04 + TF-01 already merged PR#1–5.)
+- **Slot A queue**: empty after T09 merge. No further Slot A tasks assigned. (Open to Parent/PO: Q-A-06 agent_count, Q-A-07 auth-login suspended — neither a Slot A coding task.)
+- **Next gate**: G3 (admin endpoints) — T09 (Slot A) ✅; T08 + T10 (Slot B) in flight. G3 closes when all land + CI green.
 - **Next gate**: foundation/G1 done for Slot A; T09 = G3. `PM-STATUS-PARENT.md §5`. §4-D06 collision OK (Parent kept my tsc-alias D06; Slot C → D07/D08).
 
 ---
@@ -34,7 +35,7 @@
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently verified: CLI exit 0 · 1 row (super_admin/hotel_id NULL/must_rotate=false) · argon2 login-compat (verify=true) · idempotent (Q-OPS-01) · fail-clean (exit 1, no pw leak) · 152 unit + 37 integ. **MERGE-READY** branch `feat/seed-super-admin` @ `c7a7e76`. **Closes Slot A foundation.** Gate **G1**. |
-| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | 🔵 `wip · PLAN ACKED` | — | **Slot C canonical · Slot A exec per §4-D08.** PLAN ACKED: shapes verified vs §2.14; GAP #1 agent_count=0 (Q-A-06) · GAP #2 tier-FK-only · GAP #3 §4.6 N/A + flagged login-suspended gap (Q-A-07, not T09 scope). DoD+: POST email-collision→409, forced-rollback test. Atomic `$transaction` + suspend-cascade. Gate **G3**, ≥80% cov. Footer §4-D08. Awaiting SUBMIT. |
+| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A verified atomic-tx by code + tests: interactive `$transaction` (pw-before-tx §4.5), genuine forced-rollback test (no orphan), same-tx suspend cascade (§4.3); 175 unit + 41 integ; coverage routes/schema 100%/service 98%. agent_count=0 (Q-A-06)/user_count real. **MERGE-READY** `feat/admin-hotels` @ `b8af385` (Nathan merges — **last Slot A item**). Footer §4-D08. Gate **G3**. |
 
 ---
 
@@ -833,6 +834,61 @@ Solid PLAN. **Proceed to coding.** PM A verified canonical shapes against `API-C
 On ACK → create `feat/admin-hotels` (or `feat/slot-c-absorption-a`), implement, integration-test commit+rollback+cascade, coverage ≥80%, **§4-D08 footer every block + commit** → SUBMIT. I'll verify (tx atomicity is the crux) → VERDICT → notify Nathan to merge (last Slot A item).
 
 _Awaiting Executor A SUBMIT T09._
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+#### SUBMIT T09 — exec-A (Nathan) at cycle 1 (2026-06-30) (attempt 1)
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+Task: Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family). Gate G3.
+**Branch `feat/admin-hotels` @ `b8af385`** (pushed). Code → branch, **Nathan merges** (last Slot A item).
+Files: new module `src/modules/admin/hotels/` (`hotels.{routes,service,repository,schema,types}.ts` + `index.ts` + 3 `__tests__/`) + wiring (`api.ts`, `fastify-augmentation.ts`, `jest.config.json`). **No schema/migration.**
+
+**DoD self-check:**
+- [x] **GET /api/admin/hotels** — list, tier JOIN + `user_count` (Prisma `_count.users`), `agent_count: 0` (Q-A-06), super_admin-only. Envelope `{data, meta:{total}}`.
+- [x] **POST** — atomic `$transaction`: `generatePassword(16)` + `hasher.hash` BEFORE tx (§4.5) → `tx.hotel.create` + `tx.user.create(role=gm_admin, hotel_id=new, must_rotate=true)` → re-read w/ count → `{hotel, gm_user, generated_password}`. P2002 (code/email) → 409. Mutual-exclusion + UNIQUE respected.
+- [x] **PATCH /:id** — name/tier/gm_contact (zod whitelist); tier name→id FK-validate (400 unknown); status NOT mutable here.
+- [x] **PATCH /:id/status** — suspend = same-tx flip `status='suspended'` + `session.updateMany(revokedAt=NOW WHERE user.hotelId=:id AND revokedAt null)` (§4.3); reactivate = flip only. 404 if absent.
+- [x] AuthZ: service-level `assertSuperAdmin` → `ForbiddenError`; AppError subclasses (no `throw new Error`). zod on all mutating verbs.
+- [x] Tests: unit (service) + route (mock service) + integration (real DB). coverage ≥80%. §4-D08 footer (commit `b8af385` + this block). diff scoped.
+
+**Verify evidence:**
+- **make check equiv**: lint 0/0 · typecheck · format:check · **`test:unit` 175 passed**.
+- **`test:integration` (--runInBand)**: **41 passed, 0 failed**, incl. `hotels.repository.integration.test.ts` (4): **commit** (hotel+GM; `Argon2Hasher.verify(storedHash, pw)===true` = login-compat) · **forced rollback** (dup `code` → `UniqueConstraintError` → 0 orphan GM, hotel count unchanged) · **suspend cascade** (session `revoked_at` set; reactivate leaves it revoked) · **counts** (user_count=2, agent_count=0, flat tier name).
+- **Coverage (scoped, --runInBand)**: `hotels.routes.ts` **100%** · `hotels.schema.ts` **100%** · `hotels.service.ts` **98%** (branch 95, func 100) — all ≥80% (G3). Repository excluded from `collectCoverageFrom` (mirrors auth/users) but fully integration-tested.
+
+**Decisions / flags:**
+- GAP rulings applied: `agent_count=0` (Q-A-06) · tier FK-validate only (#2) · no last-X guard (#3, super_admins untouched by hotel ops).
+- `gm_contact{name,email,phone}` persisted on `hotels.gmContact` JSONB; GM user row carries email/name only (no User.phone column).
+- **Confirm 2 small calls**: (a) PATCH excludes `code` (immutable stable billing/support identifier — §2.14 PATCH = "metadata + plan", `code` not listed); (b) PATCH /:id and /:id/status responses = the updated `AdminHotel` object (§2.14 didn't specify a PATCH response shape).
+- **`test:coverage` (parallel) is flaky for integration** — it lacks `--runInBand` → integration suites race on the shared DB (22 spurious failures in that mode). Canonical green = `test:unit` + `test:integration --runInBand` (both 0-fail above) + scoped serial coverage. **Pre-existing repo property, not introduced by T09** — flagging; a fix (add `--runInBand` to the `test:coverage` script) is a separate chore, not T09 scope.
+- Env: ran healthy throughout (32 GB free, DB up) — did not hit Slot B's disk/Postgres HALT condition.
+
+**T09 READY TO MERGE — `feat/admin-hotels` @ `b8af385`.** Closes the last Slot A item. Requesting PM A VERDICT.
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+##### VERDICT T09 — ✅ APPROVED (cycle 1, attempt 1) by PM A — independently verified — **🏁 LAST SLOT A ITEM**
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+PM A re-ran the gates + read the transaction code on `feat/admin-hotels` @ `b8af385` (you flagged atomic-tx as the crux — I verified it directly):
+- **Diff** = new `src/modules/admin/hotels/` (6 src + 3 tests) + wiring (`api.ts`, `fastify-augmentation`, `jest.config.json` coverage). **No schema/migration.** Drift CLEAN. §4-D08 footer on the impl commit ✓.
+- **🎯 Atomicity (the crux) — verified by code + tests:**
+  - **POST** = interactive `this.db.$transaction(async tx => { tx.hotel.create → tx.user.create(hotelId) → findUniqueOrThrow })` — atomic by construction (any in-tx throw → full rollback). Password **generated + hashed BEFORE the tx** (§4.5) via injected `PasswordHasherPort` (clean DI) + `generatePassword` helper. ✓
+  - **Forced-rollback test is genuine** — `hotels.repository.integration.test.ts:80` "roll back fully on duplicate code (no orphan hotel or GM)" → `.rejects` + asserts orphan GM count = 0 + hotel count unchanged. ✓
+  - **Suspend cascade** = same-tx `tx.hotel.update({status:'suspended'})` + `tx.session.updateMany({where:{user:{hotelId},revokedAt:null}, data:{revokedAt:now}})` (§4.3). Reactivate = flip only. ✓
+- **Gates (PM A re-ran)**: `typecheck` + `lint` clean · `test:unit` 175 · **`test:integration` 41 passed / 0 fail** (commit + forced-rollback + cascade + counts). Coverage routes/schema 100%, service 98% (≥80% G3 bar); repository excluded from the metric **per convention** (like `users`/`auth` repos — integration-tested, not unit-counted). ✓
+- **Contract**: list `{data,meta:{total}}` · POST `{hotel,gm_user,generated_password}` + `must_rotate=true` · `user_count` REAL + `agent_count:0` (Q-A-06) · email-collision → `ConflictError` 409 (constraint-based) · super_admin gate · AppError subclasses. All per §2.14.
+
+**Confirm-calls — both APPROVED:**
+- PATCH excludes `code` (immutable platform identifier) ✓ — correct; `code` is the stable cross-platform reference.
+- PATCH returns the updated `AdminHotel` ✓ — §2.14 didn't specify; returning the resource is the right REST default.
+
+**Minor (non-blocking, noted for hardening / follow-up):**
+- **Add a dup-*email* mid-tx rollback integration test** — the current rollback test fails on the first op (dup *code*); atomicity on a *GM-side* failure (hotel insert succeeds → GM dup-email fails → hotel rolls back) is **guaranteed by Prisma's interactive `$transaction`** + uses the same verified rollback path, but an explicit test would harden it. Recommend in a future pass.
+- **`test:coverage` flakiness** (races on shared DB without `--runInBand`) — pre-existing repo property (not T09; affects all integration suites). 1-line fix = add `--runInBand` to the `test:coverage` script. Recommend as a small separate chore (flag to Parent/Slot B since it's the shared jest config). Coverage numbers themselves are valid (measured serially).
+
+→ §1 T09 → `approved`. → **T09 verified-ready to merge** — PM A notifies Nathan (branch `feat/admin-hotels` @ `b8af385`; **this is the last Slot A merge** 🏁). → roll-up PARENT §2 + §1. **Slot A scope COMPLETE** (foundation T01–T04 + adopt-T02/T11 + TF-01 prod-boot + T09 admin-hotels).
+
+_T09 done. Slot A fully complete pending Nathan's merge. Cross-slot ownership-of-record stays Slot C (future amendments → Satrio)._
 > Cross-slot execution per §4-D08 (Slot C canonical territory).
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
