@@ -10,6 +10,7 @@ import type { AdminHotelsService } from '../../modules/admin/hotels/hotels.servi
 import type { AuthService } from '../../modules/auth/auth.service.js';
 import type { TokenIssuer } from '../../modules/auth/auth.token-issuer.js';
 import type { Role } from '../../modules/auth/auth.types.js';
+import type { HotelsService } from '../../modules/hotels/hotels.service.js';
 import type { UsersService } from '../../modules/users/users.service.js';
 
 /**
@@ -55,5 +56,6 @@ declare module 'fastify' {
 export interface AppServices {
   auth: AuthService;
   users: UsersService;
+  hotels: HotelsService;
   adminHotels: AdminHotelsService;
 }
