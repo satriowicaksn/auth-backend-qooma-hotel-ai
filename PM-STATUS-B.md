@@ -3619,6 +3619,148 @@ Phase 8 — self-validate per EXECUTOR-PROTOCOL §4.4: `make check` exit 0; drif
 
 Awaiting PM B ACK.
 
+##### PM B ACK PLAN T02 attempt 1 — Executor B clear to implement. Aux CHECK injection path APPROVED (single coherent init via `--create-only` + manual append). Cycle 6 (2026-06-30). CROSS-SLOT execution per §4-D05.
+
+**Outcome**: ✅ **ACK** with aux ruling approving Executor's CHECK injection path (A). Executor B IMPL-READY. Switch to `feat/auth-core` post-ACK; impl commits on branch per §7, PM-STATUS commits on main. **Cross-slot ceremony 4/4 mandates met + 1 bonus code-header reference.**
+
+---
+
+**PLAN validation per PM-AGENT §2.3** — 5/5 criteria PASS:
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT scope/DoD/AC | ✅ | 8-phase approach maps to 13 DoD items + 8 AC; APPROVE-direct convention (AC #6) honored — quartet batch FULL APPROVE on T02 APPROVE event |
+| File list completeness | ✅ | **3 CREATE / 2 EDIT** exact match with ASSIGNMENT baseline |
+| Test plan validity | ✅ | 3 smoke sub-tests: (a) connection round-trip via tiers insert/select/delete + (b) UNIQUE(hotelId,email) → Prisma `P2002` + (c) mutual-exclusion CHECK → constraint exception. Covers 2 spec-canonical constraints (`§4.4` + `§4.7`). |
+| GAP categorization | ✅ | 0 PLAN-blocking GAPs; 1 pre-flight HALT condition (Docker daemon/port — explicit raise-GAP-no-shim discipline); 1 aux design decision (CHECK path A vs B — ruled below) |
+| ETA reasonability | ✅ | ~2-3h matches ASSIGNMENT estimate; lighter than T07 (~5-7h) because foundation toolchain only, no new business logic |
+
+**Cross-slot ceremony compliance audit** (4 mandates per ASSIGNMENT + 1 bonus):
+
+| Mandate | Detail | Status |
+|---|---|---|
+| 1. PLAN header marker | `CROSS-SLOT execution per §4-D05.` | ✅ |
+| 2. Cross-slot heritage section | Lines 3445-3459 — canonical owner Slot A + execution one-off + commit footer template + SUBMIT/VERDICT markers + future amendment trail | ✅ |
+| 3. Workflow commit-body footer template | `Cross-slot execution per §4-D05 (Slot A canonical territory).` literal | ✅ |
+| 4. SUBMIT/VERDICT header marker plan | Phase 8 + Workflow next item 6 — both reiterated | ✅ |
+| **5. Bonus: code-header §4-D05 reference** | `prisma-client.ts` JSDoc gets §4-D05 reference line (mirror tenant-guard.ts §4-D01 pattern) | ✅ Bonus mandate met — grep-able from source |
+
+---
+
+**Pre-flight verifications independently confirmed** (PM B ran in parallel before ACK):
+
+| Check | Executor klaim | PM B independent | Status |
+|---|---|---|---|
+| `.env.example` DATABASE_URL port 5433 | `:22` line confirmed | grep `.env.example:22 DATABASE_URL=postgresql://app:app_dev_pw@localhost:5433/app?schema=public` | ✅ MATCH |
+| `docker-compose.yml` postgres port 5433:5432 | host port 5433 mapping | grep confirmed line 24 `'5433:5432'` under `postgres:` service (image `postgres:15-alpine`) | ✅ MATCH |
+| `Makefile db-migrate` target | wraps `pnpm prisma:migrate:dev` | grep confirmed line 10 `db-migrate` + downstream `pnpm prisma:migrate:dev` | ✅ MATCH |
+| `prisma/migrations/` directory state | first init (no prior) | `ls prisma/migrations/: No such file or directory` — true first migration | ✅ MATCH |
+| `prisma` + `@prisma/client` deps present | `^5.22.0` both | `package.json:39 @prisma/client ^5.22.0` + `:61 prisma ^5.22.0` | ✅ MATCH |
+| Template state at `prisma-client.ts:11-27` | commented out + line 29 placeholder | confirmed (verified earlier in T02 ASSIGNMENT context — Read tool) | ✅ MATCH |
+
+**All 6 pre-flight claims independently verified. Zero discrepancies.**
+
+---
+
+**Aux design decision ruling — CHECK constraint injection path**
+
+⚠️ **APPROVE Executor's approach (A): single coherent init via `--create-only` + manual SQL append**
+
+**Decision**: Use Prisma `migrate dev --create-only --name init` → hand-edit `migration.sql` to append CHECK ALTER TABLE statements at the bottom → `migrate dev` (no flag) to apply. NO 2-migration split (path B rejected).
+
+**Rationale** (supporting Executor's PLAN line 3552 intent):
+
+1. **Foundation init = atomic milestone** — splitting across 2 migrations fragments the narrative; future developers reading `prisma/migrations/` history will see "first migration created schema + CHECKs" as one coherent event rather than "first migration created schema; second migration added CHECKs that were forgotten initially"
+2. **Prisma `--create-only` flow is official + documented pattern** for hand-editing migration SQL before apply (per [prisma.io/docs/migrate](https://prisma.io/docs/migrate) "create-only mode")
+3. **No overwrite risk**: this is THE init migration; future `prisma migrate dev` invocations generate NEW migration files, never edit existing ones. Migration directory is append-only by convention.
+4. **Industry pattern**: many auth/identity services hand-edit init migration for constraints Prisma's schema language can't express (CHECK constraints are one such gap per Prisma 5 schema language limitations — schema author already documented this at `prisma/schema.prisma:141-163` SQL comments)
+5. **`schema.prisma` comments lines 141-163 already define expected CHECK semantics** — Executor just translates comment → SQL. ZERO schema interpretation guesswork.
+6. **`prisma/schema.prisma` ABSOLUTE NO-TOUCH preserved** — only READ access for CHECK SQL comments; ZERO edits to schema file itself
+
+**Conditions for Executor implementation**:
+
+1. **Verify generated `migration.sql` post-edit retains ALL Prisma-generated table DDL** — no inadvertent deletion of CREATE TABLE / CREATE INDEX / ALTER TABLE FK statements. Run `git diff` on migration.sql between pre-edit and post-edit to audit.
+2. **Manual CHECK additions appended at END of migration.sql** (after Prisma section). Clear visual separation — comment block delimiter recommended:
+   ```sql
+   -- ============================================================
+   -- Manual CHECK constraint injection (Prisma 5 schema limitation)
+   -- Per docs/spec/MVP-AUTH-FIRST.md §4.4 + prisma/schema.prisma:141-163
+   -- ============================================================
+   ALTER TABLE users ADD CONSTRAINT users_role_hotel_mutual_exclusion CHECK (...);
+   -- (other CHECKs from schema comments)
+   ```
+3. **Document approach di SUBMIT Notes** — explicit "Aux ruling: path A single coherent init via --create-only" + "Manual CHECK SQL block at lines X-Y of migration.sql" for audit trail
+4. **Smoke sub-test (c) MUST prove CHECK actually fires** — that's the test that prevents silent SQL syntax error in the manual append. If sub-test (c) passes, the CHECK is loaded; if it doesn't, there's a SQL bug.
+5. **Fallback path (B) still available if path A surfaces SQL syntax error** — Executor's PLAN risk-mitigation at line 3586 already covers this. Document the fallback decision di SUBMIT Notes if invoked.
+
+**Why path (B) is REJECTED as default**:
+- Fragments foundation history across 2 migrations
+- Future readers may miss the second migration (CHECK violations could go undetected if developer only reads the init migration)
+- Single coherent atomic foundation init is industry standard
+
+---
+
+**4 open items — all FINAL (no rebuttals; verbatim per PM B recommendations)**
+
+| Item | Final stance | Source |
+|---|---|---|
+| #1 Migration `--name` arg | `init` (Prisma convention default, concise) | PM B + Executor PLAN |
+| #2 DB URL port 5433 | Confirmed via `.env.example:22` + `docker-compose.yml:24` — NO GAP expected. Pre-flight HALT condition if Docker daemon down OR port conflict (no shim) | PM B + Executor PLAN |
+| #3 Smoke test scope | 3 sub-tests covering (a) connection round-trip + (b) UNIQUE trip + (c) mutual-exclusion CHECK trip | PM B + Executor PLAN |
+| #4 PrismaClient singleton pattern | Module-level export + SIGTERM/SIGINT shutdown per template lines 11-27; defer Fastify `onClose` to future refactor | PM B + Executor PLAN |
+| **Aux: CHECK injection path** | **(A) single coherent init via `--create-only` + manual append** with 5 conditions above | PM B ACK ruling |
+
+---
+
+**Auxiliary intent statements ruling** (Executor flagged 5 intent-stated items at PLAN lines 3547-3557; PM B confirms all):
+
+- **Mutual-exclusion CHECK injection method** ✅ APPROVE path (A) per aux ruling above
+- **`api.ts` cleanup line numbers** ✅ APPROVE — grep-locate cast `db as unknown as PrismaClient` at impl-time; line numbers may have shifted post-T07. Unambiguous text match.
+- **Smoke test cleanup strategy** ✅ APPROVE — `afterEach` cleanup + UUID-suffix `tiers.name = 'lite-smoke-<uuid>'` for re-run idempotency + future T03 seed coexistence
+- **Empty `tiers` table after migration** ✅ ACK — `prisma migrate dev` does not auto-seed; T03 (Slot A canonical, PARKED) handles tier seed; smoke sub-test (a) operates against empty table, inserts + deletes own row
+- **Coverage scope for `prisma-client.ts`** ✅ APPROVE deferral — smoke test serves as functional validation; coverage row addition is optional follow-up. Don't add `src/core/prisma/**` to `collectCoverageFrom` this cycle. PM B note: if cycle 7 T02-sub-1 needs coverage tracking on prisma-client, add then.
+
+---
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Switch branch**: `git checkout feat/auth-core && git rebase main` (sync ACK + PLAN context onto branch; current main HEAD = `94a0e51` PLAN; rebase replays 39 impl commits + PM-STATUS commits on top of main)
+- **Pre-flight gate**: `make start` to bring up Postgres container. If Docker daemon down OR port 5433 conflict → HALT + raise GAP, do NOT shim around. **No silent workarounds for environmental blockers per `PM-AGENT §0.6`.**
+- **Suggested commit sequence** (~6 atomic commits, mirror T11 cross-slot ceremony):
+  1. `chore(prisma): generate init migration via --create-only`
+  2. `chore(prisma): append mutual-exclusion + name + status + language CHECK constraints (manual)`
+  3. `chore(prisma): apply init migration + verify schema state`
+  4. `refactor(prisma): real PrismaClient singleton + §4-D05 JSDoc reference (Q-B-02(b) inline resolution)`
+  5. `refactor(api): remove cast + TODO(slot-A) marker (Q-B-02(b) downstream cleanup)`
+  6. `test(prisma): smoke suite 3 sub-tests (connection + UNIQUE trip + CHECK trip)`
+
+- **WAJIB commit body footer** for every T02 commit (mirror §4-D01 T11 ceremony):
+  ```
+  Cross-slot execution per §4-D05 (Slot A canonical territory).
+  ```
+- **WAJIB `prisma-client.ts` JSDoc header §4-D05 reference** — mirror tenant-guard.ts §4-D01 header pattern; grep-able from source code for future Slot A audit
+- **WAJIB SUBMIT block header marker**: `Cross-slot execution per §4-D05` literal in SUBMIT header
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT**:
+  - `make check` HARUS green (lint + format-check + typecheck + test-unit) — smoke test in test-unit; expected **155 pass + 27 todo + 2 skipped** (152 baseline + 3 smoke)
+  - **Drift scan zero hits** scoped to T02 files (`prisma-client.ts` + smoke test + `api.ts` cleanup zone) — same standard
+  - **Cross-slot footer audit**: 6/6 T02 commits carry `Cross-slot execution per §4-D05` footer
+  - **Schema-untouched verify**: `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT
+  - **Q-B-02(b) cleanup completeness**: `grep -rn "db as unknown\|TODO(slot-A)" src/` returns zero hits post-cleanup
+  - **Smoke sub-test (c) CHECK constraint trip** MUST pass — proves manual CHECK SQL append works; if it doesn't pass, there's a SQL bug to fix BEFORE SUBMIT
+- **APPROVE convention reminder**: T02 = **FULL APPROVE direct** (NOT APPROVE-PARTIAL). No upstream blocker; quartet T05+T06+T11+T07 batch FULL APPROVE upgrade triggered by T02 APPROVE event in cycle 7 (~24 it.todo backfill happens in chained T02-sub-1)
+- **Branch hygiene per §7**: T02 impl commits 1-6 land on `feat/auth-core`. SUBMIT block (PM-STATUS-B.md edit only, append-only below this ACK) commits on `main` setelah self-validate green. Then PM B checkout `feat/auth-core` for independent verify per PM-AGENT §3, back to main for VERDICT.
+
+**Pre-flight HALT condition acknowledged**: Docker daemon down OR port 5433 conflict → HALT + GAP, no shim. This is the ONLY explicit HALT path; everything else proceeds per PLAN.
+
+**Risks acknowledged from PLAN — no PLAN-blocking concerns**:
+- Path A → B fallback documented if SQL syntax error surfaces (Executor PLAN line 3586 mitigation)
+- `prisma migrate dev` regenerates `@prisma/client` artifact — existing T05/T06/T11/T07 imports unchanged (schema untouched)
+- Singleton swap-in transparent to existing tests (they mock at repo class instance level, not `db` singleton level)
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T02 attempt 1 block (PM-STATUS-B.md §2 append below this ACK, on `main` per §7), PM B akan checkout `feat/auth-core` for independent verify per PM-AGENT §3 Steps 1-7 → VERDICT block on main (expect **FULL APPROVE** direct).
+
+**PM B state**: **WAIT-MODE for SUBMIT T02 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Cross-slot execution per §4-D05.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
