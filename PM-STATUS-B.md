@@ -4315,6 +4315,183 @@ src/core/prisma/__tests__/integration-helpers.ts   OPTIONAL: shared fixture help
 
 Awaiting Executor B PLAN T02-sub-1 attempt 1.
 
+#### PLAN T02-sub-1 — exec-B (Nanak) cycle 7 (2026-06-30) attempt 1. Quartet integration backfill. Mixed-scope: T11 cross-slot per §4-D01.
+
+**Mixed-scope ceremony recap (per file ownership)**
+- `auth.repository.integration.test.ts` (T05+T06, 16 placeholders): **PLAIN** conventional commit (canonical Slot B)
+- `tenant-guard.plugin.integration.test.ts` (T11, 4 placeholders): **CROSS-SLOT** — commit body footer WAJIB `Cross-slot execution per §4-D01 (Slot A canonical territory).` Line-6 file-header `Cross-slot execution per §4-D01` marker preserved verbatim during backfill (no comment edits)
+- `users.repository.integration.test.ts` (T07, 7 placeholders): **PLAIN** conventional commit (canonical Slot B)
+- Mixed-file single-commit FORBIDDEN — split per file ownership
+
+**Scope recap**
+
+Convert all **27 `it.todo()` placeholders** (16 + 4 + 7) across 3 integration test files to real assertions hitting the local Postgres 15 instance (host port 5433 — same DB as T02 smoke). Real Prisma client (T02 singleton at `@core/prisma/prisma-client.js`), zero mocks. Mirror T02 smoke fixture pattern: `beforeAll connect` + `afterAll disconnect` + `afterEach` cleanup with UUID-suffixed natural keys for idempotency. Tighten `test:unit` regex to exclude `.integration.test.ts` files via negative-lookbehind (Open Item #3) so `make check` (runs `test:unit`) doesn't try to hit DB. Extract shared fixture helpers to `src/core/prisma/__tests__/integration-helpers.ts` to keep the 3 integration files DRY. Zero touches to impl files (`auth.repository.ts`, `users.repository.ts`, `tenant-guard.ts`, `prisma-client.ts`, etc.), zero schema changes (`prisma/schema.prisma` UNTOUCHED), zero new package install. Tests satisfy quartet upgrade conditions (b) integration fill, (c) repo coverage ≥80% line at integration scope, (d) drift re-scan zero, (e) re-issue VERDICT FULL. **FULL APPROVE convention** per AC #8 — cycle 7 SUBMIT triggers batch FULL APPROVE event for T05+T06+T11+T07 quartet + `feat/auth-core` merge to `main`.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+
+- Identity confirmed: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓
+- Task spec read: T02 VERDICT (cycle 6 quartet upgrade conditions); PARENT §1 T05/T06/T11/T07 rows; PARENT §4-D01 (T11 cross-slot context); CLAUDE.md §8; docs/TESTING.md §4/§5/§9; ADR-0001 + ADR-0007
+- Existing surface verified on branch (`git show origin/feat/auth-core`):
+  - **27 placeholders confirmed via grep**: `auth.repository.integration.test.ts:16` + `tenant-guard.plugin.integration.test.ts:4` + `users.repository.integration.test.ts:7` = **27 total** ✓ matches PM B count
+  - `tenant-guard.plugin.integration.test.ts` line 6 carries `Cross-slot execution per §4-D01 (Slot A canonical territory).` — MUST preserve verbatim
+  - `jest.config.json testMatch`: `['**/__tests__/**/*.test.ts', '**/__tests__/**/*.integration.test.ts']` — matches BOTH; `testPathIgnorePatterns: None` (default = `/node_modules/`)
+  - `package.json scripts`:
+    - `test:unit`: `jest --config jest.config.json --testPathPattern=__tests__/.*\\.test\\.ts` — regex matches `.integration.test.ts` too (suffix collision; current behavior works only because integration files are `it.todo()` placeholders that don't hit DB)
+    - `test:integration`: `jest --config jest.config.json --testPathPattern=__tests__/.*\\.integration\\.test\\.ts --runInBand` — properly scoped to `.integration.test.ts` only
+- Docker daemon ✓ reachable (`docker info | grep Server` returns no ERROR); `qooma-postgres` healthy on host port 5433 (`docker ps | grep postgres` returns `Up About an hour (healthy)`)
+- Disk ✓ 5.5 GiB free (above 5 GiB floor; slim margin — may need cleanup mid-cycle if integration test artifacts grow)
+- `make check` clean ✓ at T02 SUBMIT baseline (`ccbc37e`); will re-verify post-impl
+- Scaffolder risk: none
+
+**Files to create** (1 NEW)
+
+```
+src/core/prisma/__tests__/integration-helpers.ts   shared fixture helpers (connection + cleanup sweep + UUID-suffix utility + tier/hotel/user factory builders)
+```
+
+**Files to modify** (4 EDIT)
+
+```
+src/modules/auth/__tests__/auth.repository.integration.test.ts        EDIT: 16 it.todo() → real assertions (T05+T06 consolidated; PLAIN commit)
+src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts    EDIT: 4 it.todo() → real assertions (T11; line-6 header marker PRESERVED; CROSS-SLOT commit with §4-D01 footer)
+src/modules/users/__tests__/users.repository.integration.test.ts      EDIT: 7 it.todo() → real assertions (T07; PLAIN commit)
+package.json                                                          EDIT: tighten test:unit regex via negative-lookbehind to exclude .integration.test.ts (Open #3); test:integration unchanged
+```
+
+**Files explicitly NOT touched**
+
+- `prisma/schema.prisma` — ABSOLUTE NO-TOUCH; verified via `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT
+- `src/modules/auth/auth.repository.ts`, `auth.service.ts`, `users.repository.ts`, `users.service.ts`, `auth.routes.ts`, `users.routes.ts`, `auth.token-issuer.ts`, `auth.cookie-helpers.ts`, `auth.jwt-context.ts`, `auth.errors.ts`, `auth.schema.ts`, `users.schema.ts`, etc. — impl files: ZERO touches (NO new methods, NO refactors; tests consume existing public surface)
+- `src/plugins/tenant-guard.ts`, `must-rotate-password.plugin.ts` — plugin impl untouched
+- `src/core/prisma/prisma-client.ts` — T02 deliverable, untouched
+- `src/entrypoints/api.ts` — T02 cleanup state untouched
+- `src/shared/utils/crypto.ts`, `masking.ts` — untouched
+- `src/shared/types/fastify-augmentation.ts` — untouched
+- `jest.config.json` — `testMatch` globally OK (both unit + integration matched); `testPathIgnorePatterns` stays default; only `test:unit` SCRIPT regex tightens (per Open #3 — keep config file generic, refine script)
+- `package.json` — only `test:unit` script regex tightened; `test:integration`/`test`/`test:coverage` unchanged; no new dep
+- `pnpm-lock.yaml` — no change (no install)
+- `PM-STATUS-A.md` / `PM-STATUS-C.md` / `PM-STATUS-PARENT.md` (PM B writes §2 roll-up only)
+- Q-B-02(a)/(c)/(d) workarounds (jest config workaround, eslint inline disable, inline setErrorHandler) — slot-internal, NOT this cycle's scope
+- T11 file line-6 header marker `// Cross-slot execution per §4-D01...` — PRESERVE VERBATIM
+
+**File count**: **4 EDIT + 1 CREATE** (revised from PLAN baseline 3/0/1-optional by including the package.json regex tighten as a mandatory script EDIT per Open #3 — needed before integration tests have real assertions that would otherwise crash `make check`)
+
+**Approach**
+
+Phase 1 — tighten `test:unit` regex: edit `package.json` `test:unit` script from `__tests__/.*\\.test\\.ts` to `__tests__/.*(?<!\\.integration)\\.test\\.ts` (negative lookbehind — Node V8 regex supports it natively since Node 8). This excludes `.integration.test.ts` files from `test:unit` runs. `test:integration` stays unchanged (positive match on `.integration.test.ts`). Verify via `pnpm test:unit` (should run 155 tests unchanged) + `pnpm test:integration` (will skip until impl phase 3 lands real assertions).
+
+Phase 2 — extract shared fixture helpers (`integration-helpers.ts`): export `getTestPrisma()` (returns the singleton — same DB; T02 smoke uses it directly so we just re-export for clarity), `cleanupPattern()` (sweep helper accepting a prefix), `uuidSuffix(prefix: string, length = 8)` (returns short UUID-suffixed string for natural-key tests like `email`), `aTier()`/`aHotel()`/`aUser()` factory builders (canonical 'lite' tier reuse to satisfy `tiers_name_check`; UUID `id` per call for idempotency). All builders accept overrides. Pure functions, no Jest dependencies — importable from any test file. ~50-80 LOC.
+
+Phase 3 — convert `auth.repository.integration.test.ts` (16 tests, T05+T06):
+- T05 placeholders (10 from cycle 1): `findActiveUserByEmail` hit + miss + isActive=false miss; `findActiveUserById`; `createSession` with refresh_token hashed (SHA-256) + csrf_token + expires_at + user_agent + ip_address; `findActiveSessionByRefreshHash` with revoked/expired exclusions; `revokeSession`; `rotateSession` transaction atomicity; `touchUserLastLogin`; `users.email` UNIQUE per hotel; `users.hotel_id` FK enforcement
+- T06 placeholders (6 from cycle 3): `findUserById` with isActive variants; `updateUserPassword` atomic (passwordHash + mustRotatePassword=false single update); `updateUserLanguage`; `rotateCsrfToken` overwrites in-place; `revokeAllOtherSessions` filters `id !== exceptSessionId` correctly
+
+Each test follows the T02 smoke pattern: insert minimal seed data (tier → hotel → user via factory builders), exercise the repo method on real PG, assert observable state, cleanup via `afterEach`. UUID-suffixed natural keys for re-run safety. Commit PLAIN (no §4 footer).
+
+Phase 4 — convert `tenant-guard.plugin.integration.test.ts` (4 tests, T11; CROSS-SLOT):
+- 'should reject cross-tenant DB query when hotelId mismatch (handler-side enforcement consuming req.tenantScope)' — spin up minimal Fastify with tenant-guard + @fastify/jwt + a test route that reads `req.tenantScope` and runs a scoped query; inject 2 distinct hotel JWTs; assert wrong-hotel returns empty/throws expected error
+- 'should let a super_admin request pass through to a multi-hotel listing endpoint and return rows across all tenants' — inject super_admin JWT; assert `req.tenantScope === { type: 'all-hotels' }` + test route returns rows from multiple hotels
+- 'should compose cleanly with @fastify/jwt: invalid token → 401 from @fastify/jwt layer, NOT 403 from tenant-guard' — inject invalid/expired JWT; assert tenant-guard skips (downstream auth fires 401)
+- 'should rotate scope context on JWT refresh' — login → mutate session → re-login → assert `req.tenantScope` reflects new claims
+
+Pattern differs from repo tests: Fastify `inject()` against real DB+plugin chain. Each test seeds minimal user via factory builder, signs JWT via `FastifyJwtTokenIssuer`, injects request, asserts observable handler state. Cleanup via `afterEach` removes seeded user. Line-6 header marker `// Cross-slot execution per §4-D01 (Slot A canonical territory).` PRESERVED VERBATIM at file head. Commit body footer WAJIB `Cross-slot execution per §4-D01 (Slot A canonical territory).`
+
+Phase 5 — convert `users.repository.integration.test.ts` (7 tests, T07):
+- `listByHotel` returns rows for caller's hotel only (cross-tenant rows MUST NOT appear)
+- `insertUser` UNIQUE handling — duplicate `(hotelId, email)` raises Prisma P2002 → repo `UniqueConstraintError` sentinel
+- `updateUserWithLastGmGuard` atomic: concurrent PATCH from two sessions cannot both succeed
+- `setPassword` + `mustRotatePassword=true` atomicity
+- `revokeAllSessions` revokes EVERY session for user (including current — differs from T11 revokeAllOtherSessions)
+- `revokeAllSessions` does NOT touch sessions of other users
+- soft-delete via UPDATE `isActive=false` — row remains in users table
+
+Same fixture pattern as Phase 3. PLAIN commits (no §4 footer).
+
+Phase 6 — self-validate: `make check` exit 0 (155 unit baseline preserved — integration files now excluded from test:unit by regex tighten). `pnpm test:integration --coverage` exit 0 with 27 new assertions PASS. Coverage report ≥80% line on `auth.repository.ts`, `auth.service.ts` repo-touching paths, `tenant-guard.ts`, `users.repository.ts`. Drift scan zero on 3 integration files. Schema-diff empty. Cross-slot footer audit: T11 commit ONLY carries §4-D01; T05/T06/T07 commits PLAIN.
+
+**5 Open items — stance final (all 5 confirmed verbatim per PM B recommendations, NO rebuttals)**
+
+| # | Topic | Stance |
+|---|---|---|
+| 1 | Fixture sharing | ✅ **EXTRACT to `src/core/prisma/__tests__/integration-helpers.ts`** — DRY across 3 files; ~50-80 LOC shared eliminates ~75 LOC duplicate. Per-file duplication would be marginally easier for individual file runs but cost outweighs benefit for cycle-7 scope. |
+| 2 | Test isolation | ✅ **`afterEach` cleanup + UUID-suffix on natural keys** (mirror T02 smoke). T11 plugin tests use different pattern (Fastify inject doesn't directly INSERT — seed user → inject → cleanup user); documented in Phase 4. |
+| 3 | Coverage measurement + jest config | ✅ **Tighten `test:unit` script regex via negative-lookbehind** `__tests__/.*(?<!\\.integration)\\.test\\.ts`. Single-line edit to `package.json` `test:unit` script; `jest.config.json` `testMatch` global STAYS (both unit + integration matched at config level — script-level regex narrows runtime). `test:integration` unchanged. Coverage measurement: `pnpm test:integration --coverage` reports the 4 critical repo files. **NO GAP raised** — negative lookbehind works in Node 20 V8 regex engine natively. |
+| 4 | T02 CHECK extension scope | ✅ **DEFER to T_AUX_05 backlog** — mutual-exclusion CHECK (cycle 6) is the security-critical one; other 4 are simple enum validation. Cycle 7 stays scoped. |
+| 5 | Execution speed | ✅ **ACCEPTABLE** — `test:integration --runInBand` already configured. ~27 tests × ~1s each = ~30s wall-time estimate (within 30-60s PM B note). Parallel optimization deferred to T_AUX_06 backlog. |
+
+**GAPs / questions (PLAN-blocking)**
+
+- **(none).** All 5 open items confirmed. Aux notes (T11 plugin test pattern differs from repo pattern; tier name `'lite'` reuse via factory builder for `tiers_name_check` satisfaction — same constraint as T02 smoke) are documented in Phase 3-5 above; no PM B blocker.
+
+**Test plan summary**
+
+- `auth.repository.integration.test.ts` — 16 tests (10 T05 + 6 T06)
+- `tenant-guard.plugin.integration.test.ts` — 4 tests (T11; CROSS-SLOT)
+- `users.repository.integration.test.ts` — 7 tests (T07)
+- **Total: 27 new integration assertions** + existing 155 unit baseline = **182 tests pass** post-conversion + 2 skipped (template carryover from cycle 1)
+
+**Coverage targets** per critical repo file (T02-sub-1 scope):
+- `src/modules/auth/auth.repository.ts` — target ≥ **80% line** (currently EXCLUDED from coverage scope per cycle 1 jest config; will need temporary inclusion or check via integration coverage report)
+- `src/modules/auth/auth.service.ts` repo-touching paths — target ≥ **80% line**
+- `src/plugins/tenant-guard.ts` — currently **94.44% line** (already meets via T11 unit + 4 new integration adds)
+- `src/modules/users/users.repository.ts` — target ≥ **80% line** (currently EXCLUDED similar to auth.repository)
+- Coverage measurement via `pnpm test:integration --coverage` post-conversion. May need temporary `collectCoverageFrom` adjustment to INCLUDE the 2 repo files during integration run (currently excluded for unit-only baseline).
+
+**Security checklist (CLAUDE.md §6 + SECURITY.md)**
+
+- Test fixtures use `aUser({ passwordHash: 'argon2$test' })` — no real argon2 hash needed since these tests exercise repo paths, not crypto verification
+- Cleanup `afterEach` removes ALL seeded data — no test-data persistence between tests
+- No production credentials in test files — DATABASE_URL from `.env` (already loaded via T02 test-setup)
+- Tenant-guard integration tests verify cross-tenant isolation — proves spec §4.1 fail-closed mandate live
+- No new attack surface (test-only changes; impl files untouched)
+
+**Risks + assumptions**
+
+- **Risk**: negative-lookbehind regex `(?<!\.integration)` in `test:unit` script — Node 20 V8 supports it; verified via `node -e "console.log(/foo(?<!bar)/.test('foo'))"`. Fallback: split test:unit into two patterns OR add `testPathIgnorePatterns` to jest.config.json (would also exclude from `test:integration` — need separate config; more complex).
+- **Risk**: `auth.repository.ts` + `users.repository.ts` are currently EXCLUDED from `collectCoverageFrom` (jest.config.json line "!src/modules/auth/auth.repository.ts" + "!src/modules/users/users.repository.ts"). For coverage measurement on integration runs, may need a separate jest config OR CLI override. Will verify at impl time + adjust if blocking the ≥80% target.
+- **Risk**: Integration tests adding to test file count — `make check` runs `test:unit` only (after regex tighten). Coverage threshold in jest.config.json (global lines 80%) applies to whichever suite invokes `--coverage`. If `pnpm test:integration --coverage` triggers threshold check with new files, may need narrowed `collectCoverageFrom` for integration runs.
+- **Risk**: PG container disk usage — integration tests inserting + deleting per-test could leak rows if cleanup fails. Cycle-end manual sanity: `docker compose exec postgres psql -U app -d app -c "SELECT count(*) FROM users;"` should return 0 post-suite.
+- **Assumption**: `@testcontainers/postgresql` devDep present but NOT used (cycle-7 uses live local PG, not testcontainers); leaves room for T_AUX_05+ to upgrade to testcontainers for hermetic CI.
+- **Assumption**: T02 smoke test pattern reusable verbatim for repo tests (`beforeAll`/`afterAll`/`afterEach` + UUID-suffix + tier='lite' canonical).
+- **Assumption**: T11 tenant-guard plugin integration tests need Fastify instance fixture — pattern differs from repo tests but mirrors T11 unit tests; reuse the existing T11 unit test plumbing where possible.
+
+**ETA**
+
+- PLAN ACK cycle: ~15-30 min
+- Phase 1 jest config + test:unit regex tighten: ~30 min (incl. verify both scripts work, no regression on 155 baseline)
+- Phase 2 integration-helpers.ts extract: ~1 hour (50-80 LOC shared module + smoke test of helpers)
+- Phase 3 auth.repository.integration.test.ts (16 tests): ~2 hours
+- Phase 4 tenant-guard.plugin.integration.test.ts (4 tests; cross-slot ceremony): ~1 hour
+- Phase 5 users.repository.integration.test.ts (7 tests): ~1.5 hours
+- Phase 6 self-validate (`make check` + `pnpm test:integration` + coverage + drift + cross-slot footer + schema-diff + Q-B-02 untouched audit): ~30-45 min
+- **Total wall-time exec**: **~6-7h from ACK to SUBMIT** (slightly heavier than PM B's 4-6h estimate; padding for coverage adjustment + integration test fixture iteration)
+
+**Status: ready-for-ACK. No PLAN-blocking GAPs. 5 open items confirmed verbatim. Mixed-scope ceremony understood + planned per-file.**
+
+**Mixed-scope commit ceremony plan (4-5 commits per split):**
+
+1. `chore(test): tighten test:unit regex to exclude .integration.test.ts (Open #3)` — PLAIN (script-level change, not impl scope)
+2. `test(integration): shared fixture helpers — connect/cleanup/UUID-suffix/factories` — PLAIN (canonical Slot B; new shared module)
+3. `test(auth): backfill 16 auth.repository integration assertions (T05+T06 consolidated)` — PLAIN
+4. `test(plugins): backfill 4 tenant-guard.plugin integration assertions (T11)` — **CROSS-SLOT footer WAJIB**: `Cross-slot execution per §4-D01 (Slot A canonical territory).`
+5. `test(users): backfill 7 users.repository integration assertions (T07)` — PLAIN
+
+**Critical**: ONLY commit 4 carries the §4-D01 footer. Commits 1+2+3+5 are PLAIN canonical Slot B. Mixed-file single commits FORBIDDEN.
+
+**Quartet upgrade conditions (b)-(e) addressing strategy:**
+
+| Cond | This cycle's deliverable |
+|---|---|
+| (b) Integration fill | 27 `it.todo()` → 27 real assertions across 3 files (Phases 3-5) |
+| (c) Repo coverage ≥80% line | `pnpm test:integration --coverage` post-conversion; may need temporary `collectCoverageFrom` adjustment to INCLUDE the 2 repo files (currently excluded) — handled at impl-time |
+| (d) Drift re-scan zero | Standard grep audit at self-validate (Phase 6) |
+| (e) Re-issue VERDICT FULL | PM B authority on SUBMIT — Executor delivers the artifacts; PM B issues the batch FULL APPROVE block per AC #8 |
+
+**NOT switching to `feat/auth-core` / NOT touching `src/` until PM B ACK posted.**
+
+Awaiting PM B ACK.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
