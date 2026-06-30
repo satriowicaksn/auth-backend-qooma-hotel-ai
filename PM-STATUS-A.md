@@ -34,7 +34,7 @@
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently verified: CLI exit 0 · 1 row (super_admin/hotel_id NULL/must_rotate=false) · argon2 login-compat (verify=true) · idempotent (Q-OPS-01) · fail-clean (exit 1, no pw leak) · 152 unit + 37 integ. **MERGE-READY** branch `feat/seed-super-admin` @ `c7a7e76`. **Closes Slot A foundation.** Gate **G1**. |
-| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | 🔵 `wip · ACTIVE` (ASSIGNMENT §2, awaiting PLAN) | — | **Slot C canonical · Slot A execution per §4-D08** (Slot C absorption; Satrio offline). Atomic `$transaction` insert(hotels)+insert(users[gm], must_rotate=TRUE generated-pw) + suspend-cascade (revoke sessions same-tx). Deps T01–T04 + T11 (all ✓ merged). ADR-0001/0007. Gate **G3**, ~8h, coverage ≥80%. Footer §4-D08 every block+commit. Branch `feat/slot-c-absorption-a`. (tsc-alias TF-01 done first per Nathan.) |
+| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | 🔵 `wip · PLAN ACKED` | — | **Slot C canonical · Slot A exec per §4-D08.** PLAN ACKED: shapes verified vs §2.14; GAP #1 agent_count=0 (Q-A-06) · GAP #2 tier-FK-only · GAP #3 §4.6 N/A + flagged login-suspended gap (Q-A-07, not T09 scope). DoD+: POST email-collision→409, forced-rollback test. Atomic `$transaction` + suspend-cascade. Gate **G3**, ≥80% cov. Footer §4-D08. Awaiting SUBMIT. |
 
 ---
 
@@ -774,6 +774,67 @@ _TF-01 done. Prod `node dist` now boots. Next: T09 (admin hotels CRUD, §4-D08 c
 
 _Awaiting Executor A PLAN T09._
 
+#### PLAN T09 — exec-A (Nathan) at cycle 1 (2026-06-30)
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+**Scope recap**
+- New module `src/modules/admin/hotels/` → `/api/admin/hotels` family (5 endpoints, **super_admin-only**): GET list (tier JOIN + counts), POST (atomic hotel+GM tx, return generated password once), GET :id, PATCH :id (metadata+tier, NOT status), PATCH :id/status (suspend = **same-tx** session-revoke cascade / reactivate). Gate G3, ≥80% coverage. **No schema change** (hotels/users/sessions/tiers exist).
+
+**Session-start gate** (§2)
+- Identity Executor/Slot A ✓ · CLAUDE.md ✓
+- Spec read: ASSIGNMENT T09 + MVP-AUTH-FIRST §4.3/§4.5/§4.6 + §1 row 9 + 01-auth-identity §1.5 + **API-CONTRACT §2.14** (canonical AdminHotel/req/resp) + SERVICE-CHARTER §2 + ADR-0001/0007/0008.
+- Patterns mapped (mirror `users/`): routes (`safeParse`→service), service (role-gate + orchestration + error-map), repository (Prisma direct + `$transaction` callback `async (tx: Prisma.TransactionClient)=>…`, rollback-on-throw), zod schema, barrel. Wiring in `api.ts`: `new Repo(db)` → `new Service(repo, hasher, logger)` → `decorate('services')` + add to `AppServices` (`fastify-augmentation.ts`) + `register(prefix:'/api/admin/hotels')`.
+- Deps merged ✓ (T02/T03/T04/T11). DB up (5433/6380, healthy). lint/typecheck/test green on main.
+- **Env caveat ack**: Slot B HALTED T10 (disk<5GB/Postgres down); my env 32GB + DB up. Hit that mid-integration → immediate BLOCKED (won't fight).
+
+**super_admin AuthZ** (first admin surface — no prior route-level instance): global tenant-guard preHandler already passes super_admin (`tenantScope=all-hotels`); gate is **service-level `assertSuperAdmin(session) → ForbiddenError`** on every method (mirror `users.service.ts:237` inverted). Routes thread `req.session`.
+
+**Files to create** — `src/modules/admin/hotels/`: `hotels.routes.ts` · `hotels.service.ts` · `hotels.repository.ts` · `hotels.schema.ts` · `hotels.types.ts` · `index.ts` · `__tests__/{hotels.service.test.ts (unit, mock repo+hasher), hotels.routes.test.ts (mock service), hotels.repository.integration.test.ts (real DB)}`. (Files `hotels.*` inside `admin/hotels/`; class `AdminHotelsService`, barrel exports `adminHotelsRoutes`/`AdminHotelsService`/`AdminHotelsRepository` — confirm naming OK.)
+**Files to modify**: `src/entrypoints/api.ts` (wire) · `src/shared/types/fastify-augmentation.ts` (`adminHotels` in `AppServices`) · `jest.config.json` (add `src/modules/admin/**/*.ts` to `collectCoverageFrom` so the G3 ≥80% bar is measured on the new module — mirrors auth/users entries; flag if you'd rather measure ad-hoc).
+
+**Approach (tx-correctness = highest risk; tx lives in repo)**
+- **POST (atomic §4.5)**: service `assertSuperAdmin` → zod → `generatePassword(16)` (reuse `@shared/utils/crypto.js`) → `hasher.hash(pw)` (injected `Argon2Hasher` via DI — **no adapters import in module**) → resolve `tier` name→id (404/400 if unknown) → `repo.createHotelWithGm(...)` = `db.$transaction(async tx => { hotel=tx.hotel.create({...,gmContact:{name,email,phone},status:'active'}); tx.user.create({hotelId:hotel.id, role:'gm_admin', email, name, passwordHash, mustRotatePassword:true}); })` → service assembles `{hotel:AdminHotel, gm_user, generated_password}`. P2002 (code/email) → `ConflictError` 409.
+- **PATCH :id/status (§4.3)**: suspend → `db.$transaction(async tx => { tx.hotel.update({where:{id},data:{status:'suspended'}}); tx.session.updateMany({where:{user:{hotelId:id}, revokedAt:null}, data:{revokedAt:now}}); })`; reactivate (`'active'`) = status flip only. 404 if absent.
+- **PATCH :id (metadata)**: zod whitelist (name/tier/gm_contact); tier→id FK-validate; status NOT mutable here.
+- **GET list / :id**: `db.hotel.findMany({ include:{ tier:true, _count:{select:{users:true}} } })` → map AdminHotel (`tier:row.tier.name`, `user_count:row._count.users`, `gm_contact:row.gmContact`, `agent_count:0` — GAP#1). Envelope `{data, meta:{total}}`; 404 on missing detail.
+
+**GAPs / questions**
+- **GAP T09-#1 — `agent_count` has no Auth-side source.** Hotel relations = `tier` + `users` only; no `agents` entity in this service. §2.14 = "backend-computed telemetry, default 0 on create." **Intent: return `agent_count: 0`** everywhere (MVP). A) constant 0 (recommend) · B) PO confirms cross-service source / defers field. Proceeding A unless ruled.
+- **GAP T09-#2 — PATCH tier-change validation depth.** Only explicit rule = tier-FK-valid. **Intent: validate tier name resolves** (else 400/404); **no downgrade cap-enforcement** (reject if user_count > new tier.userCap) in MVP — unspecified. A) FK-valid only (recommend) · B) add downgrade guard (need PO rule). Proceeding A.
+- **GAP T09-#3 — "last-X guard" applicability to T09.** §4.6 last-super_admin guard is **NOT in T09's path**: super_admins have `hotel_id NULL` (untouched by hotel suspend/cascade) and T09 never sets `is_active=false` on users. So no last-X guard applies (create's GM = hotel's first user; suspend only revokes sessions). Confirm you didn't intend a specific guard here.
+- **Boundary (not a GAP):** the `403 SUSPENDED`-on-login half of the suspend semantic is **auth.service login** (checks hotel status), not T09. T09 ships the session-revoke cascade. AC §5 "re-login → 403 SUSPENDED" is auth-side — flagging the scope line; leave to auth unless you fold it in.
+- **Decisions (stating, not asking):** `gm_contact{name,email,phone}` → `hotels.gmContact` JSONB (phone has no User column — per schema comment "informational; real FK = users.hotel_id"); GM user carries email/name only. `code` unique → P2002 → ConflictError. Reactivate = status flip only. Errors: core `ForbiddenError`/`NotFoundError`/`ConflictError`/`ValidationError` + `BusinessRuleError` from `@modules/auth/auth.errors.js` (cross-module, as `users` does) if a 422 is needed.
+
+**Tests**: unit (super_admin gate, tier-resolve, error maps — mock repo+hasher, **NOT** Prisma); integration (real DB) — atomic create **commit** (hotel+GM exist, pw verifies via injected hasher) + **rollback** (force dup-code failure mid-tx → assert NEITHER row persists) + suspend cascade (seed hotel+GM+active session → suspend → sessions revoked + status flipped; reactivate leaves sessions). Cleanup `sweepByHotel`. Coverage ≥80% on `src/modules/admin/hotels/**`.
+
+**Footer**: every subsequent block + impl commit carries `Cross-slot execution per §4-D08 (Slot C canonical territory).`
+
+Awaiting PM A ACK.
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+##### PM A ACK — T09 PLAN APPROVED · GAP #1/#2/#3 ruled · 1 cross-task gap flagged (cycle 1, 2026-06-30)
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
+Solid PLAN. **Proceed to coding.** PM A verified canonical shapes against `API-CONTRACT §2.14` + schema:
+- ✅ List envelope `{data, meta:{total}}` (§2.14 GET) · POST `{hotel, gm_user, generated_password}` 201 · `gm_contact` = `hotels.gmContact` JSONB {name,email,phone E.164} · GM `must_rotate_password=true` (generated-pw flow per `MVP §2`) · atomic `$transaction` + pw-before-tx (§4.5) · suspend same-tx session-revoke (§4.3). All match. Your "stating not asking" decisions all correct (code-unique→P2002→ConflictError; reactivate=status flip; cross-module `BusinessRuleError` reuse as `users` does — sanctioned).
+
+**🟢 GAP rulings:**
+1. **GAP #1 (agent_count) — `agent_count: 0` APPROVED for MVP.** Grounded: §2.14 literally says "`agent_count`+`user_count` default to 0 on create" + agents are **Hotel Core** domain (no agents table in Auth, not shipped). **But compute `user_count` for REAL** (`COUNT(users WHERE hotel_id)`) — only agent_count is sourceless. Add code comment "agent_count=0 placeholder until Hotel Core ships agents." Raised to PO as **Q-A-06** (confirm; non-blocking, 0 ships).
+2. **GAP #2 (tier-change depth) — validate tier FK only, NO downgrade cap-enforcement. APPROVED** (unspecified in MVP; §2.14 PATCH = metadata+plan, silent on caps). Add comment noting the known limitation (downgrade may leave a hotel over-cap; not enforced MVP).
+3. **GAP #3 (last-X guard) — CONFIRMED: §4.6 does NOT apply to T09.** Your reasoning is right — §4.6 last-super_admin guard is T08 (admin-users); T09 never touches super_admin rows (hotel_id NULL → untouched by `WHERE hotel_id=$1` cascade) and never deactivates users. T09 scope = the session-revoke cascade ✓.
+   - **⚠️ But I verified the other half is MISSING**: auth login has **no** `hotel.status='suspended'` check anywhere (grepped `src/modules/auth/**` — zero hits, no `SuspendedError`). So AC §5 "re-login → **403 SUSPENDED**" isn't implemented — after your cascade revokes sessions, a suspended hotel's GM could still **re-login**. This is **NOT T09's scope** (it's auth.service/T05 login path) — your boundary call is correct. I'm raising it as **Q-A-07** (cross-task AC gap → Parent/Slot B: auth-login needs a hotel-status guard for AC §5 completeness). T09 ships the cascade as-is.
+
+**Also approved**: adding `src/modules/admin/**` to `jest.config.json` `collectCoverageFrom` (needed to measure G3 ≥80% on the new module) — additive shared-config change, carries the §4-D08 footer; ensure admin/** clears ≥80% so the global threshold passes. Module conventions mapped from `users/` ✓ (first `/api/admin/*` surface).
+
+**Add to DoD (from contract, make sure these are covered):**
+- POST with an email that already exists on the platform → **409 CONFLICT** (§2.14 `gm_contact.email` collision — `UNIQUE(hotel_id,email)` won't catch cross-hotel dupes since hotel_id differs; needs an explicit existence check or rely on a platform-wide email guard — justify in impl).
+- The **forced-rollback** integration test is the highest-value one (your plan has it — dup-code mid-tx → assert NEITHER row persists). I'll focus my VERDICT there + the cascade.
+
+On ACK → create `feat/admin-hotels` (or `feat/slot-c-absorption-a`), implement, integration-test commit+rollback+cascade, coverage ≥80%, **§4-D08 footer every block + commit** → SUBMIT. I'll verify (tx atomicity is the crux) → VERDICT → notify Nathan to merge (last Slot A item).
+
+_Awaiting Executor A SUBMIT T09._
+> Cross-slot execution per §4-D08 (Slot C canonical territory).
+
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
 > Di-stage supaya Executor A lihat seluruh jalur. Belum aktif sampai dependency tercapai.
@@ -910,7 +971,9 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 | ------------- | -------- | -------------- | ------ | ---------- |
 | GAP T01-#1    | `make` binary unavailable on host (macOS CLT absent → `/usr/bin/make` = xcode-select stub). Literal `make check/start/db-migrate` cannot run. | SUBMIT T01 §2 (exec-A) | **resolved** 2026-06-30 by PM A | **Option A ratified**: underlying-recipe (pnpm/docker) substitution accepted for G1 sign-off — `make` is thin wrapper; each recipe reproduced green; canonical `make` runs in CI on PR. Option B (Xcode CLT install) NOT required. Slot-internal (no PO escalation). Forward: T03/T04 use `pnpm seed`/`pnpm seed:super-admin` directly. See §6 incident. |
 | Q-A-02        | Per-tier `tiers.features` JSONB unlock map — exact 19-key matrix × 4 tiers. Sources absent in-repo: `src/mocks/fixtures/feature-flags.ts` (FE) + `docs/DEVELOPMENT-PLAN.md`. Needed before **T08** (`GET /api/admin/tiers` returns features, G3). | GAP T03-#1 (exec-A PLAN T03) | **open → PO** (raised PARENT §3a, 2026-06-30) | **PO action**: supply the per-tier feature matrix (or confirm `{}`-until-Hotel-Core). T03 ships now with `features: {}` (schema default, nothing reads it in auth scope) — **non-blocking**; backfill via upsert re-run. Cross-ref `open-questions.md` Q-CONTRACT-08 (FE feature-flags shape / 19 names). |
-| GAP T03-#2    | `pnpm seed`/`dev:api` crash: `prisma-client.ts:25` runtime import `from '.prisma/client'` → `ERR_INVALID_MODULE_SPECIFIER` under tsx/Node-ESM. Latent (jest resolver lenient); on `main` via PR#1+#2. **PM A reproduced.** | BLOCKED T03 + REBUTTAL (exec-A) | **resolved-direction** 2026-06-30 (RE-RULING, rebuttal upheld) | **RE-RULING §2** (PM A verified): Option B (`→ @prisma/client`) **WITHDRAWN** — throws `new PrismaClient(): did not initialize` under `node-linker=isolated` (ADR-0002); types→`any`. **Option A AUTHORIZED**: `tsconfig.json` paths `.prisma/client`→`node_modules/.prisma/client` (verified: instantiates under tsx + typecheck real types). Prod `node dist` boot = separate pre-existing alias defect → Q-A-04 (tsc-alias). Unblocks T03. |
+| GAP T03-#2    | `pnpm seed`/`dev:api` crash: `prisma-client.ts:25` runtime import `from '.prisma/client'` → `ERR_INVALID_MODULE_SPECIFIER` under tsx/Node-ESM. Latent (jest resolver lenient); on `main` via PR#1+#2. **PM A reproduced.** | BLOCKED T03 + REBUTTAL (exec-A) | **✅ RESOLVED 2026-06-30** | Dev = Option A tsconfig path (T03, merged PR#3); prod = TF-01 tsc-alias (merged PR#5, PM A verified `node dist` boots). Both boot paths green. |
+| Q-A-06        | `agent_count` in `GET /api/admin/hotels` (§2.14) — Auth has no agents table (Hotel Core domain, not shipped). Return `0` for MVP? | GAP T09-#1 (exec-A PLAN T09) | **open → PO** (PARENT §3a, 2026-06-30) | **Ruled non-blocking**: ship `agent_count: 0` (placeholder; §2.14 says "default 0 on create"; `user_count` computed real). PO confirm whether cross-service count needed before agents ship. |
+| Q-A-07        | **AC §5 suspend incomplete cross-task**: auth login has NO `hotel.status='suspended'` check (PM A grepped `src/modules/auth/**` — zero hits). T09 cascade revokes sessions, but suspended-hotel GM can **re-login** (no 403 SUSPENDED). | GAP T09-#3 boundary (exec-A) | **open → Parent/Slot B/PO** (PARENT §3c, 2026-06-30) | NOT T09 scope (auth.service/T05 login path). T09 ships cascade correctly. **Ask**: add hotel-status guard to auth login (small T05/auth addition) for AC §5 completeness — Parent assign Slot B or schedule. Non-blocking T09. |
 
 ---
 
