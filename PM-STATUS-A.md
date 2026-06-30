@@ -13,11 +13,11 @@
 ## 0. Current focus (slot A)
 
 - **Day**: cycle 1 — Slot A ONLINE (Nathan hadir, 2026-06-30). First Slot A session.
-- **Active task**: T01 (foundation sign-off) — ASSIGNMENT issued §2, awaiting Executor A PLAN.
-- **Branch**: Slot A foundation work bases on `feat/auth-core` (sequencing decision — §2 + §6).
+- **Active task**: **T03 (tiers seed)** — ASSIGNMENT issued §2, awaiting Executor A PLAN. (T01 ✅ approved · adopt-T02 ✅ · adopt-T11 ✅.)
+- **Branch**: foundation verify done on `feat/auth-core`; **code work (T03/T04) on `feat/seed-foundation`** off `feat/auth-core` (§2 decision).
 - **Next gate (global)**: G1 (criteria-based, no deadline) — lihat `PM-STATUS-PARENT.md §5`.
-- **My queue (un-parked)**: **T01** → adopt **T02** + adopt **T11** → **T03** → **T04** (see §1, §2, §8).
-- **Adopt-only (NO re-exec)**: T02 (migration) + T11 (tenant-guard) already executed cross-slot by Slot B on `feat/auth-core` (deviations §4-D05 / §4-D01), not yet merged to main. Slot A = canonical adopt/sign-off only.
+- **My queue**: ~~T01~~ ✅ → ~~adopt T02~~ ✅ → ~~adopt T11~~ ✅ → **T03 (active)** → **T04 (un-blocked, next)**.
+- **Progress**: 3 / 5 signed-off (T01 approved, T02 + T11 adopted). T03 active, T04 next. G1 foundation nearly closed for Slot A (pending T03+T04 seeds).
 
 ---
 
@@ -27,11 +27,11 @@
 
 | T## | Title                              | Status   | Verified by PM | Notes                                 |
 | --- | ---------------------------------- | -------- | -------------- | ------------------------------------- |
-| T01 | pnpm install verify + `make check` green | `wip · PLAN ACKED (2 amendments)` | — | ASSIGNMENT §2; PLAN ACKED cycle 1 w/ reorder (start→check) + lockfile guard. Verify on `feat/auth-core`. Verification only, no code change. Gate **G1**. Awaiting SUBMIT. |
-| T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | `ADOPT-pending (exec by Slot B §4-D05)` | — | **Canonical Slot A**. Already FULL APPROVE by PM B on `feat/auth-core` (NOT merged to main). Slot A = **adopt/sign-off, NO re-exec**. Adopt gated on T01 green. Migration: `prisma/migrations/20260630042913_init`. |
-| T11 | tenant-guard middleware (Fastify plugin) | `ADOPT-pending (exec by Slot B §4-D01)` | — | **Canonical Slot A**. APPROVE-PARTIAL by PM B on `feat/auth-core`. Slot A = **adopt/sign-off, NO re-exec**. Lives `src/plugins/tenant-guard.ts`. Gate **G2**. |
-| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | `assigned · BLOCKED-until T01 + adopt-T02` | — | Deps T02 (tables) + real PrismaClient. **Branch from `feat/auth-core`** (§2 decision). Writes `prisma/seeds/`. Idempotent. DoD §2. Gate **G1**. |
-| T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · BLOCKED-until T01 + adopt-T02` | — | Deps T02 + argon2 (both on `feat/auth-core`). **Branch from `feat/auth-core`** (§2). Adds `seed:super-admin` script + CLI. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
+| T01 | pnpm install verify + `make check` green | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED + GAP T01-#1 ratified (Option A — make-binary absent, underlying recipe equiv, CI runs literal make). DB verified independently (5 tables, migration applied). VERDICT §2. Gate **G1**. |
+| T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D05, no re-exec). All constraints verified (UNIQUE/FK ON DELETE/mutual-exclusion CHECK proven live). Ownership-of-record = Slot A. Full APPROVE rides Slot B batch+CI. VERDICT §2. |
+| T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
+| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🔵 `assigned · ACTIVE (un-blocked)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT issued §2. Branch `feat/seed-foundation` off `feat/auth-core`. First Slot A code task. Awaiting PLAN. Gate **G1**. |
+| T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · READY (un-blocked, next)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT after T03 PLAN (single-focus). Branch `feat/seed-foundation`. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
 
 ---
 
@@ -149,6 +149,126 @@ PLAN sound: verification-only, ground-truth verified (HEAD `25d2007`, migration 
 **Note #3 (bonus — early adopt-T02 signal).** Saat `make start` jalankan `prisma migrate dev`: bila ia mau CREATE migration baru / modifikasi `prisma/migrations/*` atau `schema.prisma` (git dirty) → **STOP + report**. Itu sinyal drift schema↔migration = finding nyata, jangan di-accept. Clean apply (no file baru) = evidence positif untuk adopt-T02 nanti.
 
 **On green → SUBMIT** dengan command output: install (+ konfirmasi lockfile clean) · start · check (jumlah test pass / 0 warning) · db-migrate exit 0 + 5 tabel · `git status`/`git diff` final clean. Aku verify + VERDICT, lalu trigger adopt-T02 + adopt-T11 → un-block T03.
+
+#### SUBMIT T01 — exec-A (Nathan) at cycle 1 (2026-06-30) (attempt 1)
+
+Task: pnpm install verify + `make check` green — foundation sign-off (G1).
+Files changed: **0** (verification-only; `git diff` empty, HEAD unchanged `25d2007`).
+Branch: `feat/auth-core` @ `25d20078fea72a8906eda64cb4634b778007adb2`.
+Env: pnpm `9.0.0` (corepack-provisioned), node `v22.21.1`, docker compose `v5.1.2`.
+
+**⚠️ Read GAP T01-#1 first (Notes) — `make` cannot run on host (macOS CLT absent). I ran the byte-identical underlying recipe from the Makefile. All substance green; requesting you ratify the substitution as part of VERDICT.**
+
+DoD self-check (reordered per Amendment #1: start → check):
+- [x] **checkout `feat/auth-core`** — HEAD `25d20078fea72a8906eda64cb4634b778007adb2`, tree clean.
+- [x] **install clean** — `corepack prepare pnpm@9.0.0 --activate` → `pnpm install --frozen-lockfile` succeeded (Done in 16.9s). **Amendment #2 guard PASSED**: `--frozen-lockfile` did **not** fail → `|| pnpm install` fallback never fired; `git status --short` empty + `git diff --stat pnpm-lock.yaml` empty → **zero lockfile churn**. (`argon2 0.44.0` resolved via prebuilt binary on Node 22 — no native-build failure; addresses Note #1.)
+- [x] **start (deps up)** — `docker compose up -d --wait postgres redis` → `qooma-postgres` healthy `0.0.0.0:5433->5432`, `qooma-redis` healthy `0.0.0.0:6380->6379`. (`--wait` used instead of the Makefile's `until … sleep 1` loop — same healthy-gate, avoids blocked foreground `sleep`.)
+- [x] **db-migrate** — `pnpm prisma:migrate:dev` applied `20260630042913_init` → **"Your database is now in sync with your schema"**, exit 0. **No new migration authored / no `schema.prisma` or `migrations/*` change** → no schema↔migration drift (**Note #3 ✓ — positive early signal for adopt-T02**). 5 domain tables present via `psql \dt`: `tiers`, `hotels`, `users`, `sessions`, `password_reset_tokens` (+ `_prisma_migrations`). `prisma migrate status` → "Database schema is up to date!" (idempotent ✓).
+- [x] **check green** (4 components, all exit 0 — DB was up first per Amendment #1, so the live-DB smoke passed):
+  - `pnpm lint` → exit 0, **0 warnings** (`eslint . --max-warnings 0`).
+  - `pnpm format:check` → "All matched files use Prettier code style!".
+  - `pnpm typecheck` → `tsc --noEmit` exit 0, 0 errors.
+  - `pnpm test:unit` → exit 0, **155 passed** / 184 total. 2 suites skipped + 27 todo are **pre-existing on `feat/auth-core` (Slot B), not my edits** — reporting, not flagging.
+- [x] **No file change** — final `git status --short` empty, `git diff` empty, HEAD still `25d2007`.
+
+Quality gate
+- lint: PASS (0 warnings) · format:check: PASS · typecheck: PASS · test:unit: PASS (155 passed)
+- `make`-wrapper: **N/A — host CLT absent (GAP T01-#1)**; underlying pnpm/docker commands run instead (identical recipe).
+
+Drift scans
+- **N/A — no edits** (`git diff` empty). The smoke suite's two `prisma:error` console lines are its *intended* negative-path trips (UNIQUE `(hotel_id,email)` + `users_role_hotel_mutual_exclusion` CHECK) — suite PASSED, both constraints proven live. These + the 2 skipped suites/27 todo live in Slot B's code on `feat/auth-core`, not Slot A changes.
+
+Security check
+- N/A (no auth/webhook/crypto code written). No secret committed; `.env` untracked (gitignored), never staged. Used existing `.env` (all keys present incl. valid `ENCRYPTION_KEY`) — **generated 0 keys** (addresses Note #2; `openssl` not needed).
+
+Test evidence
+- `test:unit`: 155 passed. Live-DB smoke `src/core/prisma/__tests__/prisma-client.smoke.test.ts` **PASS** — (a) connection round-trip, (b) UNIQUE(hotel_id,email) trip, (c) mutual-exclusion CHECK trip all verified against the migrated DB at `localhost:5433`.
+- Tables: `psql -U app -d app -c '\dt'` → 5 domain tables + `_prisma_migrations`.
+- No new endpoint/webhook/job in this task → no curl sample applicable.
+
+Notes / questions
+- **GAP T01-#1 — `make` unavailable on host (raised per ASSIGNMENT note "missing env resource → raise GAP, PM decides").**
+  - **Gap**: macOS Command Line Tools not installed → `/usr/bin/make` is only the CLT stub (invoking it pops the `xcode-select` install dialog, runs nothing). `xcode-select -p` errors ("Unable to get active developer directory"); no `gmake`/homebrew `make`. So literal targets `make install/start/check/db-migrate` cannot execute in this env.
+  - **Doc ref**: ASSIGNMENT T01 DoD (`make check`/`make start`/`make db-migrate`) + PM note. PM ACK referenced `Makefile:38/46-50` assuming `make` runs — that's the only post-ACK delta.
+  - **Workaround already executed**: byte-identical underlying recipe (corepack→`pnpm install --frozen-lockfile`→`pnpm prisma:generate`→`docker compose up -d --wait`→`pnpm prisma:migrate:dev`→`pnpm lint`/`format:check`/`typecheck`/`test:unit`). All green; evidence above. DoD substance fully verified — nothing needed descoping.
+  - **Options**: A) (my intent, recommended) **Ratify the substitution** — accept underlying-command evidence as satisfying `make check`/`start`/`db-migrate` for G1 sign-off. `make` is a thin wrapper; CI (canonical) still runs `make`. B) **Require literal `make`** — I install Xcode CLT (`xcode-select --install`, interactive GUI, multi-GB; 44 GB free is enough) then re-run via `make`; expect identical green — needs you/user to click the dialog. C) Descope the `make`-wrapper requirement (PM authority) — unnecessary since substance is green.
+  - **My intent**: **A**.
+- Amendments/notes incorporated: #1 reorder (start before check) ✓ · #2 lockfile guard (frozen passed, no churn) ✓ · Note #1 (Node 22 — argon2 prebuilt, no 22-only failure) ✓ · Note #2 (existing `.env`, 0 keys generated) ✓ · Note #3 (clean migrate apply, no drift) ✓.
+- Deps containers left **running** (5433/6380) for adopt-T02/T03/T04.
+
+Requesting PM A VERDICT (incl. ratification of GAP T01-#1 option A).
+
+##### VERDICT T01 — APPROVED (cycle 1, attempt 1) by PM A · GAP T01-#1 RATIFIED (Option A)
+
+✅ **APPROVED.** All DoD substance verified; independently corroborated by PM A (read-only):
+- Branch `feat/auth-core` @ `25d2007`, 0 file changes (working tree back on `main` @ `3b4de87`, only this SUBMIT uncommitted ✓).
+- install: `--frozen-lockfile` succeeded, zero lockfile churn (**Amend #2 ✓**). argon2 0.44.0 prebuilt on Node 22 (Note #1 ✓).
+- **DB independently checked by PM A** (`psql` on :5433): `_prisma_migrations` → `20260630042913_init` applied (`finished_at` set); 5 domain tables present (tiers/hotels/users/sessions/password_reset_tokens). Matches claim.
+- check: lint 0-warn · format ✓ · typecheck 0-err · test:unit 155 passed incl. live-DB smoke (connection + UNIQUE + CHECK trips) — **Amend #1 reorder confirmed effective**.
+- 2 skipped suites = `src/modules/_template/` reference boilerplate (CLAUDE.md §3 "jangan edit isinya") — by-design, NOT auth code, NOT a merge-drift item. 27 `it.todo` = T02-gated integration placeholders (Slot B, cycle 7). Both correctly reported, not flagged.
+
+🔧 **GAP T01-#1 — RATIFIED via Option A.** `make` binary unavailable (macOS CLT absent). The underlying-recipe substitution satisfies `make check`/`start`/`db-migrate` for **G1 foundation sign-off**, because:
+1. `make` here is a thin wrapper — `check: lint format-check typecheck test-unit` (`Makefile:148`) = the 4 pnpm scripts you ran; `start`/`db-migrate`/`install` likewise. Each recipe reproduced faithfully, component-by-component green.
+2. The **canonical `make` path is exercised by CI** (`CLAUDE.md §12` "wajib lewat CI") when `feat/auth-core` PRs to main — G1's "make check hijau" is met at the gate by CI; local run proves substance.
+3. `docker compose up --wait` vs Makefile `until pg_isready` loop = equivalent healthy-gate; accepted.
+- **Option B (install Xcode CLT) explicitly NOT required** — multi-GB, interactive, zero added signal beyond CI.
+- **Forward guidance (T03/T04)**: invoke `pnpm seed` / `pnpm seed:super-admin` directly — make-gap does NOT block seed tasks; no CLT install needed.
+- Recorded: §3 (resolved) + §6 (incident, durable for future Slot A sessions).
+
+→ §1 tracker T01 → `approved`; row mirrored PARENT §1. → roll-up PARENT §2.
+
+---
+
+##### VERDICT adopt-T02 — ADOPTED (PM A canonical sign-off, cycle 1) — NO re-exec
+
+Slot A (canonical owner per `SERVICE-CHARTER §3`) adopts T02 (executed by Slot B §4-D05). PM A review of `prisma/migrations/20260630042913_init/migration.sql` + live DB:
+- ✅ 5 tables match `schema.prisma`. `UNIQUE(hotel_id,email)` = `users_hotel_id_email_unique` (MVP §4.7).
+- ✅ FK ON DELETE: hotels.tier_id→tiers **RESTRICT** · users.hotel_id→hotels **RESTRICT** · sessions.user_id→users **CASCADE** · password_reset_tokens.user_id→users **CASCADE** — exact spec match.
+- ✅ Mutual-exclusion CHECK `users_role_hotel_mutual_exclusion` present (MVP §4.4) — **proven live** by smoke (Postgres 23514 trip).
+- ✅ Bonus CHECKs: `tiers_name_check`, `users_role_check`, `hotels_status_check`, `users_language_check`. `prisma-client.ts` = real singleton (Q-B-02(b) resolved); no drift ("in sync", no new migration).
+- **Ownership-of-record affirmed = Slot A**; future migration amendments return to Slot A. NO re-exec.
+→ §1 T02 → `adopted`.
+
+**⚠️ Carry-forward for T03/T04 (from the CHECKs above — these will reject bad INSERTs):**
+- T03 tiers seed MUST use exactly `lite`/`professional`/`luxury`/`enterprise` (else `tiers_name_check` fails).
+- T04 super-admin MUST be `role='super_admin'` + `hotel_id=NULL` (else `users_role_check` / `users_role_hotel_mutual_exclusion` fail). `language` ∈ {`id`,`en`}.
+
+---
+
+##### VERDICT adopt-T11 — ADOPTED (PM A canonical sign-off, cycle 1) — NO re-exec
+
+Slot A adopts T11 tenant-guard (executed by Slot B §4-D01, APPROVE-PARTIAL by PM B). PM A review of `src/plugins/tenant-guard.ts`:
+- ✅ Role scopes per spec §6: super_admin → `{type:'all-hotels'}`; non-super_admin w/ hotelId → `{type:'single-hotel',hotelId}`.
+- ✅ Non-super_admin w/ `hotelId===null` → `TenantScopeViolationError` (403) + audit log (correlationId/userId/role — no phone/email PII; Open Item #5 shape). AppError subclass, no `throw new Error`, no `any`, no console.log, structured log ✓.
+- ✅ Allowlist bypass for public/auth routes; `matchedPath` uses Fastify 4.28 `routeOptions.url` + safe fallback.
+- ✅ Imports auth JWT-claim/cookie/error helpers — tight coupling **sanctioned by design** (Parent §8 T11: "coordinate JWT verify util with T05 — duplication is worse than tight coupling"). Not a cross-module drift block.
+
+**🔒 Recorded canonical invariant (Slot A owns):** guard PASSES THROUGH on missing/invalid cookie (delegates 401 to upstream `@fastify/jwt` + handler — "Amendment 1"). Spec-compliant, NOT fail-open **provided every protected route also has JWT auth wired upstream**. Fail-open boundary = a protected route wired with tenant-guard but WITHOUT jwt auth. → Slot A protects this on all future tenant-guard amendments + flags it on route-wiring reviews (relevant to T07 wiring, Slot B). Logged §6 + informational to Parent §10.
+- **Ownership-of-record affirmed = Slot A.** NO re-exec. Full APPROVE rides Slot B's batch + CI (PM B owns execution-status row).
+→ §1 T11 → `adopted`.
+
+---
+
+### ASSIGNMENT T03 — routed to exec-A (Nathan) by PM A at cycle 1 (2026-06-30) — ✅ UN-BLOCKED
+- **Task**: Tiers seed — 4 rows, idempotent. **First Slot A CODE task** (T01 was verify-only).
+- **Branch**: branch from `origin/feat/auth-core` → **`feat/seed-foundation`** (per §2 SEQUENCING DECISION). Conventional commits (`feat(seed): …` / `chore(seed): …`).
+- **Deps satisfied**: T01 ✓ green · adopt-T02 ✓ (tables live, confirmed by PM A). Containers up (5433/6380, left running by T01).
+- **Spec**: `MVP-AUTH-FIRST §3` step 1 + `01-auth-identity §1.4` (Tier shape + per-tier values).
+
+**DoD T03:**
+- [ ] Branch `feat/seed-foundation` off `feat/auth-core` @ `25d2007` — confirm base in PLAN.
+- [ ] Seed implemented in `prisma/seeds/` (replace placeholder `index.ts`, or add `prisma/seeds/tiers.ts` invoked from `index.ts` — your call, justify in PLAN). Uses the **real `PrismaClient` singleton** (import-path `.prisma/client` per `src/core/prisma/prisma-client.ts` — that quirk is mandatory, see prisma-client header).
+- [ ] **4 rows, idempotent `upsert` by unique `name`**: `lite` · `professional` · `luxury` · `enterprise` (EXACT — `tiers_name_check` rejects anything else). Re-run = still 4 rows, no dupe, no error.
+- [ ] Columns per schema `Tier` + read `01-auth-identity §1.4` for exact values: `displayName`, `outboundQuotaMonthly` (2000/4000/8000/`-1`), `agentCap` (1/3/5/`-1`), `agentMinimum` (default 3 — confirm per-tier override in spec), `userCap` (2/4/6/`-1`), `departmentCap` (1/3/5/`-1`), `features` JSONB. `-1` = unlimited (enterprise). **Read the spec for the feature map — don't guess.**
+- [ ] Runs via `pnpm seed` (= `tsx prisma/seeds/index.ts`) — exit 0, idempotent on re-run. (Per ratified GAP T01-#1: invoke `pnpm seed` directly; `make db-seed` is the wrapper, equivalent.)
+- [ ] **Test**: integration/smoke test asserting 4 tiers exist post-seed + re-run idempotent (4 stays 4). Lives `*.integration.test.ts` (needs DB up). If you add a unit-level test, mock nothing Prisma (ADR-0001/CLAUDE §8).
+- [ ] `make check` equivalent green (lint 0-warn · format · typecheck · test:unit) + the new integration test green (DB up).
+- [ ] Drift floor: no `any`, no `console.log` (use `console.warn` only if a script status line is needed — allowed in `prisma/seeds/` scripts per drift table exception), no `throw new Error` (use AppError if throwing in service-path code; a top-level seed script may `process.exit(1)` on failure per existing boilerplate pattern), no default export outside entrypoints.
+- [ ] `git diff` scoped to seed files only — no `src/modules/*`, `schema.prisma`, or migration changes. SUBMIT lists exact files.
+
+**Catatan PM A**: Independent T03 & T04 (both only need T02 tables). I'm assigning **T03 first**; **T04 is now also un-blocked** (deps T01+adopt-T02 met) — ASSIGNMENT T04 issues after your T03 PLAN (keeps focus single). Spec values: read `01-auth-identity §1.4` rather than trusting the schema-comment shorthand for the `features` map + `displayName`. Raise GAP if §1.4 is ambiguous on any tier's quota.
+
+_Awaiting Executor A PLAN T03._
 
 ---
 
@@ -286,7 +406,7 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 
 | ID            | Question | Source         | Status | Resolution |
 | ------------- | -------- | -------------- | ------ | ---------- |
-| —             | —        | —              | —      | —          |
+| GAP T01-#1    | `make` binary unavailable on host (macOS CLT absent → `/usr/bin/make` = xcode-select stub). Literal `make check/start/db-migrate` cannot run. | SUBMIT T01 §2 (exec-A) | **resolved** 2026-06-30 by PM A | **Option A ratified**: underlying-recipe (pnpm/docker) substitution accepted for G1 sign-off — `make` is thin wrapper; each recipe reproduced green; canonical `make` runs in CI on PR. Option B (Xcode CLT install) NOT required. Slot-internal (no PO escalation). Forward: T03/T04 use `pnpm seed`/`pnpm seed:super-admin` directly. See §6 incident. |
 
 ---
 
@@ -306,33 +426,37 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 >
 > Format: per `PM-AGENT.md §7`.
 
-### cycle 1 — 2026-06-30 (Slot A ONLINE — Nathan hadir, first assignment issued)
+### cycle 1 (update 2) — 2026-06-30 (T01 APPROVED + adopt-T02/T11 ADOPTED + T03 issued)
 
 ```
 QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 
 ✅ Approved hari ini
-- (none — baru online)
+- T01 (foundation sign-off) — APPROVED attempt 1. GAP T01-#1 (make absent) ratified Option A. DB verified independent (5 tables, migration applied).
+- adopt-T02 (migration) — ADOPTED (PM A canonical, no re-exec). All constraints verified incl. live mutual-exclusion CHECK.
+- adopt-T11 (tenant-guard) — ADOPTED (PM A canonical, no re-exec). Fail-open invariant recorded §6.
 
 🔄 In progress
-- T01 (foundation sign-off) — ASSIGNMENT issued §2, awaiting Executor A PLAN.
+- T03 (tiers seed) — ASSIGNMENT issued §2, awaiting Executor A PLAN. First Slot A code task, branch feat/seed-foundation.
 
 ⛔ Rejected
-- (none)
+- (none — T01 clean APPROVE, 0 re-spin)
 
 🚨 Eskalasi ke Parent PM
-- (none — sequencing T03/T04 di-decide sendiri per bootstrap delegation: branch dari feat/auth-core, §2.)
+- (none) — GAP T01-#1 resolved slot-internal. Informational: tenant-guard fail-open invariant → Parent §10 (cross-dev, relevant T07 wiring).
 
 📅 Gate status (global)
-- Next gate: G1 (criteria-based) — Slot A foundation T01..T04 + adopt T11. PARENT §5.
+- Next gate: G1. Slot A foundation: T01 ✅ T02 ✅ T11 ✅ — remaining T03 (active) + T04 (next). G1 near-closed for Slot A.
 - Open Qs slot A: 0.
 
 📈 Progress slot A
-- 0 / 5 approved (T01, T02-adopt, T11-adopt, T03, T04). T02 + T11 sudah exec by Slot B (adopt-pending, no re-exec).
+- 3 / 5 signed-off (T01 approved · T02 adopted · T11 adopted). T03 active, T04 un-blocked.
 
 🎯 Fokus besok
-- T01 PLAN ACK → SUBMIT VERDICT → trigger adopt-T02 + adopt-T11 → un-block T03.
+- T03 PLAN ACK → SUBMIT VERDICT → issue T04 ASSIGNMENT → G1 Slot A foundation complete.
 ```
+
+### cycle 1 — 2026-06-30 (Slot A ONLINE — Nathan hadir, first assignment issued) — superseded by update 2 above
 
 ### H0 — (Nathan onboard, awaiting first assignment) — superseded oleh cycle 1 di atas
 
@@ -352,6 +476,26 @@ QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 - T02/T11 ownership-of-record = Slot A tapi eksekusi Slot B; adopt sign-off (§2) menegaskan kembali. Future amendments tenant-guard/migration kembali ke Slot A.
 
 **Escalate to Parent PM bila**: merge `feat/auth-core` mundur > sesi berikutnya (Slot A idle di T03/T04 menunggu), atau collision file tak terduga muncul saat rebase.
+
+### 2026-06-30 — `make` binary unavailable on Slot A host (durable, slot-scoped)
+
+**What**: macOS Command Line Tools belum ter-install → `/usr/bin/make` cuma stub xcode-select (invoke = popup installer, runs nothing). Tidak ada `gmake`/homebrew make. Surfaced di SUBMIT T01 (GAP T01-#1).
+
+**Resolution**: ratified Option A — pakai underlying recipe (pnpm/docker) langsung; `make` = thin wrapper, CI jalankan literal make. Detail §3 GAP T01-#1.
+
+**How to apply (future Slot A sessions/tasks)**: JANGAN tunggu/instal Xcode CLT. Map target → recipe langsung:
+- `make check` → `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit`
+- `make start` → `docker compose up -d --wait postgres redis` (+ `pnpm prisma:generate` + `pnpm prisma:migrate:dev`)
+- `make db-migrate` → `pnpm prisma:migrate:dev` · `make db-seed` → `pnpm seed` · `make install` → `corepack prepare pnpm@9.0.0 --activate && pnpm install --frozen-lockfile`
+- CI (Node 20) tetap source-of-truth untuk literal-make gate.
+
+### 2026-06-30 — tenant-guard fail-open invariant (adopt-T11, Slot A canonical — durable)
+
+**Invariant (Slot A owns)**: `src/plugins/tenant-guard.ts` PASSES THROUGH on missing/invalid access cookie (delegates 401 ke upstream `@fastify/jwt` + handler — design "Amendment 1"). Ini spec-compliant & **bukan** fail-open SELAMA setiap protected route juga punya jwt-auth ter-wire upstream (missing cookie → jwt 401 sebelum handler jalan).
+
+**Fail-open boundary**: protected route yang di-wire dengan tenant-guard TAPI tanpa jwt-auth → missing cookie lolos = fail-open (langgar MVP §4.1).
+
+**How to apply**: Slot A jaga invariant ini di tiap amendment tenant-guard masa depan + flag saat review wiring route (relevan T07 wiring, Slot B). Informational note ke Parent §10 (cross-dev). Bukan blocker adopt — ADOPTED.
 
 ---
 
@@ -380,13 +524,13 @@ QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 
 | T## | Title | Status (Slot A view) | Dep | Gate |
 | --- | --- | --- | --- | --- |
-| T01 | pnpm install verify + `make check` green | `assigned · READY-FULL` — **ACTIVE** (ASSIGNMENT §2) | none | G1 |
-| T02 | Initial Prisma migration | `ADOPT-pending` (exec Slot B §4-D05, on `feat/auth-core`) | T01 | G1 |
-| T11 | tenant-guard middleware | `ADOPT-pending` (exec Slot B §4-D01, on `feat/auth-core`) | T01 | G2 |
-| T03 | Tiers seed (4 rows) | `assigned · BLOCKED-until T01 + adopt-T02` | T02 | G1 |
-| T04 | `seed-super-admin` CLI | `assigned · BLOCKED-until T01 + adopt-T02` | T02 | G1 |
+| T01 | pnpm install verify + `make check` green | ✅ `approved` (GAP T01-#1 ratified) | none | G1 |
+| T02 | Initial Prisma migration | ✅ `adopted` (PM A canonical) | T01 | G1 |
+| T11 | tenant-guard middleware | ✅ `adopted` (PM A canonical) | T01 | G2 |
+| T03 | Tiers seed (4 rows) | 🔵 `ACTIVE` — ASSIGNMENT §2, awaiting PLAN | T02 ✓ | G1 |
+| T04 | `seed-super-admin` CLI | `READY (un-blocked, next)` | T02 ✓ | G1 |
 
-Sequence: **T01 → adopt-T02 + adopt-T11 → T03 → T04**.
+Sequence: ~~T01~~ ✅ → ~~adopt-T02~~ ✅ → ~~adopt-T11~~ ✅ → **T03 (active)** → **T04 (next)**.
 
 <!-- Mirror format dari PM-STATUS-PARENT.md §8 template. -->
 
