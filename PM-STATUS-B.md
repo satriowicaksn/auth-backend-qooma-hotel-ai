@@ -13,15 +13,11 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Slot B sequence COMPLETE**: T05+T06+T11+T07 quartet all `APPROVE-PARTIAL`. VERDICT T07 attempt 1 posted 2026-06-30; 17/17 verifications match; canonical Slot B (0 §4-D01 markers verified); 18 DoD + 8 AC + AC#9 sequence completion all ✓; 6 DDs ACCEPT; 5 open items resolved.
-- **Quartet status table** (verified-by cycle in §1):
-  - T05 (cycle 2) APPROVE-PARTIAL ✓
-  - T06 (cycle 3 attempt 2) APPROVE-PARTIAL ✓
-  - T11 (cycle 4, cross-slot per §4-D01) APPROVE-PARTIAL ✓
-  - T07 (cycle 5, FINAL canonical Slot B) APPROVE-PARTIAL ✓
-- **Holding pattern**: await Slot A T02 ship for batch FULL APPROVE upgrade + `feat/auth-core` merge to `main` (single merge event for entire quartet).
-- **Branch**: `feat/auth-core` (39 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07) — NO merge until batch FULL APPROVE.
-- **PO direction needed**: idle wait T02 vs Slot B picks up T02 cross-slot deviation vs Slot B picks up T01-T04 mega-deviation. PM B recommendation: **(b) T02 cross-slot deviation** — see VERDICT T07 sequence-next section.
+- **Active task**: T02 — Initial Prisma migration · `assigned · READY-FULL (cross-slot per §4-D05, cycle 6 Slot B execution)` — ASSIGNMENT issued cycle 6 (2026-06-30). **CROSS-SLOT execution** per PARENT §4-D05 (Slot A canonical; Slot B execution one-off; T02-ONLY scope — T01 implicitly done cycle 2, T03/T04 PARKED). PO ratified 2026-06-30.
+- **Quartet status**: T05+T06+T11+T07 all `APPROVE-PARTIAL` (cycles 2-5 close). Awaiting T02 APPROVE → cycle 7 chained T02-sub-1 (it.todo backfill) → batch FULL APPROVE → merge `feat/auth-core` to `main`.
+- **Cycle 6 sequence**: T02 (cross-slot per §4-D05) → cycle 7 T02-sub-1 (~24 it.todo backfill) → batch FULL APPROVE quartet → merge.
+- **Branch**: `feat/auth-core` (39 impl commits ahead of `main`) — T02 stacks on T07; same branch per §7 hygiene.
+- **Q-B-02(b) inline resolution this cycle**: `prisma-client.ts` placeholder `{}` → real `PrismaClient` singleton (closes 1 of 4 Q-B-02 gaps; other 3 remain slot-internal per Parent PM §8 line 354).
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -35,6 +31,7 @@
 
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `assigned · READY-FULL (cross-slot per §4-D05, cycle 6 Slot B execution)` | —              | Cycle 6 task. ASSIGNMENT issued 2026-06-30. **Cross-slot per §4-D05** (PO ratified 2026-06-30). Ownership of record = Slot A; execution by Slot B this cycle only (T02-ONLY scope). Scope: Prisma migration generation + Q-B-02(b) inline resolution (prisma-client singleton) + 1+ smoke integration test. Single blocker for quartet batch FULL APPROVE upgrade. ~3 CREATE / 2 EDIT. Cross-slot commit ceremony WAJIB (mirror §4-D01 T11 precedent). |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
@@ -3282,6 +3279,166 @@ PM B exits to **wait-mode for PO direction**. Three plausible paths (PM B perspe
 - **(c) Slot B picks up T01-T04 mega-deviation (full Slot A foundation absorption)**: most aggressive; unblocks T02-T04 simultaneously (pnpm install + migration + tiers seed + seed-super-admin CLI); risk = Slot B audit fatigue + Slot A canonical ownership erosion. Larger escalation per PARENT §8 line 210 "Slot B absorbs T01..T04 as one-off" — already approved as escalation path if PO directs.
 
 PM B recommendation order: **(b) > (a) > (c)** — see brief for full rationale.
+
+### ASSIGNMENT T02 — claimed by exec-B (Nanak) cycle 6 (2026-06-30). CROSS-SLOT execution per PARENT §4-D05 (Slot A canonical ownership of record; Slot B execution one-off for single-dev cycle, T02-only scope — T01 implicitly done cycle 2, T03/T04 remain PARKED). EVERY commit body MUST reference §4-D05.
+
+- **Spec row pointer**: `docs/spec/MVP-AUTH-FIRST.md §3` steps 1-5 (DB migration order) + `docs/spec/01-auth-identity.md §3` (SQL DDL canonical shape) + `prisma/schema.prisma` (already authored across cycles 2-5, no edits in T02) + `PARENT §1` T02 row + `PARENT §8` T02 detail block (lines 298-358) + `PARENT §4-D05` deviation entry (line 149)
+- **Routed from**: PARENT §1 T02 row status `assigned · READY-FULL (cross-slot per §4-D05, Slot B execution)` + PARENT §4-D05 deviation ratified PO 2026-06-30
+- **Branch**: `feat/auth-core` (continues — T02 stacks on T07; same branch per §7 hygiene)
+- **Status flag**: `READY-FULL (cross-slot per §4-D05, cycle 6 Slot B execution)`
+- **Gate target**: G1 (foundation) — closing T02 lights up batch FULL APPROVE pathway for G2 (auth module ready)
+- **Resolves inline**: Q-B-02(b) — `prisma-client.ts` placeholder `{}` → real `PrismaClient` singleton
+- **Unblocks**: batch FULL APPROVE of T05+T06+T11+T07 quartet (~24 integration-test `it.todo()` placeholders fill); `feat/auth-core` merge to main
+
+#### Cross-slot heritage (audit trail — WAJIB di setiap commit + SUBMIT/VERDICT) — mirror §4-D01 ceremony from T11
+
+- **Canonical owner of record**: Slot A (Nathan) per `docs/SERVICE-CHARTER.md §3` (foundation row) + `KICKOFF.md §1` (T01-T04 → Slot A)
+- **Execution this cycle**: Slot B (Nanak) one-off, per `PARENT §4-D05` deviation (PO ratified 2026-06-30)
+- **Reason for deviation**: T02 = SINGLE blocker for Slot B quartet (T05+T06+T11+T07) batch FULL APPROVE. Without T02: ~24 `it.todo()` integration placeholders cannot fill; `feat/auth-core` branch (39 commits ahead of main) cannot merge; FE integration window stays closed. PO ratified per `PARENT §4-D05` line 149 + cross-dev coord row at PARENT §10 line 611.
+- **Scope of deviation: T02 ONLY**. T01 (pnpm install verify) implicitly done cycle 2 via Executor B's `pnpm add argon2 @fastify/cookie` success — formal sign-off remains Slot A pickup, non-blocking. T03 (tiers seed) + T04 (`seed-super-admin` CLI) remain `PARKED · unowned-this-cycle` for Slot A canonical pickup. Slot B integration tests self-seed via test fixtures + factory builders per `docs/TESTING.md §11`.
+- **Commit message pattern (WAJIB for every T02 commit)**:
+  ```
+  <type>(<scope>): <subject — short>
+
+  Cross-slot execution per §4-D05 (Slot A canonical territory).
+  ```
+- **SUBMIT block WAJIB header note**: "Cross-slot execution per §4-D05"
+- **PM B VERDICT block WAJIB header note**: same — "cross-slot heritage per §4-D05"
+- **Future amendment audit trail**: when Slot A onboards (next cycle or later), this ASSIGNMENT block + §4-D05 deviation row + final SUBMIT/VERDICT are the canonical handoff record. Slot A re-takes T01/T03/T04 canonical pickup; T02 execution stays in historical record under §4-D05 (Slot B one-off). Future tenant-guard/migration amendments return to Slot A (mirror §4-D01 pattern).
+- **Mega-deviation absorbing T01+T03+T04 REJECTED** by PO per §4-D05 — premature foundation absorption; wastes Slot B cycles on non-blocking tasks. T02-only is the targeted minimal deviation.
+
+#### PM B notes — Scope this cycle (per Parent PM §8 T02 detail)
+
+**In scope this submission**:
+1. **Generate first Prisma migration** via `pnpm prisma:migrate:dev --name init` (Makefile target `db-migrate` wraps `pnpm prisma:migrate:dev`). Migration covers schema-authored entities at `prisma/schema.prisma`: `tiers`, `hotels`, `users`, `sessions`, `password_reset_tokens` (per spec §3).
+2. **Constraints enforced at DB level** (per spec):
+   - Mutual-exclusion CHECK on `users`: `(role='super_admin' AND hotel_id IS NULL) OR (role<>'super_admin' AND hotel_id IS NOT NULL)` per `MVP-AUTH-FIRST §4.4` — verify Prisma generates this via raw SQL in migration (Prisma doesn't auto-generate CHECK constraints from schema; may need manual SQL injection in migration.sql)
+   - UNIQUE(`hotel_id`, `email`) on `users` per `MVP-AUTH-FIRST §4.7` — auto-generated from `@@unique([hotelId, email])` in schema
+   - FKs per schema.prisma: `hotels.tier_id → tiers.id ON DELETE RESTRICT`, `users.hotel_id → hotels.id ON DELETE RESTRICT`, `sessions.user_id → users.id ON DELETE CASCADE`, `password_reset_tokens.user_id → users.id ON DELETE CASCADE`
+3. **Apply migration locally** via `make db-migrate` or equivalent against Docker Postgres (port 5433 per pre-T01 fix).
+4. **Replace `src/core/prisma/prisma-client.ts` placeholder** export `{}` (line 29) with real `PrismaClient` singleton. File already has commented-out template at lines 11-27 — Executor can uncomment + finalize. Pattern: instantiate once at module load, export `db` const, register graceful shutdown via Fastify `onClose` hook (PLAN decides exact lifecycle wiring). **Q-B-02(b) resolved inline.**
+5. **At least 1 smoke integration test** at `src/core/prisma/__tests__/prisma-client.smoke.test.ts` verifying migrated DB accessible. Recommended assertions per Parent PM line 332: round-trip a `tiers` row OR assert UNIQUE constraint trips on duplicate `(hotel_id, email)` insert with expected Postgres `23505` unique-violation code.
+6. **All existing T05/T06/T11/T07 unit tests still pass** — `make check` green post-PrismaClient swap-in. Singleton replacement must not break existing mocks/decorators (`prisma as unknown as PrismaClient` cast in entrypoint becomes unnecessary; remove it as part of Q-B-02(b) cleanup).
+
+**Explicitly OUT-of-scope this cycle**:
+- **`prisma/schema.prisma` EDITS** — schema thoroughly iterated across cycles 2-5; T02 = migration generation ONLY. **CRITICAL: editing schema = scope violation**. If Executor B finds a schema bug while generating migration, raise as GAP, do NOT silently amend.
+- **T01 (pnpm install verify)** — implicitly done cycle 2; formal sign-off remains Slot A pickup (non-blocking)
+- **T03 (tiers seed)** — Slot A canonical, PARKED
+- **T04 (seed-super-admin CLI)** — Slot A canonical, PARKED
+- **Full ~24 `it.todo()` integration backfill** — PM B ruling per Parent PM line 353: **smoke test in T02 (mandatory) + full backfill in chained T02-sub-1 cycle**. Keeps T02 SUBMIT tight; allows batch FULL APPROVE quartet trigger on T02 APPROVE rather than waiting for full backfill.
+- **Testcontainers full integration stack** — basic local migration smoke OK this cycle; testcontainers-based reproducible runs land in cycle 7+ (during the it.todo backfill cycle).
+- **Mega-deviation absorbing T01+T03+T04** — REJECTED by PO per §4-D05; do not touch T03/T04 even tangentially.
+
+#### PM B notes — DoD this submission (~10 items per Parent PM §8 T02)
+
+- [ ] **Migration file generated** at `prisma/migrations/<timestamp>_init/migration.sql` via `pnpm prisma:migrate:dev` (Makefile `make db-migrate`)
+- [ ] **Schema applied locally** — `pnpm prisma:migrate:dev` exits 0 against running Docker Postgres (host port 5433)
+- [ ] **`prisma/migrations/migration_lock.toml`** present + committed
+- [ ] **Prisma client regenerated** — `pnpm prisma:generate` artifact picked up; no TS errors at app boot or in existing T05/T06/T11/T07 service code
+- [ ] **`src/core/prisma/prisma-client.ts`** exports real `PrismaClient` singleton — uncomment lines 13-27 template + finalize; remove placeholder line 29. **Q-B-02(b) resolved inline.** Lifecycle hook: register `db.$disconnect()` via SIGTERM/SIGINT OR via Fastify `onClose` (PLAN picks; Executor decide pattern).
+- [ ] **At least 1 smoke integration test** at `src/core/prisma/__tests__/prisma-client.smoke.test.ts` passes against migrated DB:
+  - Verify connection (round-trip a `tiers` row insert+select+delete)
+  - AND/OR verify UNIQUE constraint trips on duplicate `(hotel_id, email)` insert with expected Postgres error
+  - AND verify mutual-exclusion CHECK constraint trips on invalid `(role, hotel_id)` combo
+- [ ] **All existing 152 unit tests + 27 it.todo + 2 skipped still PASS** post-PrismaClient swap-in (`make check` green). Singleton replacement must not break mocks/decorators in existing T05/T06/T11/T07 service/route tests.
+- [ ] **Entrypoint cleanup**: remove `db as unknown as PrismaClient` cast at `src/entrypoints/api.ts:62` (Q-B-02(b) cleanup) — singleton now provides typed `PrismaClient` directly. Also remove `TODO(slot-A)` marker that referenced this.
+- [ ] **`make check` green** (lint + format-check + typecheck + test-unit + smoke test) — smoke test in test-unit suite OK if it gates on DB env presence; alternatively land in `test:integration` if available
+- [ ] **Cross-slot SUBMIT commit footer**: every T02 impl commit + PLAN + SUBMIT + VERDICT carries `Cross-slot execution per §4-D05 (Slot A canonical territory).` (mirrors §4-D01 ceremony for T11)
+- [ ] **`prisma/schema.prisma` UNTOUCHED** in T02 commits — verify via `git diff origin/main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT
+- [ ] **No new packages** without §4 deviation — `prisma` + `@prisma/client` already in `package.json`; verify
+- [ ] **Drift floor zero** scoped to T02 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export outside entrypoints (per PM-AGENT §3 Step 2)
+
+#### PM B notes — File ownership
+
+**CREATE** (2-3 new files):
+```
+prisma/migrations/<timestamp>_init/migration.sql                    NEW (Prisma-generated)
+prisma/migrations/migration_lock.toml                               NEW or first-time (Prisma-generated)
+src/core/prisma/__tests__/prisma-client.smoke.test.ts               NEW (smoke integration test)
+```
+
+**EDIT additive/replacement** (2 files):
+```
+src/core/prisma/prisma-client.ts                                    EDIT: replace placeholder `{}` with real PrismaClient singleton + lifecycle hook (Q-B-02(b) inline resolution)
+src/entrypoints/api.ts                                              EDIT cleanup: remove `db as unknown as PrismaClient` cast + TODO(slot-A) marker (Q-B-02(b) cleanup)
+```
+
+**NO TOUCH ZONES** (CRITICAL):
+- **`prisma/schema.prisma`** — ABSOLUTE NO-TOUCH per Parent PM line 356. Scope violation if edited. If schema bug found → raise GAP, do NOT amend silently.
+- `src/modules/auth/*` — no auth logic touch
+- `src/modules/users/*` — no users logic touch
+- `src/plugins/*` — no plugin touch
+- `src/modules/auth/auth.errors.ts` — no error class changes
+- `src/modules/users/__tests__/*.integration.test.ts` + sibling T05/T06/T11 integration test files — leave `it.todo()` as-is for chained T02-sub-1 backfill cycle
+- `package.json` / `pnpm-lock.yaml` — no new dep; verify `prisma` + `@prisma/client` already present
+- Q-B-02(b) other 3 gaps (a/c/d — jest config, eslint entrypoint override, error-handler plugin) remain slot-internal per Parent PM line 354 — do NOT touch in T02
+- PM-STATUS-A.md / PM-STATUS-C.md / PM-STATUS-PARENT.md (only §2 roll-up for PM B writes)
+
+**File count**: **3 CREATE / 2 EDIT** baseline (migration.sql + migration_lock.toml + smoke test; prisma-client.ts + api.ts cleanup).
+
+#### PM B notes — Parent doc refs (WAJIB baca executor sebelum PLAN)
+
+- **`docs/spec/MVP-AUTH-FIRST.md §3`** — DB migration order (steps 1-5: tiers → hotels → users → sessions → password_reset_tokens)
+- **`docs/spec/01-auth-identity.md §3`** — canonical SQL DDL shape for sessions table
+- **`prisma/schema.prisma`** — schema already authored; PRINT-only reference (NO EDITS in T02)
+- **`docs/SERVICE-CHARTER.md §3`** — slot ownership matrix (cross-slot context for §4-D05)
+- **`docs/decisions/0001-hexagonal-disiplin.md`** — Prisma direct in repo (no `IUserRepository` wrap); ports only for external IO
+- **`docs/decisions/0004-one-service-one-db.md`** — 1 service = 1 DB rationale
+- **`docs/decisions/0007-prisma-vs-alternatives.md`** — Prisma as ORM
+- **`CLAUDE.md §4`** (Hexagonal Disiplin — Prisma direct), `§5` (TS strict + naming + AppError), `§8` (testing 80% floor)
+- **`PARENT §4-D05`** — cross-slot deviation context (cite verbatim in commits)
+- **`PARENT §8` T02 row (lines 298-358)** — Parent PM-authored Scope + DoD + notes
+- **`PARENT §10`** row 611 — cross-dev coord T02 entry
+- **`PM-STATUS-B.md §2`** ASSIGNMENT T11 + cross-slot ceremony pattern (T11 precedent for §4-D05 mirror)
+
+#### PM B notes — Acceptance criteria (~6 items)
+
+1. Migration generated + applied locally without error
+2. Real `PrismaClient` singleton exported (Q-B-02(b) closed); entrypoint cast removed
+3. All existing 152 unit tests + 27 it.todo + 2 skipped still PASS
+4. ≥1 smoke integration test against migrated DB green
+5. Cross-slot heritage compliance verified (mirror §4-D01: 4+ mandates — header + commit footers + plugin/code header references + SUBMIT/VERDICT headers)
+6. **APPROVE convention decision**: PM B ruling — **APPROVE direct (FULL, not PARTIAL)** for T02. Rationale: T02 has no upstream blocker; T01 implicitly satisfied; integration test scope is minimal (smoke only); full it.todo backfill is chained T02-sub-1 cycle. Quartet (T05+T06+T11+T07) batch FULL APPROVE will trigger on T02 APPROVE event (per Parent PM line 358). Executor can SUBMIT confidently expecting FULL APPROVE.
+7. `prisma/schema.prisma` UNTOUCHED — `git diff` empty
+8. Drift floor zero T02 territory
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 6 = T02 cross-slot execution** per §4-D05
+- After T02 APPROVE → **Cycle 7 = chained T02-sub-1**: convert ~24 `it.todo()` integration placeholders (10 T05 + 5 T06 + 4 T11 + 5 T07) to real assertions against migrated DB. Per Parent PM recommendation (line 353), this is a separate ASSIGNMENT in cycle 7, NOT bundled into T02.
+- After cycle 7 batch FULL APPROVE → **merge `feat/auth-core` to `main`** (single merge event for entire quartet)
+- Single-dev cycle still active (Slot A/C PARKED) until Slot A onboards
+- Branch hygiene per §7: T02 impl commits on `feat/auth-core` (continues from T07); PM-STATUS commits on `main`
+
+#### PM B notes — 4 Open items untuk Executor B raise di PLAN
+
+1. **Migration command naming** — `pnpm prisma:migrate:dev --name init` OR `--name initial_schema`?
+   - PM B verified `package.json` script name via Makefile: `pnpm prisma:migrate:dev` (Makefile line 91 `db-migrate` target wraps it)
+   - Migration `--name` arg is descriptive; **PM B recommend `init`** — concise, matches Prisma convention. Alternative `initial_schema` more descriptive but verbose. Executor pick + justify.
+
+2. **DB URL port verification** — Parent PM line 355 reminder mentions port 5433 (per pre-T01 docker port fix).
+   - PM B verified `.env.example:22 DATABASE_URL=postgresql://app:app_dev_pw@localhost:5433/app?schema=public` ✓ port 5433 present
+   - PM B verified `docker-compose.yml` port mapping via `make start` script (not shown but expected 5433 → container 5432)
+   - **NO GAP expected**. Executor verify via `make start` exit 0 + connection sanity at PLAN gate.
+
+3. **Smoke test scope** — minimal (1 connection + 1 SELECT) OR broader (constraint trigger tests)?
+   - **PM B prefer slightly broader than minimal** — verify (a) connection round-trip, (b) UNIQUE constraint trip on duplicate `(hotel_id, email)`, (c) mutual-exclusion CHECK trip on `(role='gm_admin', hotel_id=NULL)` invalid combo. 3 sub-tests in 1 smoke file.
+   - Rationale: covers the 2 spec-canonical constraints (`§4.4` + `§4.7`) without expanding into full integration suite. Catches DB-level constraint regression in cycle 7 backfill.
+   - Executor confirm or counter (e.g. if `make test-integration` separate job: 1 connection test in `test-unit` + constraint tests in `test-integration` placeholder for cycle 7).
+
+4. **PrismaClient singleton pattern** — module-level export (`export const db = new PrismaClient(...)`) OR lazy factory?
+   - PM B verified existing template at `prisma-client.ts:11-27` uses module-level pattern: `loadConfig()` → `new PrismaClient(...)` → register SIGTERM/SIGINT shutdown
+   - **PM B recommend keep module-level pattern** — matches commented template; matches T05/T06/T11/T07 mock pattern (services receive `prisma` as constructor arg via DI in entrypoint); no test surprise. Lazy factory adds complexity for no gain at MVP scale.
+   - Alternative considered: Fastify `onClose` hook for lifecycle — cleaner integration with Fastify shutdown but adds dependency on Fastify instance. PM B recommend SIGTERM/SIGINT process-level shutdown (matches template) + leave `onClose` for future refactor when worker process needs separate DB lifecycle.
+   - Executor confirm.
+
+**Notes for Executor B**:
+- **Lighter cycle than T07** — no new business logic; mostly Prisma toolchain + 1 smoke test + 1 cleanup. Estimate **~2-3h impl + test + self-validate**. Significantly faster than T07 (~5-7h) because foundation patterns minimal.
+- **Cross-slot ceremony heavy** — mirror T11 §4-D01 pattern. Every commit body footer mandatory; SUBMIT/VERDICT headers must carry marker; plugin/code header references where applicable (here: prisma-client.ts header comment can include `§4-D05` reference).
+- **First Slot B foundation work** — be conservative; if anything unexpected surfaces (schema bug, migration generation error, env mismatch), raise as GAP, do NOT silently amend per Parent PM line 356.
+- **Q-B-02(b) inline resolution** — placeholder `{}` at `prisma-client.ts:29` replaces with real singleton. Entrypoint `api.ts:62` cast cleanup follows. This closes 1 of the 4 Q-B-02 foundation gaps; other 3 (a/c/d) remain slot-internal per Parent PM line 354 — do NOT touch.
+
+Awaiting Executor B PLAN T02 attempt 1.
 
 <!--
 TEMPLATE — copy untuk task baru:
