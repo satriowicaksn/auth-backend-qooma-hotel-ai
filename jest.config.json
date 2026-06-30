@@ -23,6 +23,7 @@
   "collectCoverageFrom": [
     "src/modules/auth/**/*.ts",
     "src/modules/users/**/*.ts",
+    "src/modules/admin/**/*.ts",
     "src/plugins/**/*.ts",
     "src/shared/utils/crypto.ts",
     "!src/modules/auth/**/index.ts",
@@ -30,7 +31,10 @@
     "!src/modules/auth/auth.repository.ts",
     "!src/modules/users/**/index.ts",
     "!src/modules/users/**/__tests__/**",
-    "!src/modules/users/users.repository.ts"
+    "!src/modules/users/users.repository.ts",
+    "!src/modules/admin/**/index.ts",
+    "!src/modules/admin/**/__tests__/**",
+    "!src/modules/admin/hotels/hotels.repository.ts"
   ],
   "coverageDirectory": "coverage",
   "coverageReporters": ["text", "lcov", "html"],
