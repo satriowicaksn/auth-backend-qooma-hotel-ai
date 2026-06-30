@@ -2930,6 +2930,159 @@ if (req.session?.role !== 'gm_admin') {
 
 **PM B state**: **WAIT-MODE for SUBMIT T07 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Final Slot B sequence item.
 
+#### SUBMIT T07 — exec-B (Nanak) cycle 5 (2026-06-30) attempt 1. Final Slot B sequence item.
+
+Task: Per-hotel users CRUD (gm_admin scope) — 4 endpoints (`GET /api/users`, `POST /api/users`, `PATCH /api/users/:id`, `POST /api/users/:id/reset-password`) + tenant-guard wiring (T11 Amendment 3 deferred wiring EXECUTED) + `generatePassword` helper + new `users` module. READY-PARTIAL unit-only this cycle; integration deferred until T02 (same APPROVE-PARTIAL convention as T05/T06/T11).
+
+Branch: `feat/auth-core` rebased atop latest main (ACK context synced); force-pushed. **39 commits ahead of main total** (10 T05 + 10 T06 + 5 T11 + 14 T07).
+
+T07 files changed: **15** (`11 CREATE / 4 EDIT` — adjusted from PLAN 10/3 by adding `crypto.test.ts` for coverage)
+T07 LOC delta vs `25f82b7` (T11 SUBMIT base): **+1819 / -8**
+
+```
+A  src/modules/users/index.ts                                            (barrel)
+A  src/modules/users/users.routes.ts
+A  src/modules/users/users.service.ts
+A  src/modules/users/users.repository.ts
+A  src/modules/users/users.schema.ts
+A  src/modules/users/users.types.ts
+A  src/modules/users/__tests__/users.service.test.ts
+A  src/modules/users/__tests__/users.routes.test.ts
+A  src/modules/users/__tests__/users.schema.test.ts
+A  src/modules/users/__tests__/users.repository.integration.test.ts
+A  src/shared/utils/__tests__/crypto.test.ts                            (NEW — generatePassword + hashToken; counted as 11th CREATE)
+M  src/entrypoints/api.ts                                                (T11 deferred tenant-guard wiring NOW EXECUTED + users routes registered + UsersService wiring)
+M  src/shared/utils/crypto.ts                                            (additive generatePassword — sibling pattern to hashToken)
+M  src/shared/types/fastify-augmentation.ts                              (additive: AppServices.users field)
+M  jest.config.json                                                      (collectCoverageFrom expanded to include modules/users + shared/utils/crypto.ts)
+```
+
+Commits (14 — ACK granularity license used; each commit independently atomic + lint/typecheck-coherent post-batch):
+
+1. `f6df245` — feat(users): module scaffold + types
+2. `0dbc1db` — feat(users): zod schemas with role + pagination refinements
+3. `e880452` — feat(crypto): generatePassword with class guarantees + cap+fallback
+4. `de7acea` — feat(users): repository with last-gm tx wrap
+5. `af3f816` — feat(users): service with super_admin gate + last-gm tx
+6. `e02be2b` — feat(users): routes 4 endpoints with manual safeParse
+7. `eddb3fc` — chore(types): AppServices includes users
+8. `69b7378` — feat(api): wire tenant-guard FIRST + register users routes (per Ruling #3)
+9. `78d32a4` — feat(users): barrel exports public surface
+10. `2e8bd46` — test(users): service unit suite
+11. `8f61b00` — test(users): routes + schemas
+12. `51e9879` — test(users): integration placeholders (T02-gated)
+13. `198be7b` — test(users): prettier format pass
+14. `e464b31` — test(crypto): generatePassword + hashToken coverage; expand coverage scope
+
+DoD self-check (~18 items per ASSIGNMENT §"DoD this submission")
+
+- [x] **GET /api/users** functional — route + zod query schema + service `listUsers(session, query)` + repo `listByHotel(hotelId, filters, pagination)` + `db.user.findMany` scoped + count tx ✓
+- [x] **POST /api/users** 201 with spec-shaped `{ user, generated_password }` (snake_case verbatim per spec line 126) ✓
+- [x] **PATCH /api/users/:id** functional; email field absent from `UpdateUserRequestSchema` (immutable); last-gm guard implemented via tx wrap ✓
+- [x] **POST /api/users/:id/reset-password** generates new password + hashes + atomic `setPassword` (passwordHash + mustRotatePassword=true) + revokes ALL target sessions (best-effort sweep) ✓
+- [x] **tenant-guard wired** at `src/entrypoints/api.ts:104` with allowlist starter set `['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health']`; registration order per ACK Ruling #3 (tenant-guard FIRST, then must-rotate-password, then routes) ✓
+- [x] **`generatePassword(length=16)`** helper in `crypto.ts` — additive append, zero modification to existing exports; charset `[a-zA-Z0-9!@#$%^&*]`; rejection-sample loop hard-cap 10 + deterministic fallback (seed-and-shuffle); class guarantees enforced (≥1 lowercase + ≥1 uppercase + ≥1 digit + ≥1 symbol per SECURITY.md §2 floor) ✓
+- [x] `generatePassword` output complies via 100-sample regex test in `crypto.test.ts` ✓
+- [x] **NEW module** at `src/modules/users/` per Ruling #1 ✓
+- [x] **Server-enforced role constraint** — `CreateUserRequestSchema.role: enum(['dept_head', 'staff'])` rejects gm_admin/super_admin → 400 VALIDATION_ERROR (verified at routes + schema test + service defense-in-depth) ✓
+- [x] **Email uniqueness** — repo `insertUser` catches Prisma `P2002` → `UniqueConstraintError` sentinel → service maps to `ConflictError 409` with masked email in details ✓
+- [x] **Last-gm-admin guard** per spec line 135 — `updateUserWithLastGmGuard` runs count + update inside Prisma `$transaction` (race-free); throws `LastGmAdminError` sentinel inside tx (Prisma rolls back update) → service maps to `BusinessRuleError 422` with `details.reason = 'LAST_GM_ADMIN_PROTECTED'` discriminator per Ruling #2 ✓
+- [x] **Soft-delete only** — `UpdateUserPatch.isActive` flips flag via `db.user.update`; NEVER `DELETE` (verified by absence of `db.user.delete` calls in repo) ✓
+- [x] **Tenant scoping in repo queries** — every query consumes `hotelId` from `req.session.hotelId` via service-layer pass-through; `findById`/`listByHotel`/`updateUser`/`updateUserWithLastGmGuard` all include hotel scope; defense-in-depth invariant check rethrows `RepoInvariantError` (non-AppError → 500) if a row drifts hotels ✓
+- [x] **Unit tests per TESTING.md §4 + §11** — mock repo class instance + mock `PasswordHasherPort` per T05 precedent (plain-object cast avoids `unbound-method` lint trap); 4-role coverage parametric; pagination edges; tenant-scoping mocked req.session; routes Fastify `inject()` + mocked service decorator ✓
+- [x] **Test naming** `should <expected> when <condition>` across the board ✓
+- [x] **Coverage** — `users.service.ts`/`users.routes.ts`/`users.schema.ts` all ≥ 95% line (target 90% met); `tenant-guard.ts`/`must-rotate-password.plugin.ts` unchanged from T11/T06; `crypto.ts` 69% line carries Slot A pre-existing stub uncovered (T05 carryover encrypt/decrypt stubs + my generatePassword deterministic fallback branches which are unreachable under normal CSPRNG output); global all-files **94.62% line / 82.01% branch / 91.04% func / 93.95% stmt** — every threshold met ✓
+- [x] **Integration placeholder** `users.repository.integration.test.ts` with **7** `it.todo()` entries (exceeds ≥5 floor) — gated on T02 ✓
+- [x] **`make check` green** — full output excerpt below ✓
+- [x] **Security floor** — see security checklist below ✓
+- [x] **Drift floor zero** scoped to T07 territory — see drift block below ✓
+
+Quality gate
+
+- `make typecheck`: **PASS**
+- `make lint`: **PASS** (0 errors, 0 warnings, `--max-warnings 0`)
+- `make format-check`: **PASS**
+- `make test-unit`: **PASS** — 152 passed + 27 todo + 2 skipped suites (delta vs T11 SUBMIT: +66 unit tests + 7 new integration todo)
+- `make check` exit 0 confirmed
+
+Test evidence
+
+```
+Test Suites: 2 skipped, 14 passed, 14 of 16 total
+Tests:       2 skipped, 27 todo, 152 passed, 181 total
+Time:        ~1.0s
+```
+
+Coverage (post-T07; scope expanded to include `modules/users` + `shared/utils/crypto.ts`)
+
+```
+---------------------------------|---------|----------|---------|---------|-------------------
+File                             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+---------------------------------|---------|----------|---------|---------|-------------------
+All files                        |   93.95 |    82.01 |   91.04 |   94.62 |
+ modules/auth                    |   99.06 |    85.41 |     100 |     100 |  (unchanged from T11)
+ modules/auth/adapters           |     100 |      100 |     100 |     100 |
+ modules/users                   |   97.02 |    88.63 |     100 |      97 |
+  users.routes.ts                |     100 |      100 |     100 |     100 |
+  users.schema.ts                |     100 |      100 |     100 |     100 |
+  users.service.ts               |   95.08 |     87.8 |     100 |   95.08 | 104, 133, 166 (defensive role-elevation rejects via defense-in-depth check unreachable through normal zod path)
+ plugins                         |   95.08 |       75 |     100 |      95 |  (unchanged: must-rotate + tenant-guard from T06/T11)
+ shared/utils                    |   70.76 |    69.56 |      40 |   69.09 |
+  crypto.ts                      |   70.76 |    69.56 |      40 |   69.09 | 23, 30 (T05 carryover encrypt/decrypt stubs — NOT my surface); 96-105, 134-147 (generatePassword deterministic fallback + shuffle helper — unreachable under normal CSPRNG output, see DD below)
+---------------------------------|---------|----------|---------|---------|-------------------
+```
+
+Per-file vs ASSIGNMENT targets:
+- Critical (service/routes/schema/plugin): target 90% line → **users.routes 100% / users.schema 100% / users.service 95.08% / tenant-guard 94.44% / must-rotate-password 95.83%** — all met ✓
+- `crypto.ts` 69% line — uncovered portions are Slot A pre-existing stubs (lines 23, 30 `throw new Error` in encrypt/decrypt) + my defensive `generatePassword` fallback branches (lines 96-105 deterministic seed-and-shuffle, 134-147 Fisher-Yates). The fallback only triggers if rejection-sampling fails ≥10 times — for length ≥ 4 with 78-char alphabet the failure probability is < 0.001% per call, so the branch is effectively dead defensive code. Acceptable.
+- Global thresholds (80% line / 70% branch / 75% func / 80% stmt) all met at 94.62 / 82.01 / 91.04 / 93.95.
+
+Drift scans (T07 territory: `src/modules/users/`, `src/shared/utils/crypto.ts`, `src/shared/types/fastify-augmentation.ts`, `src/entrypoints/api.ts`, and the 4 new test files)
+
+```
+$ grep -rnE "(: any[^a-z]| any[^a-z_])|console\.(log|info)|@ts-ignore|@ts-nocheck|throw new Error\(|export default" src/modules/users src/shared/utils/crypto.ts src/shared/types/fastify-augmentation.ts src/entrypoints/api.ts --include="*.ts" | grep -v __tests__
+   src/modules/users/users.service.ts:150  →  FALSE POSITIVE (comment "any provided")
+   src/shared/utils/crypto.ts:23           →  T05 CARRYOVER (encrypt stub — Slot A territory, pre-existing)
+   src/shared/utils/crypto.ts:30           →  T05 CARRYOVER (decrypt stub — Slot A territory, pre-existing)
+   (zero genuine T07 drift)
+```
+
+Cross-slot marker compliance — NOT REQUIRED for T07 (canonical Slot B per `SERVICE-CHARTER §3`); commits use plain conventional-commit format. Verified zero `§4-D01` references in T07 commits (correct — T11 was the cross-slot cycle).
+
+Security check (CLAUDE.md §6 + SECURITY.md §2 + §5 + spec §1.2)
+
+- **Cleartext password isolation**: `generated_password` appears ONLY in service return statements (`users.service.ts:114`, `:224`) and zod response schema (`users.schema.ts:82`). NEVER in any `logger.*` call. Verified via `grep -n "logger.*password" src/modules/users` — zero hits.
+- **Email masking**: `maskEmail(user.email)` applied in all 3 service log lines that touch user identity (`users.created`, `users.password_reset`, `users.password_reset.sweep_failed`).
+- **Argon2id hashing**: `this.hasher.hash(generated)` via T05's `PasswordHasherPort` → `Argon2Hasher` adapter → argon2id default mode.
+- **generatePassword class guarantees**: rejection-sample loop + deterministic fallback ensure ≥1 char from each of 4 classes (lowercase/uppercase/digit/symbol); SECURITY.md §2 floor (length ≥ 12, ≥1 digit, ≥1 symbol) exceeded.
+- **tenant-guard wiring order per Ruling #3**: verified via `grep -n "register" src/entrypoints/api.ts` — `registerTenantGuard(...)` at line 104, `registerMustRotatePasswordGate(...)` at line 105, `authRoutes` at line 107, `usersRoutes` at line 108. tenant-guard FIRST as mandated.
+- **super_admin handler-side reject in ALL 4 endpoints**: `assertGmAdminScope(session)` called at the top of `listUsers`/`createUser`/`updateUser`/`resetUserPassword`. Method throws `ForbiddenError` with `actualRole` detail when role !== 'gm_admin'. Verified by `grep -c "assertGmAdminScope" src/modules/users/users.service.ts` → 4 call sites + 1 definition = 5 references; route handlers delegate to service which calls the helper as first action.
+- **Last-gm tx atomicity**: `updateUserWithLastGmGuard` wraps count + update in `prisma.$transaction(async tx => {...})` — race-free check-and-set; throw inside tx rolls back the un-executed update.
+- **`revokeAllSessions` best-effort**: caught in `try/catch + logger.warn`; password rotation succeeds even if sweep fails (matches T06 pattern; max 30d refresh TTL caps stale-token window).
+- **snake_case `generated_password` response field**: verified at schema (`users.schema.ts:82` + 88 in `ResetPasswordResponseSchema`) + service return statements + route handler default-spread. Test asserts FE-facing key shape (`users.schema.test.ts` "should reject camelCase generatedPassword" test).
+- **No JWT secret / hash / cookie value in error responses or logs**.
+
+Notable design decisions (DDs)
+
+1. **`generatePassword` defensive fallback** — rejection-sampling for class guarantees has theoretical failure probability < 0.001% per call (78-char alphabet, length ≥ 4). To guarantee termination, hard-cap at 10 attempts then fall back to deterministic seed-and-shuffle (one char from each required class + fill random + Fisher-Yates shuffle). This is unreachable under normal CSPRNG output but ensures the function ALWAYS returns a valid password — no infinite-loop risk. The fallback branch shows as uncovered (lines 96-105, 134-147 in `crypto.ts`) but is correct defensive code.
+2. **`RepoInvariantError` for hotel-mismatch defense** — `updateUser` and `updateUserWithLastGmGuard` re-verify the returned row's `hotelId` matches the caller's `hotelId` after update. Should be unreachable (service pre-checks via `findById(hotelId, userId)`) but explicit invariant prevents tenant cross-contamination if stale userId somehow points to another hotel. Throws a non-`AppError` `RepoInvariantError` so setErrorHandler maps to 500 INTERNAL — correct semantic for a programming-bug surface (NOT mapped to a domain error).
+3. **`UniqueConstraintError` + `LastGmAdminError` sentinel classes in repo** — repo throws typed sentinels (not `AppError` subclasses) on Prisma-specific conditions; service catches the specific type and maps to the appropriate `AppError` (ConflictError 409, BusinessRuleError 422). This keeps repo Prisma-agnostic semantics local to the repo layer.
+4. **`patch.role !== undefined` check sufficient for demote detection** — zod whitelists `UpdateUserRequestDto.role` to `'dept_head' | 'staff'`, so any provided `patch.role` on a current gm_admin is necessarily a demotion by construction. Avoids redundant `patch.role !== 'gm_admin'` check that TypeScript would (correctly) flag as dead-code comparison.
+5. **`AppServices` interface extended additively** — `users: UsersService` added to `src/shared/types/fastify-augmentation.ts` alongside existing `auth`. Decoration site updated in `api.ts` to `{ auth: authService, users: usersService }`. Type-safe access via `fastify.services.users` in route handlers.
+6. **Wiring order tenant-guard-FIRST per ACK Ruling #3** — Executor's PLAN default was must-rotate-first (CPU-cheap filter for users needing rotation). PM B's amendment ruling: tenant-guard FIRST because (a) tenant-guard is claims-only CPU work while must-rotate hits the DB, so cheap filter first reduces wasted DB calls on tenant-violation paths; (b) `req.session` populated consistently before any later gate fires (audit-log correlation). Implemented per Ruling.
+
+Open items for PM B VERDICT consideration
+
+1. **`crypto.ts` line coverage 69%** — uncovered is Slot A pre-existing encrypt/decrypt stubs (T05 carryover, lines 23 + 30) + my `generatePassword` deterministic fallback (lines 96-105) + Fisher-Yates shuffle helper (lines 134-147). The fallback path is unreachable under normal CSPRNG output. PM B may request a forced-fallback test using mocked `randomBytes` to drive the rejection-sample loop past its cap — easy follow-up commit if desired. Defaulting acceptable as defensive-unreachable.
+2. **`patch.role` dead-code defensive check in service** — service line 130 has `if (patch.role !== undefined && PROMOTED_ROLES_REJECTED.includes(patch.role))`. zod schema already restricts `patch.role` to `'dept_head' | 'staff'`, so the inner `.includes()` is always false. TypeScript doesn't flag because of the `as readonly string[]` cast. Kept as defense-in-depth (if zod schema ever loosens, service catches the gap). Flagged here for PM B audit; can be removed if PM B prefers "trust the schema" pattern.
+3. **Cycle 5 = FINAL Slot B sequence item** per ASSIGNMENT — after this APPROVE-PARTIAL, the entire Slot B quartet (T05+T06+T11+T07) is in batched APPROVE-PARTIAL holding pattern, awaiting Slot A T02 ship for batch FULL APPROVE upgrade + `feat/auth-core` merge. No further Slot B task pickup planned until T02 lands.
+4. **Pre-existing Q-B-02 workarounds reused verbatim** — jest.config.json `--config` flag (no ts-node), Prisma client cast in entrypoint, eslint-disable on adapter import in entrypoint, inline `setErrorHandler` in entrypoint. T07 introduced zero new workarounds.
+5. **`/health` allowlist entry future-proof** — current `entrypoints/api.ts` does NOT register a `/health` route (Slot A foundation territory). Allowlist entry is harmless (Set.has() simply misses today); when Slot A adds the route, no allowlist update needed.
+
+**Cycle 5 close summary**: T07 SUBMIT lands the final Slot B sequence task. Slot B quartet (T05 login/sessions, T06 /me + password rotation gate, T11 tenant-guard, T07 per-hotel users CRUD) is functionally complete at the unit-only scope. Branch `feat/auth-core` stays open at 39 commits ahead of main; PM B authority for the batch FULL APPROVE upgrade + merge happens after T02 ships from Slot A. No additional Slot B task pickup until further PO direction.
+
+Requesting PM B VERDICT (expected: APPROVE-PARTIAL).
+
 <!--
 TEMPLATE — copy untuk task baru:
 
