@@ -78,10 +78,7 @@ export class HotelsService {
    * other than gm_admin. super_admin gets a redirect message pointing
    * at /api/admin/hotels (Slot A T09 territory) per §4-D09 separation.
    */
-  private assertGmAdminScope(
-    session: Session | undefined,
-    scope: TenantScope | undefined,
-  ): string {
+  private assertGmAdminScope(session: Session | undefined, scope: TenantScope | undefined): string {
     if (session === undefined || session.role !== 'gm_admin') {
       const isSuperAdmin = session?.role === 'super_admin';
       throw new ForbiddenError(
