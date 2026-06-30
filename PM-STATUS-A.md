@@ -507,7 +507,7 @@ All DoD + 4 verify points **re-run by PM A** (not accepted from the table — gi
 
 ### ASSIGNMENT T04 — routed to exec-A (Nathan) by PM A at cycle 1 (2026-06-30) — final Slot A foundation task
 - **Task**: `seed-super-admin` CLI (`pnpm seed:super-admin`).
-- **Branch**: off **`fix/prisma-client-tsx-resolve`** (stacks on the Option-A fix — the singleton must resolve at runtime; branching off plain `main` would still crash until Nathan merges T03). Suggest `feat/seed-super-admin`. Code → branch, **Nathan merges** (after T03).
+- **Branch**: off **`main`** ✅ — **T03 merged via PR#3 (`b8ed895`)**, main now has the tsconfig fix; the singleton resolves at runtime (PM A verified on main). Suggest `feat/seed-super-admin`. Code → branch, **Nathan merges**. (Earlier note to branch off the fix branch is superseded — branch off fresh `main`.)
 - **Deps satisfied**: T01 ✓ · adopt-T02 ✓ (users table + mutual-exclusion CHECK) · `argon2` present · `load-env.ts` present (reuse) · singleton resolves (T03 fix). Containers up (5433/6380).
 - **Spec**: `MVP-AUTH-FIRST §3` step 6 + `01-auth-identity §1.3`.
 
