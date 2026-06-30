@@ -5368,6 +5368,90 @@ Bonus confirmation on PM B "GET role gating" probe (ASSIGNMENT §Scope-2): spec 
 
 Awaiting PM B ACK T10 PLAN APPROVED → proceed to impl on `feat/slot-c-absorption-b`.
 
+##### PM B ACK PLAN T10 attempt 1 — Executor B clear to implement. 4 open items confirmed. Cycle 8 (2026-07-01). CROSS-SLOT execution per §4-D09.
+
+**Outcome**: ✅ **ACK**. Executor B IMPL-READY on NEW `feat/slot-c-absorption-b` branch from CURRENT main HEAD (`cac8d6e` post Slot A COMPLETE — T09 PR#6 + tsc-alias PR#5 merged during PLAN authoring window; PLAN reference `64470a4` was the snapshot at PLAN-write time; Executor uses latest main when checkout).
+
+---
+
+**PLAN validation per PM-AGENT §2.3** — 6/6 PASS
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT scope/DoD/AC | ✅ | 3 endpoints + new module + role gates + super_admin option (b) + tenant scope consumption all addressed |
+| File list completeness | ✅ | **9 CREATE / 2 EDIT** EXACT match with ASSIGNMENT (zero scope creep per safety guard #4) |
+| Test plan validity | ✅ | 4-role × 3-endpoint matrix + schema strict reject + service branches; mock HotelsRepository class instance per TESTING.md §4 (no Prisma mock); reuse T07 routes.test pattern |
+| GAP categorization | ✅ | 0 PLAN-blocking GAPs (4 open items addressed below) |
+| ETA reasonability | ✅ | ~3-5h matches ASSIGNMENT (~3h PARENT §4-D09 + PM B convention padding) |
+| Cross-slot ceremony placement | ✅ | All 4 mandates met (commit footer + SUBMIT header + VERDICT header + JSDoc file marker on `hotels.routes.ts`); Executor EXTENDS to 3 files (routes mandatory + service + repo optional) for cross-file clarity — beyond minimum, accepted |
+
+**Bonus confirmation acknowledged**: Executor's spec probe at PLAN line 5347 confirms `GET /api/settings/hotel` role gate is gm_admin only (matches PUT) — spec §1.5 line 200 table cell `gm_admin (own hotel)` covers BOTH methods in single endpoint row. Sound spec audit. dept_head + staff + super_admin → `ForbiddenError` on both GET + PUT settings endpoints.
+
+---
+
+**4 Open Items rulings — all FINAL (verbatim per PM B ASSIGNMENT recommendations)**
+
+| # | Topic | Final stance | Source |
+|---|---|---|---|
+| **#1** | Hotel settings storage | ✅ **PRE-RESOLVED**. `Hotel.timezone` + `Hotel.branding` (JSONB) + `Hotel.dnd` (JSONB) direct columns at `prisma/schema.prisma:52-71`. NO `hotel_settings` table. PUT → Prisma `update` on Hotel row. NO GAP, NO schema change. | PM B verify + Executor re-verify |
+| **#2** | super_admin `/hotels/me` response | ✅ **Spec-pinned option (b)** — literal `{ id: null, tier: null }` per `MVP-AUTH-FIRST §5` line 92 | spec-pinned |
+| **#3** | PUT field whitelist | ✅ **3 fields** `{ timezone?, branding?, dnd? }` per spec §1.5 line 198+205+207; zod `.strict()` rejects unknowns (name/code/tierId/status/gmContact/createdAt/updatedAt) | PM B + Executor PLAN |
+| **#4** | Idempotency on PUT | ✅ **Simple last-write-wins** — spec audit shows no ETag/If-Match/version mandate; Prisma `updatedAt @updatedAt` auto-bumps | PM B + Executor PLAN |
+
+---
+
+**Cross-slot ceremony placement plan ACKED**
+
+| Mandate | Placement |
+|---|---|
+| **Per-commit footer** | EVERY impl commit body on `feat/slot-c-absorption-b`: `Cross-slot execution per §4-D09 (Slot C canonical territory).` |
+| **SUBMIT block header** | `Cross-slot execution per §4-D09` literal |
+| **VERDICT block header** | `cross-slot heritage per §4-D09` literal |
+| **JSDoc file marker (minimum 1)** | `hotels.routes.ts` MANDATORY |
+| **Bonus markers** | `hotels.service.ts` + `hotels.repository.ts` (Executor extends per PLAN line 5328 for cross-file clarity — accepted) |
+
+Meta-commits on `main` (PLAN/SUBMIT/VERDICT updates to PM-STATUS-B.md) carry PLAIN msg per §4-D01 cycle 4 + §4-D05 cycle 6/7 precedent (no footer needed for status-doc meta-commits).
+
+---
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Branch creation**: `git checkout main && git pull --rebase && git checkout -b feat/slot-c-absorption-b` (use CURRENT main HEAD `cac8d6e` post Slot A COMPLETE — Slot A merged T09 PR#6 + tsc-alias PR#5 during PLAN authoring window; PLAN line 5277 reference `64470a4` was older snapshot)
+- **Baseline `make check` sanity** on new branch before scaffold (verify Slot A's merges don't drift baseline)
+- **Suggested commit sequence** (~7-9 atomic commits per PLAN Files-to-create order):
+  1. `feat(hotels): module scaffold (barrel + types)`
+  2. `feat(hotels): zod schemas (UpdateSettingsRequestSchema strict)`
+  3. `feat(hotels): repository (Prisma direct — findHotelById + findSettingsByHotelId + updateSettings)`
+  4. `feat(hotels): service (getHotelContextForSession super_admin branch + scoped lookup; getSettings/updateSettings scope plumbing)`
+  5. `feat(hotels): routes (2 plugins — hotelsRoutes + hotelSettingsRoutes; role gate + zod safeParse)`
+  6. `chore(types): extend AppServices with hotels: HotelsService`
+  7. `feat(api): wire hotelsRoutes + hotelSettingsRoutes + HotelsService di entrypoint`
+  8. `test(hotels): unit suite (service + routes + schema)`
+- **WAJIB commit body footer** for every T10 impl commit (8 commits expected):
+  ```
+  Cross-slot execution per §4-D09 (Slot C canonical territory).
+  ```
+- **WAJIB JSDoc header** on `hotels.routes.ts` (minimum) — `// Cross-slot execution per §4-D09 (Slot C canonical territory).` mirror tenant-guard.ts §4-D01 + prisma-client.ts §4-D05 patterns
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT**:
+  - `make check` HARUS green (lint + format + typecheck + test-unit; T10 = unit-only this cycle, no integration backfill per PLAN line 5334)
+  - **Drift scan zero hits** scoped to T10 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+  - **Coverage targets**: ≥80% line floor; **≥90% on `hotels.service.ts` + `hotels.routes.ts`** (critical security per ASSIGNMENT AC #5 + TESTING.md §9)
+  - **Cross-slot footer audit**: `git log --format="%B" main..HEAD | grep -c "§4-D09"` → expected equal to impl commit count (~8)
+  - **Schema-diff EMPTY**: `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT (per safety guard #5 — NO schema touches; ASSIGNMENT NO-TOUCH zone)
+  - **Boundary verify**: NO touches to `src/modules/auth/*`, `src/modules/users/*`, `src/modules/admin/hotels/*` (Slot A T09 territory — NEW since BATCH VERDICT cycle 7), `src/plugins/*`, `prisma/schema.prisma`
+  - **Q-B-02(a)/(c)/(d) workarounds preserved** — slot-internal, NOT T10 scope
+- **APPROVE convention reminder**: T10 = **FULL APPROVE direct** (NOT PARTIAL). No upstream blocker; T02 ships ✓ + T11 wired ✓; this is first FULL APPROVE direct for Slot C absorption work
+- **Branch hygiene per §7**: impl commits 1-8 land on `feat/slot-c-absorption-b`. SUBMIT block (PM-STATUS-B.md edit only, append-only below this ACK) commits on `main` after self-validate green. Then PM B checkout `feat/slot-c-absorption-b` for independent verify per PM-AGENT §3, back to main for VERDICT.
+
+**Boundary acknowledgment — Slot A T09 distinct module**:
+- T09 created `src/modules/admin/hotels/` (super_admin platform-level CRUD per §4-D08) — merged via PR#6, lives in main
+- T10 creates `src/modules/hotels/` (authenticated /me + gm_admin scope /settings/hotel per §4-D09) — distinct module, distinct prefix routes
+- Both modules can coexist cleanly — no conflict; Executor should NOT touch `src/modules/admin/hotels/*` (Slot A territory)
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T10 attempt 1 block (PM-STATUS-B.md §2 append below this ACK, on `main` per §7), PM B akan checkout `feat/slot-c-absorption-b` for independent verify per PM-AGENT §3 Steps 1-7 → VERDICT block on main (expect **FULL APPROVE** direct).
+
+**PM B state**: **WAIT-MODE for SUBMIT T10 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. HALTING per task closing instruction.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
