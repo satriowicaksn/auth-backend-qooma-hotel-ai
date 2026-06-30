@@ -13,11 +13,15 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T07 — per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring at `entrypoints/api.ts` · `assigned · READY-PARTIAL (unit-only, single-dev cycle 5)` — ASSIGNMENT issued cycle 5 (2026-06-30). **FINAL Slot B sequence item**. After APPROVE-PARTIAL → entire Slot B quartet (T05+T06+T11+T07) in APPROVE-PARTIAL holding pattern, awaiting T02 batch FULL upgrade.
-- **T05+T06+T11 status**: all three `APPROVE-PARTIAL` (cycle 2 + 3 + 4 closes). VERDICT T11 cross-slot mandate fully satisfied.
-- **Cycle 5 = final Slot B cycle**: no cycle 6 unless T02 unparks; then PM B re-opens quartet for PARTIAL→FULL batch upgrade + `feat/auth-core` merge.
-- **Branch**: `feat/auth-core` (25 impl commits ahead of `main`) — T07 will stack on T11; NO merge to `main` until batch FULL APPROVE.
-- **Schema verification (PM B at ASSIGNMENT time)**: `User.isActive Boolean` soft-delete column ✓, `@@unique([hotelId, email])` ✓, all needed fields present at `prisma/schema.prisma`. NO GAP, NO schema change.
+- **Slot B sequence COMPLETE**: T05+T06+T11+T07 quartet all `APPROVE-PARTIAL`. VERDICT T07 attempt 1 posted 2026-06-30; 17/17 verifications match; canonical Slot B (0 §4-D01 markers verified); 18 DoD + 8 AC + AC#9 sequence completion all ✓; 6 DDs ACCEPT; 5 open items resolved.
+- **Quartet status table** (verified-by cycle in §1):
+  - T05 (cycle 2) APPROVE-PARTIAL ✓
+  - T06 (cycle 3 attempt 2) APPROVE-PARTIAL ✓
+  - T11 (cycle 4, cross-slot per §4-D01) APPROVE-PARTIAL ✓
+  - T07 (cycle 5, FINAL canonical Slot B) APPROVE-PARTIAL ✓
+- **Holding pattern**: await Slot A T02 ship for batch FULL APPROVE upgrade + `feat/auth-core` merge to `main` (single merge event for entire quartet).
+- **Branch**: `feat/auth-core` (39 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07) — NO merge until batch FULL APPROVE.
+- **PO direction needed**: idle wait T02 vs Slot B picks up T02 cross-slot deviation vs Slot B picks up T01-T04 mega-deviation. PM B recommendation: **(b) T02 cross-slot deviation** — see VERDICT T07 sequence-next section.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -34,7 +38,7 @@
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
-| T07 | Per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring | `assigned · READY-PARTIAL (unit-only, single-dev cycle 5)` | —              | Cycle 5 task. ASSIGNMENT issued 2026-06-30. **Final Slot B sequence item**. T11 dependency RESOLVED (APPROVE-PARTIAL cycle 4). Scope: 4 endpoints + tenant-guard wiring (T11 Amendment 3 deferred) + generate-password helper + 7 open items for PLAN. Schema verified: `User.isActive` + `UNIQUE(hotel_id, email)` exist; AppError hierarchy covers all error cases (likely zero new subclasses). |
+| T07 | Per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring | `approved-partial · cycle 5 close · full APPROVE held (T02)` | PM B — cycle 5 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. **FINAL Slot B sequence item** — canonical Slot B confirmed (0 §4-D01 hits in 14 commits). 17/17 verifications match; coverage 94.62% line overall, users.routes/schema 100%, users.service 95.08% (≥90% target MET); drift zero T07; 6 DDs ACCEPT; 5 open items resolved (#1 crypto fallback ACCEPT-as-is, #2 dead-code KEEP defense-in-depth). Wiring tenant-guard-FIRST per Ruling #3 verified. super_admin reject 4/4 endpoints via `assertGmAdminScope`. Last-gm tx atomicity via `$transaction`. Full APPROVE batched with T05+T06+T11 pending T02. |
 
 ---
 
@@ -3082,6 +3086,202 @@ Open items for PM B VERDICT consideration
 **Cycle 5 close summary**: T07 SUBMIT lands the final Slot B sequence task. Slot B quartet (T05 login/sessions, T06 /me + password rotation gate, T11 tenant-guard, T07 per-hotel users CRUD) is functionally complete at the unit-only scope. Branch `feat/auth-core` stays open at 39 commits ahead of main; PM B authority for the batch FULL APPROVE upgrade + merge happens after T02 ships from Slot A. No additional Slot B task pickup until further PO direction.
 
 Requesting PM B VERDICT (expected: APPROVE-PARTIAL).
+
+##### VERDICT T07 attempt 1 — APPROVE-PARTIAL (cycle 5 close; FINAL Slot B sequence item; quartet T05+T06+T11+T07 all APPROVE-PARTIAL pending T02 ship for batch FULL APPROVE) by PM B (cycle 5, 2026-06-30)
+
+**Outcome**: ✅ **APPROVE-PARTIAL**. Final Slot B sequence item. 17/17 independent verifications match Executor klaim (14 quality + 3 cross-slot/canonical). 18 DoD items ✓; 8 AC items ✓; 6 DDs ACCEPT; 5 open items resolved (#1 ACCEPT-as-is mirror T11, #2 KEEP defense-in-depth, #3-5 acks). **Cross-slot marker correctly ABSENT (0 §4-D01 references in 14 T07 commits) — confirms canonical Slot B compliance per SERVICE-CHARTER §3.** Quartet (T05+T06+T11+T07) enters batched APPROVE-PARTIAL holding pattern, awaiting Slot A T02 ship for FULL APPROVE upgrade + `feat/auth-core` merge.
+
+---
+
+**Canonical Slot B audit (per ASSIGNMENT — verify ABSENCE of cross-slot marker)**
+
+| Check | Method | Result |
+|---|---|---|
+| §4-D01 footer absence in T07 commits | `git log --format="%H %B" 25f82b7..origin/feat/auth-core \| grep -c "§4-D01"` | ✅ **0 hits** (T07 = canonical Slot B; plain conventional commits, no cross-slot ceremony required) |
+| Commit messages plain conventional | sample last 3 commits — `chore(types)`, `feat(users)`, `test(users)` formats | ✅ Plain conventional, no `§4-D01` footer |
+| Plugin file headers | Verify NEW T07 files (users module) don't carry cross-slot marker | ✅ N/A — no canonical owner conflict; SERVICE-CHARTER §3 places gm_admin scope at Slot B |
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — re-run on my session)**
+
+| Check | Executor klaim | PM B independent rerun | Status |
+|---|---|---|---|
+| `make check` exit | exit 0 green | rerun via `nvm use 20 && make check` → exit 0 (lint 0/0, format, typecheck, test-unit all PASS) | ✅ MATCH |
+| Test counts | 152 pass + 27 todo + 2 skipped | identical: `Tests: 2 skipped, 27 todo, 152 passed, 181 total` | ✅ MATCH |
+| Coverage overall | 93.95 stmt / 82.01 branch / 91.04 funcs / 94.62 line | exact same | ✅ MATCH |
+| `users.routes.ts` | 100% all metrics | identical 100/100/100/100 | ✅ MATCH (≥90% target MET) |
+| `users.schema.ts` | 100% all metrics | identical 100/100/100/100 | ✅ MATCH (≥90% target MET) |
+| `users.service.ts` | 95.08/87.8/100/95.08 (uncovered 104, 133, 166) | identical | ✅ MATCH (≥90% line target MET) |
+| `tenant-guard.ts` (T11 carryover) | 94.44/66.66/100/94.44 unchanged | identical (T11 unchanged) | ✅ MATCH |
+| `must-rotate-password.plugin.ts` (T06 carryover) | 96/83.33/100/95.83 unchanged | identical | ✅ MATCH |
+| `crypto.ts` | 70.76/69.56/40/69.09 (Slot A T05 carryover + T07 defensive fallback) | identical | ✅ MATCH (see Open #1 ruling — accept; defensive fallback unreachable under CSPRNG, mirror T11 precedent) |
+| Drift T07 territory | zero hits | rerun: only 3 hits, ALL non-T07: (1) `users.service.ts:150 // any provided ...` false-positive comment prose; (2) `crypto.ts:23 + :30` `throw new Error` pre-existing Slot A T05 carryover (commit `1e32e34 Init`); zero T07-attributable drift | ✅ MATCH |
+| (i) Cleartext password isolation | only in response body, never logged | confirmed: grep `logger.*password\|log.*generated_password` zero hits in `src/modules/users/` | ✅ MATCH |
+| (ii) Email mask at log lines | 3+ instances `maskEmail()` | confirmed at `users.service.ts:100, :111, :204` (created/reset paths); update + sweep_failed don't carry email | ✅ MATCH |
+| (iii) Wiring order tenant-guard-FIRST per Ruling #3 | api.ts: tenant-guard line < must-rotate line < routes | confirmed via grep: line **104** `registerTenantGuard` < **105** `registerMustRotatePasswordGate` < **107** `authRoutes` < **108** `usersRoutes` — exact order per Ruling #3 mandate | ✅ MATCH |
+| (iv) super_admin reject di 4/4 endpoints | `assertGmAdminScope` helper called at each endpoint entry | confirmed: helper at `users.service.ts:237-247` (throws `ForbiddenError`); called at lines **51** (listUsers) + **73** (createUser) + **122** (updateUser) + **186** (resetUserPassword) = **4/4 endpoints** ✓ | ✅ MATCH |
+| (v) Last-gm tx atomicity via `$transaction` | repo wraps check + update in single tx | confirmed: `users.repository.ts:160-191 updateUserWithLastGmGuard` wraps `this.db.$transaction(async (tx) => { count + update })` with throw on count=0 (rollback semantic); race-free | ✅ MATCH |
+| (vi) revokeAllSessions best-effort | try/catch + logger.warn on failure | confirmed: `users.service.ts:198-219` try/catch wrap — success `logger.info('users.password_reset', {revokedSessions})`, failure `logger.warn('users.password_reset.sweep_failed', {error})`. No re-throw; password rotation completes regardless. Comment explicitly states "Best-effort per Open Item #6". | ✅ MATCH |
+| (vii) generatePassword class guarantees + fallback | rejection-sample loop + Fisher-Yates fallback | confirmed: `crypto.ts:83-106` — length check (RangeError if < MIN), rejection-sample loop up to REJECTION_SAMPLE_CAP, deterministic fallback seeds 1 char from each class (lower/upper/digit/symbol) + fills randomly + `shuffleInPlace` (Fisher-Yates). 100-sample test `src/shared/utils/__tests__/crypto.test.ts` verifies class compliance | ✅ MATCH |
+| (viii) snake_case `generated_password` (no camelCase) | spec §1.2 line 126 verbatim | confirmed: 17 hits all `generated_password` snake_case across `users.service.ts`, `users.schema.ts`, tests. Tests explicitly reject camelCase: `users.schema.test.ts:148 'should reject camelCase generatedPassword (spec mandates snake_case)'` ✓ | ✅ MATCH (spec compliance) |
+
+`make check` excerpt (PM B rerun):
+```
+> @qooma/auth-backend@0.1.0 lint    → PASS (0/0 with --max-warnings 0)
+> @qooma/auth-backend@0.1.0 format:check → All matched files use Prettier
+> @qooma/auth-backend@0.1.0 typecheck → tsc --noEmit clean
+> @qooma/auth-backend@0.1.0 test:unit → Tests: 2 skipped, 27 todo, 152 passed, 181 total | Time: 1.092 s
+```
+
+**17/17 verification checks PASS independently (14 quality + 3 cross-slot/canonical). Zero Executor claim discrepancies.**
+
+---
+
+**18 DoD items mapping** (per ASSIGNMENT)
+
+| # | DoD item | Status | Evidence |
+|---|---|---|---|
+| 1 | GET /api/users functional | ✓ | `users.routes.ts` GET handler + `users.service.ts:51 listUsers` + `users.repository.ts:listByHotel`/`countByHotel` |
+| 2 | POST /api/users 201 with spec shape | ✓ | `users.service.ts:73 createUser` returns `{ user, generated_password: generated }` at line 114 |
+| 3 | PATCH /api/users/:id with last-gm guard | ✓ | `users.service.ts:122 updateUser` calls `updateUserWithLastGmGuard` for current gm_admin path; mapped LastGmAdminError → BusinessRuleError with `reason: 'LAST_GM_ADMIN_PROTECTED'` per Ruling #2 |
+| 4 | POST /api/users/:id/reset-password with revoke + must_rotate | ✓ | `users.service.ts:186 resetUserPassword` — generate + hash + `setPassword(userId, hash, true)` + `revokeAllSessions(userId)` best-effort |
+| 5 | tenant-guard wired at api.ts with allowlist | ✓ | `api.ts:104 registerTenantGuard(fastify, { allowlist: TENANT_GUARD_ALLOWLIST })` per Ruling #3 |
+| 6 | `generatePassword(length=16)` helper additive in `crypto.ts` | ✓ | `crypto.ts:83-106` rejection-sample + Fisher-Yates fallback |
+| 7 | generatePassword charset compliance (length≥12, ≥1 digit, ≥1 symbol) | ✓ | 100-sample regex test in `crypto.test.ts` |
+| 8 | NEW module `src/modules/users/` | ✓ | 10 files created per file ownership listing |
+| 9 | Role restriction at POST + PATCH (reject gm_admin/super_admin) | ✓ | zod schema enforces; service `PROMOTED_ROLES_REJECTED` defense-in-depth (Open #2 KEEP ruling) |
+| 10 | Email uniqueness P2002 → ConflictError | ✓ | `users.repository.ts:94 UniqueConstraintError` sentinel; `users.service.ts:98` maps to `ConflictError` |
+| 11 | Last-gm-admin guard BusinessRuleError 422 | ✓ | `users.repository.ts:175 LastGmAdminError` sentinel inside tx; `users.service.ts:160` maps to `BusinessRuleError('Cannot demote...', { reason: 'LAST_GM_ADMIN_PROTECTED' })` per Ruling #2 |
+| 12 | Soft-delete only (`isActive: false`, never DELETE) | ✓ | `users.service.ts updateUser` accepts `is_active` boolean; Prisma `update` not `delete` |
+| 13 | Tenant scoping in repo queries | ✓ | `users.repository.ts` all methods accept + filter by `hotelId`; `RepoInvariantError` defense-in-depth if mismatch (DD2) |
+| 14 | Unit tests per TESTING.md §4 + §11 | ✓ | 152 passed across users.service/routes/schema test files + crypto.test.ts; mock pattern reuse T05/T06/T11 precedent |
+| 15 | Test naming `should <expected> when <condition>` | ✓ | spot-checked test files; convention adhered |
+| 16 | Coverage ≥80% line; ≥90% target service/routes/schema | ✓ | users.routes/schema 100%; users.service 95.08% (≥90% MET); global 94.62% line (≥80% MET) |
+| 17 | Integration placeholder ≥5 it.todo (T02-gated) | ✓ | 5+ `it.todo()` in `users.repository.integration.test.ts` |
+| 18 | `make check` green + security floor + drift zero | ✓ | rerun confirmed green; all 8 security sub-items verified; drift zero T07 |
+
+**Bonus DoD line items**:
+- ✓ Named exports only (`users.index.ts` barrel)
+- ✓ Public function explicit return type
+- ✓ File ≤ 300 LOC — largest is `users.service.ts` ~250 LOC
+- ✓ NO new package install
+- ✓ Q-B-02 workarounds reused verbatim (jest config, Prisma cast, eslint-disable, inline setErrorHandler)
+
+---
+
+**8 AC items + bonus AC#9 (final Slot B sequence completion)**
+
+| # | AC | Status |
+|---|---|---|
+| 1 | 4 endpoints functional + tenant-guard wired at api.ts | ✓ |
+| 2 | Cleartext password returned ONCE per spec §1.2; never logged | ✓ |
+| 3 | Server-enforced constraints (role/email/last-gm/soft-delete) | ✓ |
+| 4 | tenant-guard `req.tenantScope` consumed in service layer | ✓ (via `req.session.hotelId` from tenant-guard) |
+| 5 | APPROVE-PARTIAL convention (batched with T05+T06+T11) | ✓ (this VERDICT) |
+| 6 | `make check` green; drift zero; coverage thresholds met | ✓ |
+| 7 | Security floor (cleartext handling, email mask, no plaintext leak) | ✓ |
+| 8 | `generatePassword` format compliance (length+digit+symbol) | ✓ |
+| **9** | **Final Slot B sequence item — quartet completion** | ✓ (T05→T06→T11→T07 sequence DONE per PARENT §10) |
+
+---
+
+**6 Design Decision rulings — ALL ACCEPT**
+
+| DD | Topic | PM B ruling | Verification |
+|---|---|---|---|
+| **DD1** | `generatePassword` deterministic fallback (seed 1 char per class + Fisher-Yates shuffle) | ✅ **ACCEPT** | `crypto.ts:96-105` confirmed: seed `[lower, upper, digit, symbol]` + fill rest + `shuffleInPlace`. Guarantees termination + class coverage even under pathological RNG. Sound risk mitigation per PLAN line 2740. |
+| **DD2** | `RepoInvariantError` for hotel-mismatch defense-in-depth | ✅ **ACCEPT** | `users.repository.ts:189, :116, :201 RepoInvariantError extends Error` — programming-bug surface; setErrorHandler maps to 500 INTERNAL. Sound defense against stale userId pointing to wrong hotel. |
+| **DD3** | Sentinel error classes at repo (UniqueConstraintError + LastGmAdminError, NOT extending AppError) | ✅ **ACCEPT** | `users.repository.ts:38, :210` — sentinels extend Error (Prisma-agnostic); service catches at `service.ts:98 + :160` and maps to AppError (ConflictError + BusinessRuleError per Ruling #2). Clean separation; repo doesn't import AppError. |
+| **DD4** | `patch.role !== undefined` check sufficient (no redundant `!== 'gm_admin'`) | ✅ **ACCEPT** | zod whitelist enforces role enum; service line 153 check `current.role === 'gm_admin' && (patch.role !== undefined || patch.is_active === false)` is correct. Demotion-by-construction reasoning sound. |
+| **DD5** | `AppServices` additive extension to include `users: UsersService` | ✅ **ACCEPT** | `fastify-augmentation.ts` extension verified additive; `api.ts:108 fastify.decorate('services', { auth: ..., users: ... })` update consistent |
+| **DD6** | Wiring per Ruling #3 (tenant-guard-FIRST) verified | ✅ **ACCEPT (re-affirm PM B mandate)** | `api.ts:104 < :105 < :107-108` order confirmed via independent grep |
+
+**All 6 DDs ACCEPT. No rework required.**
+
+---
+
+**5 Open Item rulings**
+
+- ✅ **Open #1 — `crypto.ts` 69% line coverage (defensive fallback unreachable)** → **ACCEPT as-is (mirror T11 precedent)**
+
+  **Decision**: NO additional test required. Accept defensive fallback as unreachable in normal CSPRNG flow.
+
+  **Rationale**:
+  1. **Global thresholds all met**: line 94.62% > 80% floor; branch 82.01% > 70% floor; func 91.04% > 75% floor; stmt 93.95% > 80% floor
+  2. **Critical files (users.service/routes/schema + plugins) all ≥90% line** — coverage hot-spot is at the security boundary, not at defensive crypto helper
+  3. **Defensive fallback genuinely unreachable under CSPRNG**: rejection-sample loop has `REJECTION_SAMPLE_CAP=10`; per PLAN line 2740 probability of missing both digit+symbol classes in 16 draws is ~20%, so 10 consecutive failures = `0.2^10 ≈ 10^-7`. Forcing this path requires mocking `crypto.randomBytes` — test-for-test-sake.
+  4. **Mirror T11 Open #1 ruling** (defensive non-Error catch ACCEPT as-is) — same precedent: defensive code stays as fail-closed insurance against future contract changes; coverage threshold met overall.
+  5. **Hedge note added**: revisit if `generatePassword` spec ever changes (e.g., longer charset, stricter class requirements where fallback becomes more likely).
+  6. **`crypto.ts` 69% is heavily driven by Slot A T05 carryover stubs** (encrypt/decrypt at lines 23 + 30 throw "not implemented") — NOT T07 territory; will improve when Slot A onboards and fills those stubs.
+
+- ✅ **Open #2 — Service-layer dead-code role check (PROMOTED_ROLES_REJECTED at users.service.ts:130)** → **KEEP for defense-in-depth**
+
+  **Decision**: Keep the check as-is. NO removal.
+
+  **Rationale**:
+  1. **Trade-off small**: 1 line dead code vs robustness if schema layer ever changes (e.g., relaxed for admin path or different consumer)
+  2. **Pattern consistency**: T05/T06/T11 all had similar defensive paths kept (mirror DD4 ethos — defense-in-depth even when zod enforces)
+  3. **Zero performance cost**: TypeScript dead-code elimination at compile; runtime no-op
+  4. **Future-proof**: if PATCH `/api/admin/users` (Slot C T08) ever shares a codepath via service refactor, the defensive check catches the gap
+  5. **Alternative considered**: remove the check + trust schema — but pattern consistency wins. Brief documentary comment may be added by Executor in future cleanup if desired.
+
+  **Action**: KEEP as-is.
+
+- ✅ **Open #3 — Cycle 5 = FINAL Slot B sequence item** → **ACK confirm**
+
+  Quartet (T05+T06+T11+T07) all APPROVE-PARTIAL → batched holding pattern confirmed. Branch stays open until T02 ships.
+
+- ✅ **Open #4 — Q-B-02 workarounds reused verbatim** → **ACK confirm**
+
+  No new workaround surface introduced. Clean.
+
+- ✅ **Open #5 — `/health` allowlist entry future-proof** → **ACK confirm**
+
+  Harmless until Slot A scaffolds `/health` route. `Set.has()` misses today, will hit when route added. Documented in PLAN.
+
+---
+
+**Conditions for APPROVE-PARTIAL → FULL APPROVE upgrade (batched with T05+T06+T11)**
+
+The entire Slot B quartet stays APPROVE-PARTIAL until ALL of:
+1. Slot A T02 (initial Prisma migration) APPROVED + `prisma migrate dev` applied locally
+2. Executor B re-opens ALL 4 `*.integration.test.ts` placeholder files (~24 `it.todo()` total: T05 had 10 + T06 added 5 + T11 added 4 + T07 added 5). Fill with testcontainers Postgres assertions per `docs/TESTING.md §5`.
+3. PM B re-validate full integration suite green + repo coverage ≥ 80% line per TESTING.md §9
+4. Drift re-scan clean across all auth + users domain code post-integration
+5. Re-issue VERDICT as **`APPROVE (full)`** — **single block covering ALL FOUR** T05+T06+T11+T07 quartet
+6. Branch `feat/auth-core` merges to `main` — **single merge event for the entire Slot B quartet**
+
+**Branch `feat/auth-core` stays open** — 39 impl commits ahead of `main` post-T07 (10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07).
+
+---
+
+**Cycle 5 close — Slot B sequence COMPLETE**
+
+Per PARENT §10 cycle-1 sequence: **T05 → T06 → T11 → T07** — all 4 in APPROVE-PARTIAL holding pattern.
+
+| Task | Cycle | Status | Verified by |
+|---|---|---|---|
+| T05 (auth core: login/logout/refresh) | 2 close | APPROVE-PARTIAL | PM B cycle 2 (2026-06-29) |
+| T06 (auth current-user: /me + rotation gate) | 3 close | APPROVE-PARTIAL (attempt 2) | PM B cycle 3 (2026-06-29) |
+| T11 (tenant-guard middleware, cross-slot per §4-D01) | 4 close | APPROVE-PARTIAL | PM B cycle 4 (2026-06-30) |
+| T07 (per-hotel users CRUD, FINAL canonical Slot B) | 5 close | APPROVE-PARTIAL | PM B cycle 5 (2026-06-30) — this VERDICT |
+
+**Slot B sequence DONE.** No further Slot B task pickup until further PO direction.
+
+---
+
+**Roll-up + cross-references**:
+- `PM-STATUS-B.md §1` task tracker row T07 → status flag `approved-partial · cycle 5 close · full APPROVE held (T02)`; Verified-by = `PM B — cycle 5 (2026-06-30) attempt 1`
+- `PM-STATUS-B.md §0` current focus → quartet all APPROVE-PARTIAL; Slot B sequence COMPLETE; holding pattern awaiting T02
+- `PM-STATUS-PARENT.md §2` short roll-up appended (per `PM-AGENT §0.8` APPROVE entry format + sequence completion marker + PO direction question)
+
+PM B exits to **wait-mode for PO direction**. Three plausible paths (PM B perspective per ASSIGNMENT cycle-1 audit constraint):
+- **(a) Idle wait T02**: Slot A unparks naturally; PM B re-opens quartet for batch FULL APPROVE upgrade when migration ships. Cleanest, but burns calendar time if Slot A remains PARKED.
+- **(b) Slot B picks up T02 cross-slot deviation**: most targeted minimal cross-slot escalation; T02 is the SINGLE unblocking task; would land integration tests + enable batch FULL APPROVE. Cross-slot deviation precedent already set via §4-D01 (T11) — same pattern repeatable.
+- **(c) Slot B picks up T01-T04 mega-deviation (full Slot A foundation absorption)**: most aggressive; unblocks T02-T04 simultaneously (pnpm install + migration + tiers seed + seed-super-admin CLI); risk = Slot B audit fatigue + Slot A canonical ownership erosion. Larger escalation per PARENT §8 line 210 "Slot B absorbs T01..T04 as one-off" — already approved as escalation path if PO directs.
+
+PM B recommendation order: **(b) > (a) > (c)** — see brief for full rationale.
 
 <!--
 TEMPLATE — copy untuk task baru:
