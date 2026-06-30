@@ -24,10 +24,21 @@ import { AuthRepository } from '@modules/auth/auth.repository.js';
 import { authRoutes } from '@modules/auth/auth.routes.js';
 import { AuthService } from '@modules/auth/auth.service.js';
 import { FastifyJwtTokenIssuer } from '@modules/auth/auth.token-issuer.js';
+import { UsersRepository } from '@modules/users/users.repository.js';
+import { usersRoutes } from '@modules/users/users.routes.js';
+import { UsersService } from '@modules/users/users.service.js';
 import { registerMustRotatePasswordGate } from '@plugins/must-rotate-password.plugin.js';
+import { registerTenantGuard } from '@plugins/tenant-guard.js';
 
 // Side-effect: pull Fastify augmentations (fastify.services, fastify.appConfig, cookie + jwt).
 import '@shared/types/fastify-augmentation.js';
+
+const TENANT_GUARD_ALLOWLIST: readonly string[] = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/refresh',
+  '/health',
+];
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -71,19 +82,30 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // keeps wiring type-correct so auth surface compiles ahead of foundation.
   const prisma = db as unknown as PrismaClient;
   const authRepo = new AuthRepository(prisma);
+  const usersRepo = new UsersRepository(prisma);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
+  const hasher = new Argon2Hasher();
 
-  const authService = new AuthService(authRepo, new Argon2Hasher(), tokenIssuer, config, logger);
+  const authService = new AuthService(authRepo, hasher, tokenIssuer, config, logger);
+  const usersService = new UsersService(usersRepo, hasher, logger);
 
   fastify.decorate('tokenIssuer', tokenIssuer);
-  fastify.decorate('services', { auth: authService });
+  fastify.decorate('services', { auth: authService, users: usersService });
 
-  // Register the must-rotate-password gate after JWT plugin + tokenIssuer
-  // decoration, before any route registration so it applies to every
-  // route via the root-instance `preHandler` hook.
+  // Plugin order (PM B ACK T07 Ruling #3 — tenant-guard FIRST):
+  //   1. tenant-guard — cheap claims-only filter; sets req.session +
+  //      req.tenantScope on every guarded request. Short-circuits
+  //      missing-hotelId requests BEFORE the must-rotate DB hit.
+  //   2. must-rotate-password — DB lookup (TODO(T_AUX_02) refactor when
+  //      fastify-plugin install ratified). 403s rotation-required users.
+  // Both run as `preHandler`; Fastify executes registered hooks in
+  // registration order. Route registration follows so the hooks apply
+  // to every route registered after this point.
+  registerTenantGuard(fastify, { allowlist: TENANT_GUARD_ALLOWLIST });
   registerMustRotatePasswordGate(fastify, { repo: authRepo });
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
+  await fastify.register(usersRoutes, { prefix: '/api/users' });
 
   return fastify;
 }

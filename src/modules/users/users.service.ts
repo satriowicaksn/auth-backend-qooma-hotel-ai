@@ -6,24 +6,24 @@ import {
   NotFoundError,
   ValidationError,
 } from '@core/errors/app-errors.js';
+
 import { BusinessRuleError } from '@modules/auth/auth.errors.js';
+import type { PasswordHasherPort } from '@modules/auth/ports/password-hasher.port.js';
+import type { Session } from '@shared/types/fastify-augmentation.js';
 import { generatePassword } from '@shared/utils/crypto.js';
 import { maskEmail } from '@shared/utils/masking.js';
-import type { Session } from '@shared/types/fastify-augmentation.js';
 
-import type { PasswordHasherPort } from '@modules/auth/ports/password-hasher.port.js';
-
-import type {
-  CreateUserRequestDto,
-  GetUsersQueryDto,
-  UpdateUserRequestDto,
-} from './users.schema.js';
 import {
   LastGmAdminError,
   UniqueConstraintError,
   type UpdateUserPatch,
   type UsersRepository,
 } from './users.repository.js';
+import type {
+  CreateUserRequestDto,
+  GetUsersQueryDto,
+  UpdateUserRequestDto,
+} from './users.schema.js';
 import type { ListUsersResult, SettingsUser } from './users.types.js';
 
 export interface CreateUserResult {
@@ -126,10 +126,16 @@ export class UsersService {
       throw new NotFoundError('User', userId);
     }
 
-    if (patch.role !== undefined && (PROMOTED_ROLES_REJECTED as readonly string[]).includes(patch.role)) {
-      throw new ValidationError('Cannot elevate user to gm_admin or super_admin via this endpoint', {
-        role: patch.role,
-      });
+    if (
+      patch.role !== undefined &&
+      (PROMOTED_ROLES_REJECTED as readonly string[]).includes(patch.role)
+    ) {
+      throw new ValidationError(
+        'Cannot elevate user to gm_admin or super_admin via this endpoint',
+        {
+          role: patch.role,
+        },
+      );
     }
 
     const repoPatch: UpdateUserPatch = {
@@ -144,8 +150,7 @@ export class UsersService {
     // so any provided `patch.role` on a current gm_admin is a demotion by
     // construction. `is_active: false` on a current gm_admin is a deactivation.
     const wouldRemoveGmAdmin =
-      current.role === 'gm_admin' &&
-      (patch.role !== undefined || patch.is_active === false);
+      current.role === 'gm_admin' && (patch.role !== undefined || patch.is_active === false);
 
     let updated: SettingsUser;
     if (wouldRemoveGmAdmin) {

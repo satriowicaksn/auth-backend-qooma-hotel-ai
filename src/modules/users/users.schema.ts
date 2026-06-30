@@ -14,7 +14,13 @@ export const GetUsersQuerySchema = z
     role: z.enum(ROLE_VALUES).optional(),
     dept_id: z.string().uuid().nullable().optional(),
     is_active: z.coerce.boolean().optional(),
-    limit: z.coerce.number().int().min(1).max(MAX_LIST_LIMIT).optional().default(DEFAULT_LIST_LIMIT),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_LIST_LIMIT)
+      .optional()
+      .default(DEFAULT_LIST_LIMIT),
     offset: z.coerce.number().int().min(0).optional().default(0),
   })
   .strict();

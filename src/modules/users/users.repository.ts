@@ -186,9 +186,7 @@ export class UsersRepository {
       });
     });
     if (row.hotelId !== hotelId) {
-      throw new RepoInvariantError(
-        'updateUserWithLastGmGuard produced a row outside caller hotel',
-      );
+      throw new RepoInvariantError('updateUserWithLastGmGuard produced a row outside caller hotel');
     }
     return toSettingsUser(row);
   }
