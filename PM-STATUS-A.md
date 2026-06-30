@@ -31,7 +31,7 @@
 | T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D05, no re-exec). All constraints verified (UNIQUE/FK ON DELETE/mutual-exclusion CHECK proven live). Ownership-of-record = Slot A. Full APPROVE rides Slot B batch+CI. VERDICT §2. |
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
-| T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · READY (un-blocked, next)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT after T03 PLAN (single-focus). Branch `feat/seed-foundation`. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
+| T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | 🔵 `wip · PLAN ACKED` | — | PLAN ACKED cycle 1: argon2-primitive approved (verified login-safe, no pepper) · idempotency = Q-OPS-01 ("no-op if any super_admin exists") · **GAP T04-#1 ruled `must_rotate=false`** (Q-OPS-01 break-glass recovery account; Nathan may override). Branch `feat/seed-super-admin` off `main`. Awaiting SUBMIT. Gate **G1**. |
 
 ---
 
@@ -525,6 +525,61 @@ All DoD + 4 verify points **re-run by PM A** (not accepted from the table — gi
 **Catatan PM A**: This closes Slot A foundation (T01–T04 + adopts). After T04 APPROVE I notify Nathan that the full Slot A foundation is merge-ready, then the queued `tsc-alias` prod-boot task (Q-A-04 §4-D06) is next. On argon2 reuse: importing `Argon2Hasher` from `@modules/auth/adapters/` into a seed script is a justified exception (script ≠ module; correctness > the cross-module-import guideline) — state it in PLAN. Raise GAP if `01-auth-identity §1.3` is ambiguous on `must_rotate_password` for the seeded super-admin.
 
 _Awaiting Executor A PLAN T04._
+
+#### PLAN T04 — exec-A (Nathan) at cycle 1 (2026-06-30)
+
+**Scope recap**
+- `seed-super-admin` CLI (`pnpm seed:super-admin`): idempotent insert of one founding super_admin (`role='super_admin'`, `hotel_id=NULL`) from `SEED_SUPER_ADMIN_EMAIL/PASSWORD`, argon2-hashed (login-compatible), fail-clean on missing env, masked-email logging. Adds `.env.example` placeholders. Final Slot A foundation task. Branch `feat/seed-super-admin` off `main`.
+
+**Session-start gate** (§2)
+- Identity Executor/Slot A ✓ · CLAUDE.md ✓
+- Spec read: ASSIGNMENT T04 DoD + `MVP-AUTH-FIRST §3` step 6 + `01-auth-identity §1.3` + `open-questions.md Q-OPS-01 (RESOLVED)`.
+- Deps: T01 ✓ · adopt-T02 ✓ (users table + mutual-exclusion CHECK) · `argon2` present · `load-env.ts` present (reuse) · singleton resolves on main (T03/PR#3). DB up (5433/6380).
+- `lint`/`typecheck`/`test:unit` green on main (T03 verify). Re-confirm on branch.
+- Scaffolder risk: none.
+
+**Decisions:**
+- **#1 Branch** — `feat/seed-super-admin` off `main` (per ASSIGNMENT; main has T03 fix + seed + `load-env.ts`).
+- **#2 File split (testability, mirrors T03)** — runner `prisma/seeds/super-admin.ts` (`pnpm seed:super-admin`: `import './load-env.js'` FIRST → singleton `db` → read+validate env → `await seedSuperAdmin(...)` → masked log → exit/disconnect); logic `prisma/seeds/super-admin.seed.ts` exports `seedSuperAdmin(db, {...})` (no import-time side-effects → testable).
+- **#3 argon2 — login-compatible hash, primitive not class.** `Argon2Hasher.hash` = `argon2.hash(pw, { type: argon2id })` (no ctor params). Reusing the *class* needs `import … from '@modules/auth/adapters/…'`, blocked by `no-restricted-imports` (`**/adapters/*`); api.ts uses an `eslint-disable` but **this env's comment-stripper removes directive comments from content I author** → lint would fail in a new file. So the seed hashes via the **identical primitive** `argon2.hash(pw, { type: argon2id })` (byte-identical params, lint-clean), and the **integration test imports the real `Argon2Hasher`** (test override allows `adapters/*`) asserting `Argon2Hasher.verify(storedHash, pw) === true` → **proves login-path compatibility**. (Prefer literal class-reuse? The clean route is exporting `Argon2Hasher` from the auth barrel — Slot B/cross-slot — your call; else I proceed with the primitive.)
+- **#4 Idempotency — per Q-OPS-01 (RESOLVED): "no-op if ANY super_admin already exists"** (authoritative; reconciles the DoD's "by email" suggestion). `findFirst({ where: { role: 'super_admin' } })` → if present, no-op (log masked "exists, skipping"); else `create`. `@@unique([hotelId,email])` can't dedupe here — Postgres treats NULL `hotel_id` as distinct (multiple NULLs allowed) → upsert-by-unique won't work; check-then-insert required. Respects `users_role_hotel_mutual_exclusion` + `users_role_check`.
+- **#5 `name` default** `'Super Admin'` (not in env/spec; varchar100). `language='id'` (DoD + schema default). `isActive=true` (default).
+- **#6 env validation** — read `SEED_SUPER_ADMIN_EMAIL/PASSWORD` directly from `process.env` (post `load-env`) in the runner; either missing/empty → `console.error('[seed:super-admin] SEED_SUPER_ADMIN_EMAIL + SEED_SUPER_ADMIN_PASSWORD required')` + `process.exitCode=1`, **no throw, password never printed**. (Not adding to `core/config` zod — seed-scoped, not service env.)
+- **#7 `.env.example`** — add `SEED_SUPER_ADMIN_EMAIL=` + `SEED_SUPER_ADMIN_PASSWORD=` placeholders (resolves deferred GAP; in-scope per DoD).
+
+**GAP T04-#1 — `must_rotate_password` for the SEEDED super_admin is unspecified.** §1.3 + Q-OPS-01 are silent; `open-questions.md:202`'s `must_rotate_password: true` is for the **admin-created generated-password** flow (§1.2/§1.3 endpoint), NOT the env-seeded founding admin.
+- **Options**: **A)** `false` (schema default) — operator chose `SEED_SUPER_ADMIN_PASSWORD` deliberately; immediately usable (matters for the Q-OPS-01 lockout-recovery use case); no rotation gate. **B)** `true` — force rotation on first login (treat env bootstrap pw as provisional; must-rotate plugin enforces).
+- **My intent: A** (`false`). Proceeding on A unless you rule B.
+
+**Note (flag only, NOT fixing under T04 per your guidance):** `.env.example:33` `JWT_ACCESS_TTL=8h` vs code 15m (ties to §4-D04).
+
+**Files to create**: `prisma/seeds/super-admin.ts` (runner) · `prisma/seeds/super-admin.seed.ts` (logic) · `src/core/prisma/__tests__/super-admin-seed.integration.test.ts`.
+**Files to modify**: `package.json` (add `seed:super-admin` script) · `.env.example` (2 placeholders).
+
+**Approach**
+`seedSuperAdmin`: check-then-insert (idempotency #4); hash via `argon2.hash(pw,{type:argon2id})`; `db.user.create({ role:'super_admin', hotelId:null, email, passwordHash, name:'Super Admin', language:'id', mustRotatePassword:false })`; returns `{created:boolean}`. Runner validates env (#6), calls it, logs masked email + created/skipped. Test (DB up, `*.integration.test.ts`): clean super_admins → seed → assert 1 row (role/`hotelId`=null/mustRotate/language) + `Argon2Hasher.verify(hash,pw)===true` → re-run → still 1 (idempotent) → cleanup.
+
+**Drift/security**: no `any`/`console.log`(only `console.warn/error`)/`throw new Error`/default-export; never log pw/hash; `maskEmail` in logs; no secret committed.
+
+Awaiting PM A ACK.
+
+##### PM A ACK — T04 PLAN APPROVED · GAP T04-#1 ruled (false) · all decisions cleared (cycle 1, 2026-06-30)
+
+Strong PLAN. **Proceed to coding.** PM A verified the load-bearing claims independently:
+- ✅ **argon2 primitive is login-safe** — `Argon2Hasher.hash` (`adapters/argon2-hasher.adapter.ts`) is literally `argonHash(pw, { type: argon2id })` — **no pepper, no secret, no custom params**. Your `argon2.hash(pw,{type:argon2id})` is byte-equivalent, and `argon2.verify` reads params from the PHC hash envelope → **login compat guaranteed**. **APPROVED.**
+- ✅ **eslint reasoning correct** — `.eslintrc.cjs:64` `no-restricted-imports` blocks `**/adapters/*` in non-test code, and is `off` in the test override (line 93). So seed-uses-primitive + **integration test verifies with the real `Argon2Hasher`** is exactly the right compat proof. **Do NOT add a barrel export** — over-engineering for a one-liner + a cross-slot edit into idle Slot B. (Minor caveat, no action: if Slot B ever customizes `Argon2Hasher` params, the seeded hash uses different cost — but login STILL works, argon2 hashes are self-describing. Revisit only if params change; negligible.)
+- ✅ **idempotency = Q-OPS-01 verbatim** — "no-op if any super_admin exists" is the PO ruling (`open-questions.md:247`). Check-then-insert is correct: `UNIQUE(hotel_id,email)` can't dedupe a super_admin (Postgres treats NULL `hotel_id` as distinct). **APPROVED.**
+
+**🟢 GAP T04-#1 — RULED: `must_rotate_password = false`** (your Option A). Grounded in **Q-OPS-01**, not just a default:
+- Q-OPS-01 ties `must_rotate=true` to the **subsequent** super_admins (admin-created, *generated* password, point 2) — explicitly NOT the env-seeded founder.
+- The founding admin is the **break-glass recovery account** (Q-OPS-01 point 1: "document the env vars so support knows how to recover if the founding super_admin is **locked out**"). Forcing rotation on the recovery account undermines that. Operator chose the password deliberately.
+- So `false` is the spec-aligned reading (CLAUDE.md §14 "most restrictive" doesn't override — the spec context resolves the doubt). **FYI to Nathan (PO)**: you can override to `true` for forced-rotation hygiene on the founder — it's a one-boolean flip; I'm proceeding `false` per Q-OPS-01 unless you say otherwise.
+
+**Cleared as-is**: split runner/logic (mirrors T03) · branch `feat/seed-super-admin` off `main` · fail-clean (exit 1, never print pw) · `maskEmail` in logs · name `'Super Admin'` · `language='id'` · `.env.example` placeholders (in-scope). The `JWT_ACCESS_TTL` 8h-vs-15m note: leave as flagged, don't touch under T04 (ties §4-D04).
+
+**Verify on SUBMIT**: `pnpm seed:super-admin` exit 0 → DB: 1 row `role=super_admin` + `hotel_id IS NULL` + `must_rotate_password=false` → **`Argon2Hasher.verify(storedHash, pw) === true`** (login-compat proof) → re-run = no-op, still 1 (idempotent) → `typecheck`+`lint`+`test:integration` green → drift floor + no secret logged. Code → branch, **Nathan merges** (I notify when verified-ready).
+
+_Awaiting Executor A SUBMIT T04._
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
