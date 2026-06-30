@@ -13,11 +13,11 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T02 — Initial Prisma migration · `assigned · READY-FULL (cross-slot per §4-D05, cycle 6 Slot B execution)` — ASSIGNMENT issued cycle 6 (2026-06-30). **CROSS-SLOT execution** per PARENT §4-D05 (Slot A canonical; Slot B execution one-off; T02-ONLY scope — T01 implicitly done cycle 2, T03/T04 PARKED). PO ratified 2026-06-30.
-- **Quartet status**: T05+T06+T11+T07 all `APPROVE-PARTIAL` (cycles 2-5 close). Awaiting T02 APPROVE → cycle 7 chained T02-sub-1 (it.todo backfill) → batch FULL APPROVE → merge `feat/auth-core` to `main`.
-- **Cycle 6 sequence**: T02 (cross-slot per §4-D05) → cycle 7 T02-sub-1 (~24 it.todo backfill) → batch FULL APPROVE quartet → merge.
-- **Branch**: `feat/auth-core` (39 impl commits ahead of `main`) — T02 stacks on T07; same branch per §7 hygiene.
-- **Q-B-02(b) inline resolution this cycle**: `prisma-client.ts` placeholder `{}` → real `PrismaClient` singleton (closes 1 of 4 Q-B-02 gaps; other 3 remain slot-internal per Parent PM §8 line 354).
+- **T02 status**: `approved · cycle 6 close (FIRST FULL APPROVE in repo)` ✓ — VERDICT attempt 1 posted 2026-06-30; 15/15 verifications match; cross-slot 5/5 mandates + bonus code-header all satisfied; smoke (c) CHECK trip CONFIRMED Postgres 23514 fires; Q-B-02(b) inline resolution COMPLETE.
+- **Quartet status**: T05+T06+T11+T07 STILL `APPROVE-PARTIAL`. T02 satisfies upgrade condition (a); conditions (b)-(e) require cycle 7 integration test backfill.
+- **Cycle 7 sequence**: chained T02-sub-1 batch backfill ~24 it.todo across T05/T06/T11/T07 integration test files → batch FULL APPROVE quartet → merge `feat/auth-core` to `main`.
+- **Branch**: `feat/auth-core` (44 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07 + 5 T02) — T02-sub-1 will stack on T02.
+- **First FULL APPROVE milestone**: cycles 2-5 all APPROVE-PARTIAL; T02 (cycle 6) is the first FULL APPROVE event. Foundation milestone unlocked. CHECK constraints live in DB.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -31,7 +31,7 @@
 
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `assigned · READY-FULL (cross-slot per §4-D05, cycle 6 Slot B execution)` | —              | Cycle 6 task. ASSIGNMENT issued 2026-06-30. **Cross-slot per §4-D05** (PO ratified 2026-06-30). Ownership of record = Slot A; execution by Slot B this cycle only (T02-ONLY scope). Scope: Prisma migration generation + Q-B-02(b) inline resolution (prisma-client singleton) + 1+ smoke integration test. Single blocker for quartet batch FULL APPROVE upgrade. ~3 CREATE / 2 EDIT. Cross-slot commit ceremony WAJIB (mirror §4-D01 T11 precedent). |
+| T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
@@ -4002,6 +4002,124 @@ Open items for PM B VERDICT consideration
 **Cycle 6 close summary**: T02 SUBMIT delivers the foundation migration + real Prisma singleton (Q-B-02(b) inline closure) + 3-sub-test smoke proving the migrated DB carries spec-mandated CHECK constraints. After this VERDICT (expected FULL APPROVE), the quartet (T05+T06+T11+T07) is eligible for batch FULL APPROVE upgrade. Cycle 7 opens with the chained T02-sub-1 ASSIGNMENT to backfill the ~24 `it.todo()` integration placeholders. No additional Slot B task pickup planned until PO direction.
 
 Requesting PM B VERDICT (expected: **FULL APPROVE**).
+
+##### VERDICT T02 attempt 1 — FULL APPROVE (cycle 6 close; FIRST FULL APPROVE in repo). Quartet T05+T06+T11+T07 upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. CROSS-SLOT execution per §4-D05. by PM B (cycle 6, 2026-06-30)
+
+**Outcome**: ✅ **FULL APPROVE — FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates satisfied + 1 bonus code-header reference. 15/15 independent verifications match Executor klaim. 13 DoD items ✓; 8 AC items ✓; 5 DDs ACCEPT (including DD2 test-setup.ts env loader bootstrap-style); 4 open items resolved. Smoke sub-test (c) CHECK trip CONFIRMED with actual Postgres `23514` error message live in DB. Schema-diff EMPTY (critical scope compliance). Q-B-02(b) inline resolution COMPLETE; Q-B-02(d) error-handler gap preserved per scope rules.
+
+**Quartet upgrade convention CLARIFIED**: T02 FULL APPROVE satisfies upgrade condition (a) for quartet T05+T06+T11+T07. Conditions (b)-(e) require cycle 7 integration test backfill. **Quartet status remains APPROVE-PARTIAL pending cycle 7.**
+
+---
+
+**Cross-slot marker audit (5 mandates per §4-D05) — ALL PASS**
+
+| Mandate | Method | Result |
+|---|---|---|
+| **1. Per-commit footer (5/5)** | `git log --format="===%n%h %s%n%b" f92f4cc..origin/feat/auth-core` | ✅ **5/5 commits** carry exact literal `Cross-slot execution per §4-D05 (Slot A canonical territory).`: `2ff5587` (generate) + `e82ed19` (CHECK append) + `def59a6` (singleton) + `65aef3f` (api cleanup) + `ccbc37e` (smoke) |
+| **2. SUBMIT block header** | grep | ✅ Line 3824: `CROSS-SLOT execution per §4-D05` |
+| **3. SUBMIT heritage section** | scan SUBMIT body | ✅ Heritage + audit trail + canonical ownership + Q-B-02(b)/(d) boundary |
+| **4. Migration.sql §4-D05 reference** | check delimiter block | ✅ Comment block contains `Cross-slot execution per §4-D05 (Slot A canonical territory).` inline |
+| **5. Code-header JSDoc reference (BONUS)** | `git show origin/feat/auth-core:src/core/prisma/prisma-client.ts` | ✅ JSDoc lines 5-9: `Cross-slot execution per PARENT §4-D05 (Slot A canonical territory; Slot B execution one-off for single-dev cycle). Future amendments return to Slot A.` + Q-B-02(b) annotation. Mirrors `tenant-guard.ts` §4-D01 pattern. |
+
+---
+
+**Independent verification (PM-AGENT §3 Step 2 — 15 checks)**
+
+| # | Check | Executor klaim | PM B independent | Status |
+|---|---|---|---|---|
+| 1 | `make check` exit | 0 green | exit 0 | ✅ |
+| 2 | Test counts | 155 pass + 27 todo + 2 skipped (delta +3 smoke from T07) | identical | ✅ |
+| 3 | Smoke 3/3 pass | (a)+(b)+(c) all pass | rerun → `Tests: 3 passed, 3 total` | ✅ |
+| 4 | **Smoke (c) CHECK trip CONFIRMED** | Postgres `23514` "users_role_hotel_mutual_exclusion" | console output shows literal `code: "23514", message: "new row for relation \"users\" violates check constraint \"users_role_hotel_mutual_exclusion\""` — manual CHECK SQL from Commit 2 (`e82ed19`) LIVE in DB | ✅ **CRITICAL** |
+| 5 | Drift T02 territory | zero | 1 false-positive (`prisma-client.smoke.test.ts:46 // ... any rows ...` comment prose); zero actual T02 drift | ✅ |
+| 6 | **Schema-diff EMPTY (CRITICAL)** | `prisma/schema.prisma` untouched | `git diff main..HEAD -- prisma/schema.prisma` → EMPTY output | ✅ scope compliance |
+| 7 | Q-B-02(b) cleanup zero remaining | `db as unknown` cast removed | `grep -rn "db as unknown" src/` → ZERO hits | ✅ |
+| 8 | Q-B-02(d) gap preserved | TODO at `api.ts:50` intact | 1 hit at `src/entrypoints/api.ts:50` (error-handler gap, OUT of T02 scope per ASSIGNMENT) | ✅ scope preserved |
+| 9 | Migration dir first-time | `prisma/migrations/<ts>_init/` + lock | `20260630042913_init/` + `migration_lock.toml` | ✅ |
+| 10 | Migration.sql 150 lines | ~150 line | `wc -l` → 150 lines | ✅ |
+| 11 | Manual CHECK delimited + §4-D05 | delimiter block + 5 CHECKs verbatim | confirmed: `===` block + comment referencing `prisma/schema.prisma:141-163` + §4-D05 + 5 CHECKs (tiers_name, hotels_status, users_role, users_role_hotel_mutual_exclusion, users_language) | ✅ |
+| 12 | DB CHECKs live (psql) | applied | `\d users` shows `users_language_check` + `users_role_check` + `users_role_hotel_mutual_exclusion` all live | ✅ |
+| 13 | Singleton + JSDoc + Q-B-02(b) annotation | per `def59a6` | confirmed via `git show` | ✅ |
+| 14 | api.ts cleanup | per `65aef3f` | cast + comment block removed; unused import dropped; Q-B-02(d) TODO preserved | ✅ |
+| 15 | Postgres healthy on 5433 | running | `docker ps` shows `qooma-postgres Up 36 minutes (healthy) 0.0.0.0:5433->5432/tcp` | ✅ |
+
+**15/15 verification checks PASS independently. CRITICAL: smoke (c) CHECK constraint trip CONFIRMED via actual Postgres `23514` error message live in DB.**
+
+---
+
+**13 DoD ✓** (migration generated + applied + lock present + client regenerated + singleton + smoke 3/3 + 152 baseline unchanged + entrypoint cleanup + make check green + cross-slot 5/5 + schema untouched + zero new deps + drift zero)
+
+**8 AC ✓ + bonus AC#9** (FIRST FULL APPROVE in repo — cycle 6 milestone)
+
+---
+
+**5 Design Decision rulings — ALL ACCEPT**
+
+| DD | Topic | PM B ruling |
+|---|---|---|
+| **DD1** | CHECK injection path A (`--create-only` + manual append) | ✅ ACCEPT (already approved at ACK). Migration.sql composition verified: Prisma DDL + delimiter block + 5 manual CHECKs + §4-D05 reference inline. |
+| **DD2** | `test-setup.ts` env loader extension (file count revised **3 CREATE / 3 EDIT** vs ASSIGNMENT 3/2) | ✅ ACCEPT. Smoke needs `.env` loaded at module-import; minimal `readFileSync` + KEY=VALUE parser avoids new `dotenv` dep; test-environment-only (no production touch); coerces jest `NODE_ENV='test'` → `'development'` (env.ts enum compat) + 64-char dummy `ENCRYPTION_KEY`. Defensible scope creep. File count revision approved. |
+| **DD3** | Singleton `shutdown()` sync (`() => void`) | ✅ ACCEPT. Satisfies `@typescript-eslint/no-misused-promises` on `process.on('SIGTERM')`. `void db.$disconnect()` fires-and-forgets. Sound. |
+| **DD4** | Import `PrismaClient` from `.prisma/client` (NOT `@prisma/client`) | ✅ ACCEPT. pnpm hoisting quirk workaround — `@prisma/client` hoisted stub types `any`; `.prisma/client` carries real typed constructor. Mirrors existing auth/users repo pattern. |
+| **DD5** | Smoke `tier.name = 'lite'` (canonical, not UUID-suffixed) | ✅ ACCEPT. `tiers_name_check` CHECK restricts to 4 values; UUID-suffix would fail CHECK. Cleanup by PK (UUID generated) not natural key. Flag for cycle-7+ T03 seed coexistence. |
+
+---
+
+**4 Open Item rulings — all ACCEPT-as-is with future-cycle hedges**
+
+- **#1 Prisma error logger noise** → ACCEPT (structured log per CLAUDE.md §7); hedge: configure `log: ['error']` future cycle if needed → **T_AUX_03** backlog
+- **#2 Smoke naming `.smoke.test.ts`** → KEEP (smoke = quick health check, gates Q-B-02(b) closure di `make check`; integration = cycle 7 backfill)
+- **#3 `test-setup.ts` manual env loader** → ACCEPT bootstrap-style (no new dep); hedge: swap to `dotenv` future cycle if env complexity grows → **T_AUX_04** consideration
+- **#4 Cycle 7 = T02-sub-1 chained ASSIGNMENT** → ACK confirm. PM B authors separate ASSIGNMENT post-VERDICT.
+
+---
+
+**Quartet upgrade convention CLARIFIED** (revised from Executor SUBMIT line 4)
+
+T02 FULL APPROVE = NECESSARY but NOT SUFFICIENT for quartet upgrade. Per VERDICT blocks of T05/T06/T11/T07, conditions:
+
+| Cond | Action | Cycle |
+|---|---|---|
+| **(a)** T02 ships | Migration + PrismaClient real | ✓ **THIS VERDICT** (cycle 6) |
+| **(b)** Integration tests fill (~24 it.todo) | Convert placeholders to real assertions | cycle 7 |
+| **(c)** Repo coverage 80% floor at integration scope | `pnpm test:integration --coverage` ≥80% line on repos | cycle 7 |
+| **(d)** Drift re-scan post-integration | Re-scan 4 integration test files + cross-touched | cycle 7 |
+| **(e)** Re-issue VERDICT FULL untuk quartet | Single block T05+T06+T11+T07 batch | cycle 7 |
+
+**Quartet status remains APPROVE-PARTIAL after this T02 VERDICT** until cycle 7 batch APPROVE event satisfies (b)-(e).
+
+---
+
+**Cycle 6 close — FIRST FULL APPROVE in repo**
+
+| Task | Cycle | Status |
+|---|---|---|
+| T05 (auth core) | 2 | APPROVE-PARTIAL |
+| T06 (/me + rotation) | 3 attempt 2 | APPROVE-PARTIAL |
+| T11 (tenant-guard, cross-slot §4-D01) | 4 | APPROVE-PARTIAL |
+| T07 (users CRUD, canonical Slot B) | 5 | APPROVE-PARTIAL |
+| **T02 (initial migration, cross-slot §4-D05)** | **6** | **FULL APPROVE** ✓ FIRST |
+
+**Achievement**: T02 ships FULL APPROVE direct; CHECK constraints live in DB; Q-B-02(b) closed; cross-slot ceremony complete; foundation milestone unlocked.
+
+---
+
+**Cycle 7 preview** — chained **T02-sub-1**: batch integration test backfill across 4 files (~24 placeholders):
+- `auth.repository.integration.test.ts` — 10 it.todo (T05 territory; T06's 5 rolled in during cycle 3)
+- `tenant-guard.plugin.integration.test.ts` — 4 it.todo (T11)
+- `users.repository.integration.test.ts` — 5 it.todo (T07)
+
+Cycle 7 SUBMIT triggers batch FULL APPROVE quartet VERDICT (conditions (b)-(e) satisfied) → `feat/auth-core` merges to `main` (single merge event for entire Slot B work: T02+T05+T06+T07+T11).
+
+---
+
+**Roll-up + cross-references**:
+- `PM-STATUS-B.md §1` task tracker row T02 → status `approved · cycle 6 close (FIRST FULL APPROVE in repo)`; Verified-by = `PM B — cycle 6 (2026-06-30) attempt 1`
+- `PM-STATUS-B.md §1` rows T05/T06/T11/T07 notes → append "T02 ships ✓ (cycle 6 close); upgrade conditions (b)-(e) cycle 7 pending"
+- `PM-STATUS-B.md §0` current focus → T02 FULL APPROVE; quartet still APPROVE-PARTIAL; cycle 7 preview
+- `PM-STATUS-PARENT.md §2` short roll-up appended
+
+PM B exits to **wait-mode for cycle-7 opening decision**: (a) chain T02-sub-1 ASSIGNMENT now (PM B recommendation per cycle 5→6 chain precedent), or (b) wait fresh cycle. See brief.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
