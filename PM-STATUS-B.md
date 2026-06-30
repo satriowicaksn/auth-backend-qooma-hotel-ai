@@ -3761,8 +3761,65 @@ Awaiting PM B ACK.
 
 **PM B state**: **WAIT-MODE for SUBMIT T02 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Cross-slot execution per §4-D05.
 
-<!--
-TEMPLATE — copy untuk task baru:
+#### HALT T02 — exec-B (Nanak) cycle 6 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D05.
+
+**Trigger**: pre-flight Postgres-availability gate FAILED at impl-start (per PLAN T02 line "One pre-flight HALT condition: if `make start` fails (Docker daemon down OR port 5433 conflicts) → I HALT and raise GAP, NO ad-hoc shim.").
+
+**Pre-flight observations (2026-06-30 cycle 6 impl-start)**:
+
+```
+$ docker info
+Client:
+ Context:    desktop-linux
+ ...
+Server:
+ERROR: Cannot connect to the Docker daemon at unix:///Users/krisnahendra/.docker/run/docker.sock.
+       Is the docker daemon running?
+
+$ nc -z localhost 5433
+port 5433 NOT listening
+```
+
+Docker Desktop / colima daemon is NOT running on the macOS host. `make start` (`docker compose up -d postgres redis`) cannot reach the daemon → Postgres container cannot start → `pnpm prisma:migrate:dev` would fail before generating a migration. Port 5433 itself is free (no conflict — the issue is purely daemon-down).
+
+**Action taken**:
+
+- **NO** `make start` invocation completed (daemon-down precludes it)
+- **NO** `pnpm prisma migrate dev` attempted (would fail with connection error and pollute repo state with a half-created migration directory)
+- **NO** branch state mutation on `feat/auth-core` — branch sits at `f92f4cc` (T07 SUBMIT tip post-rebase atop PLAN+ACK)
+- **NO** `src/` or `prisma/` touches
+- Switched back to `main` to post this HALT block per §7 branch hygiene
+
+**Why HALT (not BLOCKED, not shim)**:
+- PLAN line "One pre-flight HALT condition" explicitly committed to HALT-and-raise-GAP on this scenario, no ad-hoc fix
+- Docker daemon start is owner-local (Nanak's macOS host) — Executor cannot start Docker Desktop or colima from inside the harness
+- Single-step resolution: owner starts the local Docker daemon, then Executor re-runs the pre-flight (`make start` + `nc -z localhost 5433`) and proceeds to Commit 1
+
+**Resolution path (owner action — out of Executor scope)**:
+1. Start Docker Desktop on the Mac (Applications → Docker, OR `open -a Docker`), OR start colima (`colima start`) if that's the runtime
+2. Wait for daemon to be reachable (`docker info` no longer ERROR section)
+3. Re-trigger Executor B (same /loop or next session) to resume from Commit 1 — pre-flight will re-verify and proceed if green
+
+**Branch state**: `feat/auth-core` at `f92f4cc` (T07 SUBMIT tip, rebased atop main's PLAN T02 ACK). Force-pushed to remote. Working tree CLEAN on `main`. No half-state to revert.
+
+**Resume trigger**: owner confirms Docker daemon is reachable → Executor re-runs:
+```
+docker info | grep -A1 ^Server   # confirm no ERROR line
+nc -z localhost 5433              # may still say NOT listening before make start
+git checkout feat/auth-core
+make start                        # bring up postgres + redis containers
+nc -z localhost 5433              # NOW expect listening
+```
+Then proceeds with Commit 1 (`pnpm prisma migrate dev --create-only --name init`) per PLAN Phase 2.
+
+**Cross-slot heritage carried through HALT**:
+- This block carries the `CROSS-SLOT execution per §4-D05` marker (same as PLAN/ACK/SUBMIT/VERDICT chain) — audit trail unbroken
+- No commits on `feat/auth-core` during HALT → no commit-footer compliance to check
+- The PM-STATUS-B.md edit on main does NOT carry the §4-D05 footer in its commit msg (PM-STATUS commits are infrastructure-meta, not T02 impl work) — same pattern as PLAN T02 commit `94a0e51` on main
+
+**Standing instruction for PM B**: this is INCIDENT-class, not a planning/code gap. No PM B action needed beyond awareness. Resume happens once the owner brings the daemon up; no re-PLAN, no re-ACK required.
+
+**Awaiting owner resolution (Docker daemon start), then Executor B resume.**
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
