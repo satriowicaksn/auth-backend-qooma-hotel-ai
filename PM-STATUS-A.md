@@ -16,10 +16,12 @@
 - **🎯 SLOT A FOUNDATION CLOSED**: T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · T03 ✅ · **T04 ✅ APPROVED**.
 - **Merge-ready (notify Nathan)**: **T04** — branch `feat/seed-super-admin` @ `c7a7e76`. (T03 already merged via PR#3.) Nathan merges.
 - **New scope (Parent ruling `d40264e`)**: **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) → Slot A *execution* per §4-D08 (Slot C absorption; Slot C canonical + offline). **READY** (T04 closed). Gate **G3**, ~8h.
-- **🏁 SLOT A SCOPE COMPLETE**: T01 · T02 · T11 · T03 · T04 · TF-01 (prod-boot) · **T09 ✅ APPROVED** (admin hotels, §4-D08). All approved.
-- **Merge-ready (LAST Slot A merge, notify Nathan)**: **T09** — branch `feat/admin-hotels` @ `b8af385`. (T01–T04 + TF-01 already merged PR#1–5.)
-- **Slot A queue**: empty after T09 merge. No further Slot A tasks assigned. (Open to Parent/PO: Q-A-06 agent_count, Q-A-07 auth-login suspended — neither a Slot A coding task.)
-- **Next gate**: G3 (admin endpoints) — T09 (Slot A) ✅; T08 + T10 (Slot B) in flight. G3 closes when all land + CI green.
+- **🏁 SLOT A COMPLETE + ALL MERGED — Dev A IDLE/STANDBY** (verified git 2026-07-01).
+- **All 6 PRs merged to main**: PR#1 feat/auth-core · PR#2/#3 T03 (seed + tsx fix) · PR#4 T04 · **PR#5 TF-01 tsc-alias** · **PR#6 T09 admin-hotels**. tsc-alias DONE+merged; T09 MERGED (`src/modules/admin/hotels` on main). **Nothing pending for Dev A.**
+- **Planning-agent reconciliation (2026-07-01)**: feedback assumed (a) tsc-alias still TODO — actually merged PR#5; (b) T03/T04/T09 merge-ready-on-HOLD — actually all merged PR#2–6; (c) HOLD until feat/auth-core lands — it landed PR#1 (day 1). Snapshot was stale; corrected here. T08/T10 = Slot B (agreed, untouched).
+- **Slot A queue: EMPTY.** No assigned task remains. Standby for new assignment / "can Dev A help" after Slot B (T08/T10) done.
+- **Open to Parent/PO (NOT Dev A coding tasks)**: Q-A-02 (tier features) · Q-A-06 (agent_count=0 confirm) · Q-A-07 (auth-login suspended, Slot B). Plus 2 non-blocking chores: dup-email rollback test (hardening), `test:coverage --runInBand`.
+- **Next gate**: G3 — T09 (Slot A) ✅ landed; T08 + T10 (Slot B) in flight. G3 closes when those land + CI green.
 - **Next gate**: foundation/G1 done for Slot A; T09 = G3. `PM-STATUS-PARENT.md §5`. §4-D06 collision OK (Parent kept my tsc-alias D06; Slot C → D07/D08).
 
 ---
