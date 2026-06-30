@@ -27,7 +27,7 @@
 
 | T## | Title                              | Status   | Verified by PM | Notes                                 |
 | --- | ---------------------------------- | -------- | -------------- | ------------------------------------- |
-| T01 | pnpm install verify + `make check` green | `assigned · READY-FULL` | — | ASSIGNMENT issued §2. Verify on `feat/auth-core` (integration branch heading to main). Foundation sign-off — verification only, no code change. Gate **G1**. |
+| T01 | pnpm install verify + `make check` green | `wip · PLAN ACKED (2 amendments)` | — | ASSIGNMENT §2; PLAN ACKED cycle 1 w/ reorder (start→check) + lockfile guard. Verify on `feat/auth-core`. Verification only, no code change. Gate **G1**. Awaiting SUBMIT. |
 | T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | `ADOPT-pending (exec by Slot B §4-D05)` | — | **Canonical Slot A**. Already FULL APPROVE by PM B on `feat/auth-core` (NOT merged to main). Slot A = **adopt/sign-off, NO re-exec**. Adopt gated on T01 green. Migration: `prisma/migrations/20260630042913_init`. |
 | T11 | tenant-guard middleware (Fastify plugin) | `ADOPT-pending (exec by Slot B §4-D01)` | — | **Canonical Slot A**. APPROVE-PARTIAL by PM B on `feat/auth-core`. Slot A = **adopt/sign-off, NO re-exec**. Lives `src/plugins/tenant-guard.ts`. Gate **G2**. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | `assigned · BLOCKED-until T01 + adopt-T02` | — | Deps T02 (tables) + real PrismaClient. **Branch from `feat/auth-core`** (§2 decision). Writes `prisma/seeds/`. Idempotent. DoD §2. Gate **G1**. |
@@ -92,6 +92,63 @@ T03 & T04 saling independen (dua-duanya cuma butuh T02 tables) — boleh dikerja
 **Catatan PM A**: Ini sign-off cepat, bukan re-build. Kalau ada step yang butuh resource yang tak tersedia di env (mis. Docker), raise GAP — aku decide apakah descope step itu untuk G1 sign-off atau eskalasi. Setelah T01 green → aku trigger adopt-T02 + adopt-T11, lalu un-block T03.
 
 _Awaiting Executor A PLAN T01._
+
+#### PLAN T01 — exec-A (Nathan) at cycle 1 (2026-06-30)
+
+**Scope recap**
+- T01 = foundation sign-off (G1), **verification-only, no file change**. Checkout `feat/auth-core` (state nyata menuju main), provision toolchain, jalankan `make check` hijau, `make start` (deps up), `make db-migrate` apply `20260630042913_init`, konfirmasi 5 tabel + `git status`/`git diff` bersih. SUBMIT = command output evidence only.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+- Identity confirmed: Executor, Slot A (Nathan) ✓
+- CLAUDE.md loaded ✓ ; EXECUTOR-PROTOCOL.md read ✓
+- Task spec read: PM-STATUS-A.md §2 ASSIGNMENT T01 (DoD 7 butir) + §1 tracker row T01
+- Parent docs spot-read: `Makefile` (install/start/check/db-migrate targets), `docker-compose.yml` (pg host **5433**, redis **6380**), `package.json` (`packageManager: pnpm@9.0.0`, scripts)
+- Dependencies: none (T01 = root foundation, §1) ✓
+- `make typecheck`/`make lint` clean: **N/A pre-ACK** — running these IS the T01 deliverable; akan dieksekusi post-ACK pada `feat/auth-core` (butuh pnpm yang di-provision via `make install`). Flag bila tidak hijau.
+- Scaffolder risk: none. Tooling note di bawah.
+
+**Verified ground-truth (read-only, pre-ACK):**
+- `origin/feat/auth-core` HEAD = `25d20078fea72a8906eda64cb4634b778007adb2` ("test(prisma): smoke suite — connection + UNIQUE + CHECK trip", 2026-06-30 12:45 +0700).
+- `origin/main` HEAD = `d3ca0ce3` (PM A roll-up). Working tree currently on `main`, **clean**.
+- Init migration present on `feat/auth-core`: `prisma/migrations/20260630042913_init/migration.sql` + `migration_lock.toml` ✓.
+- Toolchain available: `corepack` 0.34.0 (→ akan provision `pnpm@9.0.0` via `make install`, **bukan** `pnpm add` — tidak butuh approval PO), `docker compose` v5.1.2, node `v22.21.1` (memenuhi `engines.node >=20`). Docker daemon up; container project lain di host (`mvp-backend-*`) di port 5432/6379 → **tidak bentrok** dengan 5433/6380 milik kita.
+
+**Files to create / modify**
+- **None.** Verification task — `git diff` harus kosong di akhir.
+
+**Approach** (commands yang akan dijalankan post-ACK, urut):
+1. `git checkout feat/auth-core` (HEAD `25d2007`) — confirm branch + hash.
+2. `make install` — **touches root**: jalankan `corepack enable && corepack prepare pnpm@9.0.0 --activate` lalu `pnpm install --frozen-lockfile` (honor lockfile — konfirmasi `git status` clean, no lockfile churn) + `prisma generate`.
+3. `make check` — lint (`--max-warnings 0`) + format:check + typecheck + test:unit. Paste ringkasan (jumlah test pass, 0 warning).
+4. `make start` — `docker compose up -d postgres redis` (5433/6380) → wait healthy → `prisma generate` → `db-migrate`.
+5. `make db-migrate` (`prisma migrate dev`) apply `20260630042913_init` → verifikasi 5 tabel (tiers/hotels/users/sessions + prt) via `\dt`.
+6. `git status` + `git diff` → konfirmasi bersih (no file change, no lockfile change).
+
+**Env note** (bukan GAP — minor): `.env` sudah ada di working tree (untracked, gitignored). DoD T01 tidak sebut env setup. `make start`/`db-migrate`/config-zod mungkin butuh `DATABASE_URL`/`JWT_*`/`ENCRYPTION_KEY` ter-isi. Intent: pakai `.env` existing; **bila** `make check`/`start` gagal karena env key kosong, isi `JWT_*`/`ENCRYPTION_KEY` via `openssl rand -hex 32` (per brief bootstrap original) — `.env` tidak akan di-commit (gitignore + §0.7). Akan kureport hasilnya di SUBMIT, tidak diam-diam.
+
+**GAPs / questions**
+- (none blocking T01) — flag terpisah utk task nanti (bukan minta resolve sekarang): `.env.example` belum punya `SEED_SUPER_ADMIN_*` (→ T04) & `JWT_ACCESS_TTL=8h` vs kode 15m. Akan kuraise GAP formal saat T04 aktif, tidak kusentuh `.env.example`/docs sekarang.
+
+Awaiting PM A ACK.
+
+##### PM A ACK — T01 PLAN APPROVED with 2 mandatory amendments + 3 notes (cycle 1, 2026-06-30)
+
+PLAN sound: verification-only, ground-truth verified (HEAD `25d2007`, migration present, toolchain ok, ports 5433/6380 no-collision), no file change, good deferred-GAP discipline (T04 `.env.example`/TTL — agreed, **jangan** sentuh sekarang, raise formal saat T04 aktif). **Proceed to coding** setelah incorporate di bawah — no re-PLAN, reflect amendments di SUBMIT evidence.
+
+**⚠️ Amendment #1 (MANDATORY — reorder, else spurious fail).** Approach-mu jalankan `make check` (step 3) SEBELUM `make start` (step 4). Itu akan gagal: `src/core/prisma/__tests__/prisma-client.smoke.test.ts` bernama `.smoke.test.ts` → match pattern `test:unit` (`__tests__/.*\.test\.ts`) → ikut jalan di `make check`. Smoke ini **hit LIVE Postgres + tabel ter-migrasi** (connection round-trip + UNIQUE(hotel_id,email) trip + mutual-exclusion CHECK trip — lihat file header + `jest.config.json` `testMatch`). Tanpa DB up, `make check` merah di smoke = false negative.
+- **Fix — urutan benar**: `checkout feat/auth-core` → `make install` → **`make start`** (DB up + healthy + prisma-generate + db-migrate, per `Makefile:46-50`) → **`make check`** (smoke konek ke DB ter-migrasi) → `git status`/`git diff` clean.
+- `make db-migrate` eksplisit di DoD-mu **sudah dilakukan di dalam `make start`** (`Makefile:50`). Re-run untuk konfirmasi exit 0 + 5 tabel boleh (idempotent), tapi taruh SETELAH start sebagai evidence "5 tabel", bukan sebagai apply pertama.
+
+**⚠️ Amendment #2 (MANDATORY — lockfile guard).** `make install` = `pnpm install --frozen-lockfile || pnpm install` (`Makefile:38`). Bila `--frozen-lockfile` gagal, fallback `|| pnpm install` **mutate `pnpm-lock.yaml`** → langgar DoD "no file change / git clean".
+- **Fix**: setelah `make install`, cek `git status`. Bila `pnpm-lock.yaml` modified → **STOP**: artinya lockfile di `feat/auth-core` out-of-sync dengan `package.json` (deps argon2/@fastify/cookie §4-D02/D03). Raise GAP, `git checkout -- pnpm-lock.yaml` untuk discard, **JANGAN commit**. Jangan tutupi — ini finding nyata yang harus aku lihat (juga sinyal untuk merge-readiness feat/auth-core).
+
+**Note #1 (non-blocking) — Node version.** Kamu di node v22.21.1; standar proyek Node 20 LTS (`CLAUDE.md §2`), `engines.node >=20` izinkan 22. OK untuk local sign-off; CI (Node 20) = gate kanonik. `argon2` itu native addon — bila ada check yang gagal HANYA di 22 (rebuild native / API diff), catat eksplisit, jangan anggap defect branch. Bila perlu, retry di Node 20.
+
+**Note #2 (non-blocking) — env/zod.** Reuse `.env` existing (gitignored — never commit ✓). Bila harus isi key: `ENCRYPTION_KEY` wajib penuhi zod schema di `src/core/config/env.ts` (AES-256-GCM → `openssl rand -hex 32` = 64 hex char = 32 byte, benar). Spot-check constraint `env.ts` dulu biar check tidak gagal karena alasan salah. Report di SUBMIT key mana (kalau ada) yang kamu generate.
+
+**Note #3 (bonus — early adopt-T02 signal).** Saat `make start` jalankan `prisma migrate dev`: bila ia mau CREATE migration baru / modifikasi `prisma/migrations/*` atau `schema.prisma` (git dirty) → **STOP + report**. Itu sinyal drift schema↔migration = finding nyata, jangan di-accept. Clean apply (no file baru) = evidence positif untuk adopt-T02 nanti.
+
+**On green → SUBMIT** dengan command output: install (+ konfirmasi lockfile clean) · start · check (jumlah test pass / 0 warning) · db-migrate exit 0 + 5 tabel · `git status`/`git diff` final clean. Aku verify + VERDICT, lalu trigger adopt-T02 + adopt-T11 → un-block T03.
 
 ---
 
