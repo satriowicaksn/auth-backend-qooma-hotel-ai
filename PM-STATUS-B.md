@@ -4492,6 +4492,131 @@ Phase 6 — self-validate: `make check` exit 0 (155 unit baseline preserved — 
 
 Awaiting PM B ACK.
 
+##### PM B ACK PLAN T02-sub-1 attempt 1 — Executor B clear to implement. 5 open items confirmed, 1 aux ruling (coverage scope option (a) approved). Cycle 7 (2026-06-30) FINAL pre-merge.
+
+**Outcome**: ✅ **ACK** with coverage scope ruling (Option A approved). Executor B IMPL-READY. 5-commit split with mixed-scope ceremony (only commit #4 carries §4-D01 footer). After SUBMIT + batch VERDICT → quartet FULL APPROVE → merge `feat/auth-core` to `main`.
+
+---
+
+**PLAN validation per PM-AGENT §2.3** — 6/6 PASS
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT scope/DoD/AC | ✅ | 27 conversions across 3 files (16+4+7) + shared fixtures + tighten regex; satisfies (b)+(c)+(d)+(e); FULL APPROVE convention honored |
+| File list completeness | ✅ | **4 EDIT + 1 CREATE** (revised from ASSIGNMENT 3 EDIT + 1 optional CREATE — Executor includes `package.json` regex tighten as MANDATORY per Open #3; sound revision; PM B approves the reclassification) |
+| Test plan validity | ✅ | 27 new integration assertions + 155 unit baseline = 182 tests + 2 skipped; mock pattern reuses T02 smoke fixture |
+| GAP categorization | ✅ | 0 PLAN-blocking; 1 aux flag (coverage scope adjustment) — addressed below |
+| ETA reasonability | ✅ | ~6-7h vs ASSIGNMENT ~4-6h — slight padding for coverage adjustment + fixture iteration; acceptable |
+| Mixed-scope commit ceremony | ✅ | 5-commit split: #1+#2+#3+#5 PLAIN, #4 (tenant-guard plugin) §4-D01 footer WAJIB; mixed-file single-commit FORBIDDEN |
+
+**Independent pre-flight verifications confirmed**:
+- `package.json:25` `test:unit` regex `__tests__/.*\\.test\\.ts` (matches BOTH unit + integration) ✅
+- `package.json:26` `test:integration` regex `__tests__/.*\\.integration\\.test\\.ts --runInBand` ✅
+- it.todo count via grep on branch: **16+4+7 = 27** exact match ✅
+- T11 file line 6 `// Cross-slot execution per §4-D01 (Slot A canonical territory).` PRESERVED ✅
+- `jest.config.json` (on branch — Q-B-02(a) workaround) `collectCoverageFrom` EXCLUDES `auth.repository.ts` + `users.repository.ts` ✅ (cycle-1 baseline; cycle 7 needs adjustment per aux ruling)
+
+---
+
+**5 open items rulings — all CONFIRMED (verbatim per PM B ASSIGNMENT recommendations)**
+
+| # | Topic | Final stance | Source |
+|---|---|---|---|
+| #1 | Fixture sharing | ✅ **EXTRACT to `src/core/prisma/__tests__/integration-helpers.ts`** — DRY across 3 files; ~50-80 LOC shared eliminates ~75 LOC duplicate | PM B + Executor PLAN |
+| #2 | Test isolation | ✅ **`afterEach` cleanup + UUID-suffix on natural keys** (mirror T02 smoke); T11 plugin tests use alt Fastify-inject pattern | PM B + Executor PLAN |
+| #3 | Coverage measurement + jest config | ✅ **Negative-lookbehind regex** `__tests__/.*(?<!\\.integration)\\.test\\.ts` in `package.json` `test:unit` script. Node 20 V8 supports it natively (verified `node -e "/foo(?<!bar)/.test(...)"`). `jest.config.json testMatch` stays generic (both matched at config level — script-level narrows). `test:integration` unchanged. **NO GAP raised.** | PM B + Executor PLAN |
+| #4 | T02 CHECK extension scope | ✅ **DEFER to T_AUX_05 backlog** — mutual-exclusion CHECK (cycle 6) is security-critical; other 4 are simple enum validation Prisma type-narrows | PM B + Executor PLAN |
+| #5 | Execution speed | ✅ **ACCEPTABLE** — `test:integration --runInBand` configured; ~27 tests × ~1s = ~30s wall-time (within 30-60s PM B note); parallel optimization defer to T_AUX_06 backlog | PM B + Executor PLAN |
+
+---
+
+**Aux ruling — `collectCoverageFrom` adjustment for repo files**
+
+⚠️ **APPROVE Option (a): temporary inclusion via `test:integration` script flag override**
+
+**Executor flagged at PLAN line 4452**: `auth.repository.ts` + `users.repository.ts` are currently EXCLUDED from `collectCoverageFrom` per cycle-1 baseline (jest.config.json). Cycle 7 condition (c) requires repo coverage ≥80% line measurement.
+
+**Two options considered**:
+- **(a)** Temporary inclusion via `test:integration` script flag override (e.g., `pnpm test:integration --coverage --collectCoverageFrom='src/modules/auth/auth.repository.ts' --collectCoverageFrom='src/modules/users/users.repository.ts'`) OR augment via separate `jest.integration.config.json` file
+- **(b)** Permanent inclusion in main `jest.config.json` (remove the `!auth.repository.ts` / `!users.repository.ts` exclusions; let global coverage report include repo files at all runs)
+
+**PM B ruling: Option (a) APPROVED.**
+
+**Rationale**:
+1. **Minimal config divergence**: single `jest.config.json` source of truth stays unchanged; only `test:integration` script adds CLI override OR a small companion config file
+2. **Easy to revert** if pattern changes in future cycle (no global config mutation)
+3. **Coverage measurement scope explicitly different** between `test:unit` (excludes repos, mock-tested) vs `test:integration` (includes repos, real-DB-tested) — appropriate semantic separation
+4. **Executor decide implementation detail at impl-time** and document approach in SUBMIT Notes:
+   - Path α: CLI flags on `test:integration` script (cleaner, no new file)
+   - Path β: separate `jest.integration.config.json` (slightly more verbose but more explicit)
+   - PM B recommend α first; fallback to β if jest CLI flags don't compose cleanly with the negative-lookbehind regex tightening
+5. **Fallback acceptable**: if Option (a) implementation surfaces blocker (e.g., jest doesn't support `--collectCoverageFrom` CLI override clean), fallback to Option (b) with minor jest.config.json edit — small scope creep, acceptable. Document fallback decision in SUBMIT.
+
+**Coverage scope target post-ruling**:
+- `auth.repository.ts` ≥80% line via integration runs
+- `users.repository.ts` ≥80% line via integration runs
+- `tenant-guard.ts` already 94.44% line via T11 unit + cycle 7 integration adds
+- `auth.service.ts` repo-touching paths already covered via T05/T06 unit; integration adds confidence
+
+---
+
+**Mixed-scope commit ceremony plan ACKED**
+
+| # | Commit | Footer |
+|---|---|---|
+| 1 | `chore(test): tighten test:unit regex to exclude .integration.test.ts (Open #3)` | PLAIN (script-level, no impl scope) |
+| 2 | `test(integration): shared fixture helpers — connect/cleanup/UUID-suffix/factories` | PLAIN (canonical Slot B; new shared module) |
+| 3 | `test(auth): backfill 16 auth.repository integration assertions (T05+T06 consolidated)` | PLAIN |
+| 4 | `test(plugins): backfill 4 tenant-guard.plugin integration assertions (T11)` | **CROSS-SLOT footer WAJIB**: `Cross-slot execution per §4-D01 (Slot A canonical territory).` |
+| 5 | `test(users): backfill 7 users.repository integration assertions (T07)` | PLAIN |
+
+**Critical: ONLY commit #4 carries the §4-D01 footer. Commits #1+#2+#3+#5 are PLAIN canonical Slot B.** Mixed-file single commits FORBIDDEN.
+
+T11 file line-6 header marker `// Cross-slot execution per §4-D01 (Slot A canonical territory).` PRESERVED VERBATIM at file head during backfill (NO comment edits).
+
+---
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Switch branch**: `git checkout feat/auth-core && git rebase main` (sync ACK + PLAN context onto branch; current main HEAD = `566b18e` PLAN; rebase replays 44 impl commits + PM-STATUS commits on top of main)
+- **Pre-flight gate**: `docker ps | grep postgres` — Postgres must be UP + healthy on port 5433. HALT + GAP if Docker daemon down OR container unhealthy. Same HALT condition as cycle 6.
+- **5-commit sequence per PLAN** (commit splits per file ownership):
+  1. PLAIN: `chore(test): tighten test:unit regex` (package.json edit; verify both `test:unit` + `test:integration` work post-edit)
+  2. PLAIN: `test(integration): shared fixture helpers` (new `integration-helpers.ts` module)
+  3. PLAIN: `test(auth): backfill 16 auth.repository integration assertions (T05+T06)`
+  4. **CROSS-SLOT (§4-D01 footer WAJIB)**: `test(plugins): backfill 4 tenant-guard.plugin integration assertions (T11)`
+  5. PLAIN: `test(users): backfill 7 users.repository integration assertions (T07)`
+- **NEVER mix files across commits** — split per file ownership; T11 commit isolated to T11 file only
+- **T11 file line-6 marker** `// Cross-slot execution per §4-D01 (Slot A canonical territory).` PRESERVED VERBATIM during backfill
+- **Coverage scope adjustment** per aux ruling Option (a):
+  - Path α (recommend): CLI flag override on `test:integration` script — add `--collectCoverageFrom='src/modules/auth/auth.repository.ts' --collectCoverageFrom='src/modules/users/users.repository.ts'` (or equivalent passthrough via npm script args)
+  - Path β (fallback): separate `jest.integration.config.json` if Path α blocked
+  - Document chosen path + rationale in SUBMIT Notes
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT**:
+  - **`make check` green** (test:unit now excludes integration via tightened regex; should be **155 pass + 0 todo + 2 skipped** unchanged from T07 baseline — 27 todo migrate to test:integration scope)
+  - **`pnpm test:integration --coverage` green** — 27 new integration assertions pass against migrated PG; coverage scope adjustment per Option (a) applied; repo files (auth.repository.ts + users.repository.ts) ≥80% line confirmed
+  - **Coverage report verify** ≥80% line on 4 critical repo files (auth.repository, auth.service repo-paths, tenant-guard, users.repository)
+  - **Drift scan zero hits** scoped to 3 integration test files + `integration-helpers.ts` + `package.json` edit zone
+  - **Schema-diff EMPTY**: `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT
+  - **Mixed-scope ceremony audit**: `git log --format="%H %s%n%b" <T02-sub-1 range> | grep -c "§4-D01"` → expected exactly **1** (only commit #4)
+  - **T11 file line-6 marker preserved**: `git show <T02-sub-1 final commit>:src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts | head -10` shows `// Cross-slot execution per §4-D01 (Slot A canonical territory).` at line 6
+  - **Q-B-02(a)/(c)/(d) workarounds preserved** — `jest.config.json` exists (Q-B-02(a)), eslint-disable at api.ts (Q-B-02(c)), inline setErrorHandler at api.ts:36 (Q-B-02(d)) — all unchanged
+- **APPROVE convention**: T02-sub-1 = **FULL APPROVE direct** (NOT PARTIAL). PM B will issue:
+  - **Single batch VERDICT block** covering T05+T06+T11+T07 quartet FULL APPROVE (PM B decision — recommend single block for audit clarity)
+  - **T02-sub-1 own VERDICT** also FULL APPROVE
+  - Then merge `feat/auth-core` to `main` (single merge event)
+- **Branch hygiene per §7**: integration test commits 1-5 on `feat/auth-core`. SUBMIT block (PM-STATUS-B.md edit only, append-only below this ACK) commits on `main` setelah self-validate green. Then PM B checkout `feat/auth-core` for independent verify per PM-AGENT §3, back to main for batch VERDICT.
+
+**Risks acknowledged from PLAN — no PLAN-blocking concerns**:
+- Negative-lookbehind regex Node 20 V8 viable (PLAN line 4451) — verified
+- `auth.repository.ts` + `users.repository.ts` coverage exclusion — aux ruling resolves (Option a temporary inclusion)
+- Integration test PG disk usage — cycle-end sanity `SELECT count(*) FROM users` should return 0 post-suite
+- T11 plugin integration test fixture pattern differs from repo pattern — accepted (Fastify inject reuses T11 unit test plumbing)
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T02-sub-1 attempt 1 block (PM-STATUS-B.md §2 append below this ACK, on `main` per §7), PM B akan checkout `feat/auth-core` for independent verify per PM-AGENT §3 Steps 1-7 → batch VERDICT (T02-sub-1 FULL APPROVE + quartet T05+T06+T11+T07 batch FULL APPROVE) on main → coordinate merge `feat/auth-core` to `main` (single merge event).
+
+**PM B state**: **WAIT-MODE for SUBMIT T02-sub-1 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. Cycle 7 = FINAL pre-merge cycle.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
