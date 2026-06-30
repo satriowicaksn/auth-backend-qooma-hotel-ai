@@ -26,6 +26,9 @@ import { AuthRepository } from '@modules/auth/auth.repository.js';
 import { authRoutes } from '@modules/auth/auth.routes.js';
 import { AuthService } from '@modules/auth/auth.service.js';
 import { FastifyJwtTokenIssuer } from '@modules/auth/auth.token-issuer.js';
+import { HotelsRepository } from '@modules/hotels/hotels.repository.js';
+import { hotelSettingsRoutes, hotelsRoutes } from '@modules/hotels/hotels.routes.js';
+import { HotelsService } from '@modules/hotels/hotels.service.js';
 import { UsersRepository } from '@modules/users/users.repository.js';
 import { usersRoutes } from '@modules/users/users.routes.js';
 import { UsersService } from '@modules/users/users.service.js';
@@ -83,18 +86,21 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // (T02 cycle-6 Q-B-02(b) inline resolution). Repositories consume it directly.
   const authRepo = new AuthRepository(db);
   const usersRepo = new UsersRepository(db);
+  const hotelsRepo = new HotelsRepository(db);
   const adminHotelsRepo = new AdminHotelsRepository(db);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
   const hasher = new Argon2Hasher();
 
   const authService = new AuthService(authRepo, hasher, tokenIssuer, config, logger);
   const usersService = new UsersService(usersRepo, hasher, logger);
+  const hotelsService = new HotelsService(hotelsRepo);
   const adminHotelsService = new AdminHotelsService(adminHotelsRepo, hasher, logger);
 
   fastify.decorate('tokenIssuer', tokenIssuer);
   fastify.decorate('services', {
     auth: authService,
     users: usersService,
+    hotels: hotelsService,
     adminHotels: adminHotelsService,
   });
 
@@ -112,6 +118,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(usersRoutes, { prefix: '/api/users' });
+  await fastify.register(hotelsRoutes, { prefix: '/api/hotels' });
+  await fastify.register(hotelSettingsRoutes, { prefix: '/api/settings' });
   await fastify.register(adminHotelsRoutes, { prefix: '/api/admin/hotels' });
 
   return fastify;

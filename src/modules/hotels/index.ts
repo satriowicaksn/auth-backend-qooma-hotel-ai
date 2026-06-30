@@ -1,8 +1,9 @@
 // Public API barrel for the hotels module. External consumers (e.g.
 // src/entrypoints/api.ts) import from here; internal files use relative
-// paths. Routes/service/repository land in subsequent scaffold commits.
+// paths.
 
 export { HotelsRepository } from './hotels.repository.js';
+export { hotelSettingsRoutes, hotelsRoutes } from './hotels.routes.js';
 export { HotelsService } from './hotels.service.js';
 export { UpdateSettingsRequestSchema } from './hotels.schema.js';
 
