@@ -30,7 +30,7 @@
 | T01 | pnpm install verify + `make check` green | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED + GAP T01-#1 ratified (Option A — make-binary absent, underlying recipe equiv, CI runs literal make). DB verified independently (5 tables, migration applied). VERDICT §2. Gate **G1**. |
 | T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D05, no re-exec). All constraints verified (UNIQUE/FK ON DELETE/mutual-exclusion CHECK proven live). Ownership-of-record = Slot A. Full APPROVE rides Slot B batch+CI. VERDICT §2. |
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
-| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🔵 `wip · PLAN ACKED` | — | PLAN ACKED cycle 1: GAP T03-#1 → Option A (`features:{}`, Q-A-02 raised to PO) · env amendment (no `--env-file-if-exists`, Node 20 baseline) · base `d1cf477` ✓. Branch `feat/seed-foundation`. Awaiting SUBMIT (test:unit + test:integration). Gate **G1**. |
+| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🟠 `wip · BLOCKED→hotfix authorized` | — | Code green (152 unit + 35 integ incl tiers-seed 2/2). **BLOCKED**: GAP T03-#2 — `pnpm seed` crashes on `prisma-client.ts:25` `.prisma/client` value import (ERR_INVALID_MODULE_SPECIFIER, P0, on main — PM A reproduced). RULING §2: reject tsconfig Option A; **authorize 1-line root fix** (→ `@prisma/client`, Slot A canonical T02 hotfix) + P0 escalated PARENT §3c Q-A-04. Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · READY (un-blocked, next)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT after T03 PLAN (single-focus). Branch `feat/seed-foundation`. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
 
 ---
@@ -359,6 +359,58 @@ Mid-task heads-up (does NOT change your T03 implementation — keep building on 
 - Cross-slot **merge strategy** (does `feat/seed-foundation` subsume `feat/auth-core` in one merge, or two) = Parent/PO call — recorded PARENT §3c Q-A-03, not yours. Keep your branch clean + seed-scoped.
 ---
 
+##### BLOCKED T03 — exec-A (Nathan) at cycle 1 (2026-06-30)
+
+**TL;DR**: All T03 code is done + proven correct. The one blocker is a **mandatory-DoD-vs-runtime conflict** needing your scope ruling: the mandated `.prisma/client` singleton import is **invalid at runtime under tsx/Node-ESM**, so `pnpm seed` crashes. I have a **verified 1-line fix**, but it's out of "seed-files-only" scope, touches shared config, and exposes a service-wide latent bug. WIP committed `bf5517b` → pushed `origin/feat/seed-foundation` (off `feat/auth-core` tip `e4a8720`; `d1cf477` was orphaned by the feat/auth-core rebase — same Decision #0 logic).
+
+**GREEN (verified, DB up):** `pnpm lint` 0-warn · `format:check` clean · `typecheck` exit 0 · `test:unit` 152 passed · `test:integration` 35 passed incl. my `tiers-seed.integration.test.ts` 2/2 (exact §1.4 values + idempotent). With the fix below, `pnpm seed` = exit 0, 4 rows w/ exact values (lite 2000/1/3/2/1/false · professional 4000/3/3/4/3/false · luxury 8000/5/3/6/5/false · enterprise -1/-1/3/-1/-1/true · `features={}` all), re-run stays 4 (idempotent).
+
+**Blocker — `.prisma/client` = valid TYPE specifier but INVALID runtime ESM specifier:**
+- `pnpm seed` (`tsx prisma/seeds/index.ts`) imports mandated singleton `@core/prisma/prisma-client.js` → which does `import { PrismaClient } from '.prisma/client'` (value import). Node/tsx ESM throws: `ERR_INVALID_MODULE_SPECIFIER: Invalid module ".prisma/client" is not a valid package name`.
+- **Isolated from my code**: `tsx -e "import('@core/prisma/prisma-client.js')"` fails identically (singleton alone). Not my seed.
+- **Why tests still pass**: jest-resolve leniently maps `.prisma/client`→`node_modules/.prisma/client`; tsc "Bundler" mode + eslint TS resolver accept it for types. Real Node ESM (tsx / `node dist`) does not.
+- **Scope — now mainline**: `src/entrypoints/api.ts:18` imports the same singleton → `dev:api` (tsx) can't boot; `start:api` (`node dist`) emits `.prisma/client` verbatim → same crash in prod. `feat/auth-core` merged to `main` (PR #1 `12f9c4d`), so this latent runtime defect is on `main` now — broader than T03.
+
+**Verified minimal fix (keeps the mandated import, no source change):** add to `tsconfig.json` `paths`: `".prisma/client": ["node_modules/.prisma/client"]`. tsx resolves tsconfig paths at runtime → `pnpm seed` + `dev:api` work under tsx. I tested it (results above) then reverted it (unapproved scope). **Limitation**: `node dist` (prod) ignores tsconfig paths → `start:api` still broken until a build-time rewrite (`tsc-alias`) or switching value imports to `@prisma/client`. So this unblocks dev + seed (T03), not prod.
+
+**Options:**
+- **A (recommended for T03)** — you ACK the 1-line `tsconfig.json` `.prisma/client` path mapping as part of T03 (scope expansion). I apply + SUBMIT immediately. Minimal, keeps mandated import, no runtime-behavior change. Cons: shared/mainline config; doesn't fix prod `node dist`.
+- **B (root fix, bigger)** — amend `prisma-client.ts` (+ `auth.repository.ts`/`users.repository.ts` value imports) to import runtime value from `@prisma/client` keeping `.prisma/client` types. Fixes dev+prod everywhere. Touches Slot B's just-merged files → likely a **separate task**, not T03.
+- **C** — seed constructs its own `@prisma/client` instance (deviates from mandated singleton; leaves dev:api/prod broken). Rejected.
+
+**My recommendation**: **A** to unblock T03 now + **route the service-wide runtime defect (dev:api/prod) as a separate finding to PARENT/Slot-B** (their just-merged prisma-client; complete fix = B or `tsc-alias`, beyond T03). I will NOT touch prisma-client.ts/repositories without your ruling.
+
+**Specific question**: Approve Option A (1-line `tsconfig.json` `.prisma/client` path) as part of T03 so I apply + SUBMIT? And shall I draft the separate PARENT/Slot-B finding for the prod-runtime fix?
+
+Awaiting PM A ruling.
+
+###### PM A RULING — BLOCKED T03 / GAP T03-#2 — Option A REJECTED · root fix authorized (Slot A canonical) · P0 escalated (cycle 1, 2026-06-30)
+
+**Defect CONFIRMED — PM A reproduced independently** (not just accepted the report): `node --import tsx/esm -e "import('@core/prisma/prisma-client.js')"` → `ERR_INVALID_MODULE_SPECIFIER: Invalid module ".prisma/client" is not a valid package name`. Real, P0, on `main`. Good catch — would've bitten first prod/dev boot.
+
+**Blast radius — verified by PM A (corrects your Option-B scoping):** grepped all `.prisma/client` imports in `src/` on `main`. **Exactly ONE runtime value-import: `prisma-client.ts:25`.** The others — `auth.repository.ts:9`, `users.repository.ts:5`, `integration-helpers.ts:22` — are all `import type` → **erased at compile, zero runtime impact**. So Option B is NOT "3 files / touches Slot B repos" — it's **one line in `prisma-client.ts`**. Repos fine as-is.
+
+**🟢 RULING: Option A REJECTED · Option B authorized, scoped to one line.**
+- **Reject Option A** (tsconfig `.prisma/client` path): incomplete — fixes tsx only; prod `node dist` stays broken (no `tsc-alias`); shared-infra churn; masks the defect. Not acceptable as the fix.
+- **Authorize root fix (Option B, minimal):** `prisma-client.ts:25` — change the **value** import `from '.prisma/client'` → `from '@prisma/client'`. Verified by PM A: `@prisma/client` is runtime-valid (`node --import tsx/esm -e "import('@prisma/client')"` → `PrismaClient is function`) and `@prisma/client/index.d.ts` re-exports the real generated types (`export * from '.prisma/client/default'`). Fixes **dev (tsx) + prod (node dist) + seed** in one file, no tsconfig/build change.
+  - **If** `@prisma/client`'s value-type degrades to `any` under pnpm (Slot B's original concern): keep the type via `import type { PrismaClient } from '.prisma/client'` (erased — safe) + value from `@prisma/client`. Typecheck must stay green, **no new `any`** (drift floor).
+- **Ownership — NOT cross-slot trespass:** `prisma-client.ts` is **Slot A canonical** (adopt-T02: "future amendments return to Slot A"; Slot B only EXECUTED it one-off per §4-D05). Fixing it = your canonical foundation responsibility. This is a **T02 foundation hotfix (amendment)**, surfaced by T03.
+
+**Branch + verify (paste all four in SUBMIT):**
+- Branch off current `main`: `fix/prisma-client-esm-import` (seed WIP already on main via PR#2 → fix completes the picture, no revert).
+1. `pnpm seed` exit 0 + 4 exact rows + idempotent re-run.
+2. `pnpm typecheck` green, **no new `any`**.
+3. `pnpm build` (`tsc -p tsconfig.build.json`) → import/`node --check` the built `dist/**/prisma-client.js` resolves — **proves PROD fixed**, not just dev.
+4. `pnpm dev:api` (tsx) boots past the singleton import (api up) — **proves G1 "make start/api boots"**.
+
+**Escalation — I handle it (not you).** P0 latent defect reached `main` (PR#1+PR#2). I'm escalating to Parent/PO (PARENT §3c Q-A-04 + §2): (a) api could never boot dev/prod → **G1's "make start/api boots" was never actually validated** (T01 `make start` = DB+Redis deps only, never booted the api process — I own that gap in my T01 sign-off); (b) PR#2 merged blocked/unapproved T03 WIP to main. **You do NOT draft the PARENT finding — that's my job.** You: one-line fix + 4-point verify + SUBMIT T03.
+
+**T03 status:** BLOCKED → unblocked by the one-line foundation fix. Once `pnpm seed` runs green, your T03 (code already verified-green) → SUBMIT → I VERDICT. T04 follows.
+
+_Awaiting Executor A: foundation hotfix `prisma-client.ts:25` + T03 SUBMIT (4-point evidence)._
+
+---
+
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
 > Di-stage supaya Executor A lihat seluruh jalur. Belum aktif sampai dependency tercapai.
@@ -495,6 +547,7 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 | ------------- | -------- | -------------- | ------ | ---------- |
 | GAP T01-#1    | `make` binary unavailable on host (macOS CLT absent → `/usr/bin/make` = xcode-select stub). Literal `make check/start/db-migrate` cannot run. | SUBMIT T01 §2 (exec-A) | **resolved** 2026-06-30 by PM A | **Option A ratified**: underlying-recipe (pnpm/docker) substitution accepted for G1 sign-off — `make` is thin wrapper; each recipe reproduced green; canonical `make` runs in CI on PR. Option B (Xcode CLT install) NOT required. Slot-internal (no PO escalation). Forward: T03/T04 use `pnpm seed`/`pnpm seed:super-admin` directly. See §6 incident. |
 | Q-A-02        | Per-tier `tiers.features` JSONB unlock map — exact 19-key matrix × 4 tiers. Sources absent in-repo: `src/mocks/fixtures/feature-flags.ts` (FE) + `docs/DEVELOPMENT-PLAN.md`. Needed before **T08** (`GET /api/admin/tiers` returns features, G3). | GAP T03-#1 (exec-A PLAN T03) | **open → PO** (raised PARENT §3a, 2026-06-30) | **PO action**: supply the per-tier feature matrix (or confirm `{}`-until-Hotel-Core). T03 ships now with `features: {}` (schema default, nothing reads it in auth scope) — **non-blocking**; backfill via upsert re-run. Cross-ref `open-questions.md` Q-CONTRACT-08 (FE feature-flags shape / 19 names). |
+| GAP T03-#2    | `pnpm seed` / `dev:api` / prod `start:api` crash: `prisma-client.ts:25` does a runtime **value** import `from '.prisma/client'` (invalid ESM specifier → `ERR_INVALID_MODULE_SPECIFIER`). Latent (jest resolver lenient); on `main` via PR#1+#2. **PM A reproduced.** Only 1 value-import site (repos use `import type` = safe). | BLOCKED T03 (exec-A) | **resolved-direction** 2026-06-30 by PM A; **P0 escalated** PARENT §3c Q-A-04 | **RULING §2**: reject tsconfig Option A (prod stays broken); **authorize 1-line root fix** `prisma-client.ts:25 → '@prisma/client'` (runtime-valid, real types; Slot A canonical T02 hotfix). 4-point verify (seed/typecheck/build-dist/dev:api). Unblocks T03. |
 
 ---
 
@@ -584,6 +637,16 @@ QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 **Fail-open boundary**: protected route yang di-wire dengan tenant-guard TAPI tanpa jwt-auth → missing cookie lolos = fail-open (langgar MVP §4.1).
 
 **How to apply**: Slot A jaga invariant ini di tiap amendment tenant-guard masa depan + flag saat review wiring route (relevan T07 wiring, Slot B). Informational note ke Parent §10 (cross-dev). Bukan blocker adopt — ADOPTED.
+
+### 2026-06-30 — `.prisma/client` value-import = runtime ESM crash (P0, durable lesson)
+
+**What**: `src/core/prisma/prisma-client.ts:25` did `import { PrismaClient } from '.prisma/client'` (runtime **value** import). `.prisma/client` is a valid TYPE specifier but **invalid Node-ESM runtime specifier** → `ERR_INVALID_MODULE_SPECIFIER`. Crashed `pnpm seed`, `dev:api` (tsx), prod `start:api` (`node dist`). **Latent on main** (PR#1+#2) until T03's `pnpm seed` (first standalone Node-ESM process importing the singleton) exposed it. Surfaced by exec-A BLOCKED T03; PM A reproduced. Fix: 1-line → `@prisma/client` (runtime-valid; Slot A canonical T02 hotfix). Detail §3 GAP T03-#2 + §2 RULING.
+
+**Why it hid**: jest's resolver leniently maps `.prisma/client`→`node_modules/.prisma/client`; tsc Bundler mode + eslint accept it for TYPES. So 187 tests green while the service can't boot. **Type-check + test-green ≠ runtime-boots.**
+
+**How to apply (durable for Slot A)**:
+- For generated Prisma client: **value** imports go through `@prisma/client` (valid specifier); only `import type` may reference `.prisma/client` (erased at runtime).
+- **Don't trust "tests green" as boot-proof.** Foundation/G1 sign-off MUST include an actual runtime boot of the entrypoint (`dev:api` under tsx + a `node dist` import), not just `make check` + deps-up. ⚠️ **T01 gap owned**: T01 `make start` validated DB+Redis deps + migration but never booted the api process — this defect slipped my T01 APPROVE. Future foundation sign-offs add an api-boot step.
 
 ---
 
