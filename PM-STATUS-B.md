@@ -13,12 +13,12 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Slot B sequence COMPLETE**: ALL 6 tasks FULL APPROVE (T02 + T05 + T06 + T07 + T11 + T02-sub-1). Quartet upgrade conditions (a)-(e) ALL SATISFIED.
-- **Quartet status table**: T05+T06+T07+T11 all flipped `approved-partial → approved` via batch VERDICT cycle 7 close (this event); T02 (cycle 6 first FULL APPROVE); T02-sub-1 (cycle 7 FULL APPROVE direct).
-- **Branch state**: `feat/auth-core` (50 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07 + 5 T02 + 6 T02-sub-1). **READY for merge to `main`**.
-- **Cross-slot ceremony complete**: 7 §4-D01 footer commits (5 cycle-4 T11 + 2 cycle-7 T11 integration) + 5 §4-D05 footer commits (cycle 6 T02). Canonical record for Slot A future audit complete.
-- **Audit trail**: 185 total tests pass (155 unit + 30 integration); 1 PO escalation handled (Q-B-01); 2 cross-slot deviations executed clean (§4-D01 + §4-D05); 1 REQUEST-FIX round (T06 spec compliance); Q-B-02(b) resolved inline (3 others Slot A future pickup); zero branch hygiene violation; 100% ceremony compliance.
-- **Next phase**: PM B coordinate merge. **PM B recommend `git merge --no-ff` (option b)** to preserve 50-commit history + 12 cross-slot footer evidence. **PO decides** final merge convention.
+- **Active task (cycle 8)**: T10 — Hotel context + settings · `assigned · READY-FULL (cross-slot per §4-D09, cycle 8 Slot B execution)`. ASSIGNMENT issued 2026-06-30. **First Slot C absorption task (3/3 split per PO 2026-06-30)**. Warm-up before T08. Branch: NEW `feat/slot-c-absorption-b`.
+- **Slot B canonical sequence COMPLETE**: T02 + T05 + T06 + T07 + T11 + T02-sub-1 all FULL APPROVE (cycle 7 close batch). `feat/auth-core` in merge coordination — PO/Parent PM authority.
+- **Cycle 8+ phase**: Slot C absorption active per PO 2026-06-30. Slot B handles T10 (§4-D09, warm-up, no blocker) then T08 (§4-D07, after Slot A T04 ship). Slot A handles T09 (§4-D08, after T04). Slot C OFFLINE (Satrio busy other repo).
+- **Cross-slot ceremony for cycle 8+**: T10 commits → §4-D09 footer (Slot C canonical territory); T08 commits → §4-D07 footer. Mirrors §4-D01/§4-D05 precedent.
+- **Branch isolation**: `feat/slot-c-absorption-b` (Slot B cycle 8+ work) separate from `feat/auth-core` (merge coord) + `feat/seed-foundation` (Slot A T03/T04).
+- **Schema verified at ASSIGNMENT**: Hotel table has direct `timezone` + `branding` (JSONB) + `dnd` (JSONB) columns — NO separate `hotel_settings` table. NO schema change needed for T10.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -34,6 +34,7 @@
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
 | T02-sub-1 | Quartet integration backfill (27 it.todo → 30 real assertions across 3 files) | `approved · cycle 7 close (FULL APPROVE direct)` | PM B — cycle 7 (2026-06-30) batch attempt 1 | BATCH VERDICT cycle 7 (2026-06-30) → FULL APPROVE. 17/17 verifications match. 6 DDs ACCEPT; 4 open items resolved. Cross-slot ceremony 2/6 §4-D01 both T11-file-only ✅. Mixed-scope clean: 4 PLAIN + 2 §4-D01 commits. 30 integration assertions (+3 over 27 plan: 1 happy-demote symmetry T07 + 2 tenant-guard coverage T11 lift 75→88.88%). Critical repo line coverage ALL ≥80% (auth.repo 85.18% / users.repo 82.5% / tenant-guard 88.88%). Quartet upgrade conditions (b)-(e) ALL SATISFIED. |
+| T10 | Hotel context + settings (`GET /api/hotels/me` + `GET/PUT /api/settings/hotel`) | `assigned · READY-FULL (cross-slot per §4-D09, cycle 8 Slot B execution)` | —              | Cycle 8 task. ASSIGNMENT issued 2026-06-30. **First Slot C absorption (3/3)** per §4-D09 (PO 2026-06-30). Ownership of record = Slot C; execution by Slot B this cycle only. Scope: 3 endpoints + new src/modules/hotels/ module. Super_admin /hotels/me returns option (b) `{ id: null, tier: null }` per spec §5. PUT whitelist: timezone/branding/dnd. No upstream blocker. ETA ~3-5h. Cross-slot commit ceremony WAJIB §4-D09 footer (mirror §4-D01/§4-D05). Branch: NEW `feat/slot-c-absorption-b`. Schema verified at ASSIGNMENT: Hotel direct columns OK; no schema change. |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) via auth.repository.integration.test.ts 16 tests T05+T06 consolidated; repo coverage ≥80% ✓ (c) auth.repository.ts 85.18%; drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 2 unit-scope baseline preserved (98.56% stmt / 100% line / critical 100%). |
 | T06 | Auth current-user + password rotation gate | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) consolidated in auth.repository file — T06 paths (rotation + revokeAllOtherSessions + getMe + updateMeLanguage) covered; repo coverage ≥80% ✓ (c); drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 3 attempt 2 BusinessRuleError 422 fix (spec §1.1) preserved. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | **`approved · cycle 7 close (FULL APPROVE batch, cross-slot per §4-D01 preserved)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) tenant-guard.plugin.integration.test.ts 4 base + 2 coverage = 6 assertions (Commits 4 + 6 both §4-D01 footer); repo coverage ≥80% ✓ (c) tenant-guard.ts 88.88% post-Commit-6 lift; drift zero ✓ (d); VERDICT FULL ✓ (e). **Cross-slot heritage COMPLETE**: 7 §4-D01 footer commits total (5 cycle-4 + 2 cycle-7) + plugin file JSDoc + integration test line-6 marker preserved. Slot A re-takes future tenant-guard amendments. |
@@ -4987,6 +4988,187 @@ Branch state:
 - `PM-STATUS-PARENT.md §2` short roll-up appended (significant milestone marker)
 
 PM B exits to **wait-mode for PO direction on merge convention + post-merge state**. Branch `feat/auth-core` stays open until PO/Parent PM authorizes merge sequence. After merge → Slot B work loop fully closed; PM B + Executor B idle until next Slot B task issued.
+
+### ASSIGNMENT T10 — claimed by exec-B (Nanak) cycle 8 (2026-06-30). CROSS-SLOT execution per PARENT §4-D09 (Slot C canonical ownership of record; Slot B execution one-off per Slot C absorption ruling 2026-06-30). EVERY commit body MUST reference §4-D09.
+
+- **Spec row pointer**: `docs/spec/MVP-AUTH-FIRST.md §1` rows 8 + 10 + `docs/spec/01-auth-identity.md §1.5` (Hotel context shape — id + tier; gm_admin per-hotel write timezone/DND/branding) + `MVP-AUTH-FIRST §5` open behavior Q (super_admin `/hotels/me` recommended option (b) `{ id: null, tier: null }`)
+- **Routed from**: PARENT §1 T10 row `assigned · READY-FULL (no upstream blocker)` + PARENT §4-D09 deviation entry (PO ratified 2026-06-30) + PARENT §10 absorption coord
+- **Branch**: **new** `feat/slot-c-absorption-b` (NOT `feat/auth-core` which is in merge coordination per BATCH VERDICT cycle 7 close; NOT `feat/seed-foundation` which is Slot A territory)
+- **Status flag**: `assigned · READY-FULL (cross-slot per §4-D09, cycle 8 Slot B execution)`
+- **Gate target**: G3 (auth admin surface — T10 + T08 collectively close G3 once T08 also ships)
+- **No upstream blocker**: T11 tenant-guard already wired (T07 cycle 5); T02 migration ships (cycle 6); first Slot C absorption task = warm-up before T08
+
+#### Cross-slot heritage (audit trail — WAJIB di setiap commit + SUBMIT/VERDICT) — mirror §4-D01/§4-D05 ceremony
+
+- **Canonical owner of record**: Slot C (Satrio) per `docs/SERVICE-CHARTER.md §3` (Auth admin surface)
+- **Execution this cycle**: Slot B (Nanak) one-off per `PARENT §4-D09` deviation (PO ratified 2026-06-30 — Slot C absorption split 3/3)
+- **Reason for deviation**: Slot C (Satrio) OFFLINE (busy other repo); PO absorption ruling distributes Slot C tasks across Slot A + Slot B. T10 → Slot B because it mirrors T06's `/me` pattern (read + gm_admin scoped settings PUT with own-hotel tenant scope) — Auth-adjacent skill match.
+- **Commit message pattern (WAJIB for every T10 commit)**:
+  ```
+  <type>(<scope>): <subject — short>
+
+  Cross-slot execution per §4-D09 (Slot C canonical territory).
+  ```
+- **SUBMIT block WAJIB header note**: `Cross-slot execution per §4-D09`
+- **VERDICT block WAJIB header note**: `cross-slot heritage per §4-D09`
+- **Code-file header markers** (mirror tenant-guard.ts §4-D01 + prisma-client.ts §4-D05 patterns):
+  - `src/modules/hotels/hotels.routes.ts` JSDoc header MUST include §4-D09 reference
+  - Optional: `hotels.service.ts` + `hotels.repository.ts` headers (Executor decide — minimum 1 file-level marker)
+- **Future amendment audit trail**: this ASSIGNMENT + PLAN + ACK + SUBMIT + VERDICT chain is the canonical handoff record for Slot C re-onboarding; T10 execution stays in historical record under §4-D09 (Slot B one-off). Future hotel-context/settings amendments return to Slot C.
+
+#### PM B notes — Scope this cycle (FULL APPROVE convention — no PARTIAL needed since no upstream blocker)
+
+**In scope this submission**:
+
+1. **`GET /api/hotels/me`** — return current hotel context (`{ id, tier, name?, ... }` per spec §1.5 line 197 "id + tier"):
+   - **authenticated** (any role; tenant-guard already wired from T07)
+   - For non-super_admin (gm_admin/dept_head/staff): query Hotel by `req.tenantScope.hotelId`; return `{ id, name, tier, status, timezone, branding, dnd }` (Executor decide minimum shape per spec §1.5 line 197 = "id + tier"; PM B recommend FULL hotel shape since spec note is minimum — verify in PLAN)
+   - **For super_admin** (per `MVP-AUTH-FIRST §5` open-Q resolution): return literal `{ id: null, tier: null }` per recommended option (b). Spec line 92: "Recommend (b) for simplicity; FE's `/admin/hotels` page doesn't depend on `/api/hotels/me` anyway."
+2. **`GET /api/settings/hotel`** — return hotel settings for **gm_admin scope** (verify role gating in PLAN; spec §1.5 line 198 says "gm_admin per-hotel write" but read might be wider — Executor confirm):
+   - Response: `{ timezone, branding, dnd }` (whitelist per spec §1.5 line 198 + line 205 "GM edits their own hotel's DND/branding")
+   - Scoped to `req.tenantScope.hotelId`
+3. **`PUT /api/settings/hotel`** — update gm_admin-writable settings fields:
+   - Body whitelist: `{ timezone?, branding?, dnd? }` (per spec §1.5 line 198 + 205)
+   - Server-enforced: role MUST be `gm_admin`; super_admin must use `/api/admin/hotels` (Slot A T09 territory per §4-D08)
+   - Schema verified at ASSIGNMENT: `Hotel.timezone` (VARCHAR(50) default "Asia/Jakarta") + `Hotel.branding` (JSONB nullable) + `Hotel.dnd` (JSONB nullable) — direct columns on Hotel table; NO separate `hotel_settings` table
+4. **NEW module** `src/modules/hotels/` (analogous to T07's `src/modules/users/` scaffold)
+5. **tenant-guard wiring** ALREADY done in T07 (`entrypoints/api.ts`) — T10 just adds `fastify.register(hotelsRoutes, { prefix: '/api/hotels' })` + `fastify.register(hotelSettingsRoutes, { prefix: '/api/settings' })` OR combined under one module (Executor decide path; PM B recommend single module with 2 prefixes since routes share `HotelsService` — see file ownership)
+6. **Unit tests** covering 4-role + tenant scoping + super_admin behavior (b)
+
+**Explicitly OUT-of-scope this cycle**:
+- **`/api/admin/hotels` family** (super_admin platform-level CRUD: create/read/update/suspend) — T09 Slot A territory per §4-D08; DO NOT touch
+- **Tier catalog `/api/admin/tiers`** — T08 territory (next Slot B cycle); DO NOT touch
+- **Hotel CREATE/DELETE** — `/api/admin/hotels` scope (T09)
+- **Suspend cascade** — T09 scope
+- **Settings versioning / audit log** — deferred (T_AUX backlog)
+- **Hotel.name + Hotel.code editing via /settings/hotel** — those are super_admin scope via /api/admin/hotels (T09); /settings/hotel is per spec gm_admin-writable subset only
+- **schema.prisma changes** — ZERO touches (verified at ASSIGNMENT: all needed fields present)
+- **package install** — no new dep needed
+
+#### PM B notes — DoD this submission (~13 items)
+
+- [ ] **3 endpoints functional** with tenant-guard scoping
+- [ ] **NEW module `src/modules/hotels/`** scaffold per MODULE_TEMPLATE.md (mirrors T07 users module)
+- [ ] **`GET /api/hotels/me` super_admin path** returns literal `{ id: null, tier: null }` per spec §5 option (b)
+- [ ] **`GET /api/hotels/me` non-super_admin path** returns hotel context scoped to `req.tenantScope.hotelId`
+- [ ] **`GET /api/settings/hotel`** returns `{ timezone, branding, dnd }` for gm_admin (role gate verified)
+- [ ] **`PUT /api/settings/hotel`** updates whitelisted fields only (timezone/branding/dnd); rejects unknown fields via zod `.strict()`
+- [ ] **Server-enforced role**: super_admin → `ForbiddenError('Use /api/admin/hotels for platform-level edits')` on PUT
+- [ ] **Tenant scoping**: every repo query consumes `req.tenantScope.hotelId` (verified via mocked scope test)
+- [ ] **Cross-slot heritage**:
+  - Footer on ALL impl commits: `Cross-slot execution per §4-D09 (Slot C canonical territory).`
+  - SUBMIT + VERDICT headers carry §4-D09 marker
+  - `hotels.routes.ts` JSDoc header §4-D09 reference (minimum 1 file-level marker)
+- [ ] **Unit tests** per TESTING.md §4 (mock port + mock repo INSTANCE; reuse T05/T06/T11/T07 precedent):
+  - 4-role coverage: super_admin (option-b return) / gm_admin (own-hotel read+write) / dept_head (read only — verify spec) / staff (read only — verify spec)
+  - Cross-tenant deny via mocked req.tenantScope
+  - PUT field whitelist enforcement (zod strict reject)
+- [ ] **Coverage ≥80% line floor**; target ≥90% on service/routes/schema (critical security per TESTING.md §9)
+- [ ] **`make check` green** (lint + format + typecheck + test-unit)
+- [ ] **Drift floor zero** scoped to T10 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / forbidden imports / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+- [ ] **Security floor** (CLAUDE.md §6 + SECURITY.md):
+  - No plaintext leak in error response
+  - Email/PII masking via `maskEmail()` IF settings include user-identifying data (likely N/A — settings are hotel-level)
+  - tenant-guard plugin active (already wired T07; T10 just consumes `req.session.hotelId`)
+  - Role gate at handler entry (gm_admin only for PUT)
+- [ ] **APPROVE convention**: **FULL APPROVE direct** (NOT PARTIAL) — T02 ships, no upstream blocker; this is first FULL APPROVE direct for Slot C absorption work
+
+#### PM B notes — File ownership
+
+**CREATE** (9 module files + tests):
+```
+src/modules/hotels/
+├── index.ts                          (barrel — export hotelsRoutes + HotelsService type)
+├── hotels.routes.ts                  (Fastify plugin — GET /hotels/me + GET/PUT /settings/hotel; JSDoc §4-D09 reference)
+├── hotels.service.ts                 (orchestrator: scope filter + super_admin option-b branch)
+├── hotels.repository.ts              (Prisma direct — findHotelById + updateSettings)
+├── hotels.schema.ts                  (zod: GetHotelMeResponseSchema, GetSettingsResponseSchema, UpdateSettingsRequestSchema)
+├── hotels.types.ts                   (HotelContext + HotelSettings domain types)
+└── __tests__/
+    ├── hotels.service.test.ts        (unit — mock repo class instance)
+    ├── hotels.routes.test.ts         (unit — Fastify inject + mocked req.session)
+    └── hotels.schema.test.ts         (unit — zod parse)
+```
+
+**EDIT additive** (1-2 files):
+```
+src/entrypoints/api.ts                EDIT: register hotelsRoutes (likely 1-2 lines: import + fastify.register call with prefix)
+src/shared/types/fastify-augmentation.ts  EDIT optional: extend AppServices with `hotels: HotelsService` (if Executor wires service decorator like users/auth)
+```
+
+**File count**: **9 CREATE / 1-2 EDIT** (mirrors T07 users module scaffold pattern).
+
+**NO TOUCH ZONES**:
+- **`prisma/schema.prisma`** — ABSOLUTE NO-TOUCH. Schema verified at ASSIGNMENT: `Hotel.timezone` + `Hotel.branding` + `Hotel.dnd` all present as direct columns. ZERO schema changes needed.
+- `src/modules/auth/*` — boundary (auth domain)
+- `src/modules/users/*` — boundary (gm_admin user mgmt domain; T07)
+- `src/plugins/tenant-guard.ts` — T11 plugin reused as-is via `req.session` + `req.tenantScope`; NO modifications
+- `src/plugins/must-rotate-password.plugin.ts` — T06 plugin reused
+- `src/core/prisma/prisma-client.ts` — T02 singleton reused
+- `src/modules/auth/auth.errors.ts` — only TOUCH if new error subclass needed (e.g., `HotelNotFoundError` — but `NotFoundError` from `@core/errors/app-errors.js` may suffice; Executor decide at PLAN, recommend reuse `NotFoundError` per heavy-AppError-reuse principle)
+- `package.json` / `pnpm-lock.yaml` — no new dep
+- `PM-STATUS-A.md` / `PM-STATUS-C.md` / `PM-STATUS-PARENT.md` (PM B writes §2 roll-up only — not Executor's scope)
+- Q-B-02 workarounds — slot-internal, not T10 scope
+
+#### PM B notes — Parent doc refs (WAJIB baca Executor sebelum PLAN)
+
+- **`docs/spec/MVP-AUTH-FIRST.md §1`** rows 8 + 10 — endpoint list
+- **`docs/spec/MVP-AUTH-FIRST.md §5`** open-Q — super_admin `/hotels/me` recommended option (b) `{ id: null, tier: null }` per line 92
+- **`docs/spec/01-auth-identity.md §1.5`** — Hotel context shape (id + tier; gm_admin per-hotel write timezone/DND/branding); soft-delete only (no hard-delete in MVP)
+- **`docs/SERVICE-CHARTER.md §3`** — slot ownership matrix (Slot C canonical context for §4-D09)
+- **`PARENT §4-D09`** — deviation entry (cross-slot ceremony mandate)
+- **`PARENT §10`** absorption coord — context for 3/3 Slot C absorption
+- **`docs/MODULE_TEMPLATE.md`** — new module scaffold pattern (T07 users module is recent canonical reference)
+- **`CLAUDE.md §4`** (Hexagonal Disiplin — Prisma direct, no port wrap for repo) + `§5` (TS strict + naming + AppError) + `§6` (security floor) + `§8` (testing 80% floor)
+- **`docs/TESTING.md §4`** (unit pattern — mock port + mock repo INSTANCE) + `§9` (coverage targets)
+- **`docs/decisions/0001-hexagonal-disiplin.md`** — middleware/Prisma rules
+- **`docs/decisions/0008-repo-scope-auth.md`** — multi-hotel scoping
+- **`src/modules/users/`** (T07 reference pattern — recent canonical new-module scaffold)
+- **`src/modules/auth/auth.routes.ts`** (route registration pattern)
+- **`src/plugins/tenant-guard.ts`** (`req.session` + `req.tenantScope` shape — T11 contract)
+- **PM-STATUS-B.md §2** ASSIGNMENT T11 + ASSIGNMENT T02 (cross-slot ceremony precedents)
+
+#### PM B notes — Acceptance criteria (~6 items)
+
+1. 3 endpoints functional (`GET /hotels/me` + `GET /settings/hotel` + `PUT /settings/hotel`) per spec shapes
+2. **Cross-slot heritage compliance** (mirror §4-D01/§4-D05): footer on ALL impl commits + SUBMIT/VERDICT headers + ≥1 code-file header marker
+3. super_admin `/hotels/me` returns literal `{ id: null, tier: null }` per spec §5 option (b)
+4. Tenant scope enforced via `req.tenantScope.hotelId` consumption (no cross-hotel access)
+5. `make check` green; drift zero; coverage ≥80% line on service/routes/schema (≥90% target critical)
+6. **FULL APPROVE convention direct** (T02 ships; no PARTIAL holding pattern needed)
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 8 = T10** (first Slot C absorption — warm-up; ~3h ETA per PARENT §4-D09)
+- **Cycle 9 = T08** (cross-slot per §4-D07; ~6h; **gated by Slot A T04 ship** for integration test phase per PARENT §4-D07; PARTIAL APPROVE OK for unit-only before T04 ship)
+- **Branch**: NEW `feat/slot-c-absorption-b` (separate from `feat/auth-core` which is in merge coordination; separate from `feat/seed-foundation` which is Slot A territory). Slot B work isolated from Slot A's parallel foundation work.
+- **Branch hygiene §7**: T10 impl commits on `feat/slot-c-absorption-b`; PM-STATUS commits on `main` (this ASSIGNMENT, ACK, SUBMIT, VERDICT)
+- After T10 FULL APPROVE → T08 ASSIGNMENT next cycle (PARTIAL or chain decision per Slot A T04 status)
+- No further Slot C absorption tasks after T08 (3/3 absorption split: T08 Slot B + T09 Slot A + T10 Slot B)
+
+#### PM B notes — 4 Open items untuk Executor B raise di PLAN
+
+1. **Hotel settings storage** — ✅ **PRE-RESOLVED at ASSIGNMENT**: PM B verified `prisma/schema.prisma:51-70` shows `Hotel.timezone` + `Hotel.branding` (JSONB) + `Hotel.dnd` (JSONB) are direct columns on the Hotel table. NO separate `hotel_settings` table. PUT updates Hotel row via Prisma `update` with whitelisted fields. **NO GAP, NO schema change needed**. Executor confirm at PLAN by re-reading lines 51-70.
+
+2. **super_admin `/hotels/me` response** — ✅ **spec-pinned option (b)**: literal `{ id: null, tier: null }` per `MVP-AUTH-FIRST §5` line 92 recommendation. PM B confirms (b). Executor implement verbatim shape; raise GAP only if FE handler shape demands variation.
+
+3. **PUT `/api/settings/hotel` field whitelist** — PM B recommend `{ timezone?, branding?, dnd? }` per spec §1.5 line 198 + 205 explicit ("GM edits their own hotel's DND/branding" + line 198 "timezone/DND/branding"). Reject any other field via zod `.strict()`:
+   - `name` + `code` → super_admin scope via `/api/admin/hotels` (T09); NOT writable here
+   - `tierId` → super_admin scope (T09 platform-level)
+   - `status` → super_admin suspend cascade (T09)
+   - `gmContact` → derived from users table; not directly writable
+   - Executor confirm whitelist 3 fields (`timezone`, `branding`, `dnd`) + verify spec at PLAN
+
+4. **Idempotency on PUT** — spec does NOT mandate optimistic locking. PM B recommend simple PUT (last-write-wins; Prisma `updatedAt` auto-bumps). Executor confirm; if spec audit reveals ETag/version requirement, raise GAP `T10-#1`. Default proceed simple PUT.
+
+**Notes for Executor B**:
+- **Light cycle** — 3 endpoints + new module + scope filter. No new business logic beyond T07 module pattern. ETA ~3-5h matches PARENT §4-D09 estimate (~3h).
+- **Pattern reuse HEAVY** — mirror T07 users module scaffold (recent canonical); reuse tenant-guard `req.session` + `req.tenantScope` (T11 contract); reuse AppError hierarchy (`NotFoundError` if hotel not found by tenantScope hotelId; `ForbiddenError` if PUT called by super_admin).
+- **Cross-slot ceremony mandate** — every impl commit MUST carry §4-D09 footer (mirror §4-D01/§4-D05 ceremony enforced previously). Code-file header in `hotels.routes.ts` JSDoc minimum. Audit at SUBMIT will grep-verify count = impl commit count.
+- **NEW branch**: `feat/slot-c-absorption-b` — first commit creates branch via `git checkout -b feat/slot-c-absorption-b main` (branch from `main` post BATCH VERDICT cycle 7 close).
+- **Estimate**: ~3-5h impl + test + self-validate per PARENT estimate.
+
+Awaiting Executor B PLAN T10 attempt 1.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
