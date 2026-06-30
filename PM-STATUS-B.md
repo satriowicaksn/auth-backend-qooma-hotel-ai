@@ -3821,6 +3821,188 @@ Then proceeds with Commit 1 (`pnpm prisma migrate dev --create-only --name init`
 
 **Awaiting owner resolution (Docker daemon start), then Executor B resume.**
 
+#### SUBMIT T02 — exec-B (Nanak) cycle 6 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D05.
+
+**Cross-slot heritage** — mirror §4-D01 ceremony from T11:
+- Canonical owner: Slot A (Nathan)
+- Execution this cycle: Slot B (Nanak) one-off per `PARENT §4-D05`
+- All 5 impl commits carry footer `Cross-slot execution per §4-D05 (Slot A canonical territory).` — audit verified below (5/5)
+- Code-header: `src/core/prisma/prisma-client.ts` JSDoc carries `§4-D05` reference line (grep-able from source, mirror tenant-guard `§4-D01` pattern)
+
+**Resume context**: cycle-6 HALT block above (`exec B: HALT T02 impl — Docker daemon down (pre-flight gate)`, commit `0fb8320`) cleared by owner. Docker daemon restored. Pre-flight gate retried green; no shim invoked.
+
+Task: First Prisma migration (`init`) generated from `prisma/schema.prisma` + applied to local Postgres 15 (host port 5433) + real `PrismaClient` singleton swapped in (Q-B-02(b) inline resolution) + entrypoint cast cleanup + 3-sub-test smoke against the live DB. **FULL APPROVE convention** per ACK AC #6 — quartet (T05+T06+T11+T07) batch FULL APPROVE expected on T02 VERDICT.
+
+Branch: `feat/auth-core` rebased atop main (ACK + HALT synced); force-pushed. **44 commits ahead of main total** (10 T05 + 10 T06 + 5 T11 + 14 T07 + 5 T02).
+
+T02 files changed: **6** (`3 CREATE / 3 EDIT` — adjusted from PLAN 3/2 by adding `test-setup.ts` env loader, see DD2 below)
+T02 LOC delta vs `f92f4cc` (T07 SUBMIT tip): **+417 / -38**
+
+```
+A  prisma/migrations/20260630042913_init/migration.sql              (+121 base + 29 manual CHECK = 150 lines)
+A  prisma/migrations/migration_lock.toml                            (Prisma-generated, provider=postgresql)
+A  src/core/prisma/__tests__/prisma-client.smoke.test.ts            (3 sub-tests against live PG)
+M  src/core/prisma/prisma-client.ts                                 (uncomment template + real singleton + §4-D05 JSDoc; line 29 placeholder removed; sync `shutdown()` to satisfy `no-misused-promises`)
+M  src/entrypoints/api.ts                                           (-7 lines: cast + Q-B-02(b) comment block + unused `PrismaClient` type import all removed)
+M  src/shared/utils/test-setup.ts                                   (env loader + NODE_ENV coercion + ENCRYPTION_KEY dummy — supports prisma-client smoke test loadConfig at module load)
+```
+
+Commits (5 — PLAN sequence; Phase-3 "apply migration" landed as zero-LOC DB-state shift, no separate commit per PLAN Phase 3 note):
+
+1. `2ff5587` — chore(prisma): generate init migration via --create-only
+2. `e82ed19` — chore(prisma): append mutual-exclusion + name + status + language CHECKs
+3. `def59a6` — refactor(prisma): real PrismaClient singleton + §4-D05 JSDoc (Q-B-02(b) inline) *(amended pre-push to import from `.prisma/client` for typed `PrismaClient` + sync `shutdown()` to satisfy `no-misused-promises`)*
+4. `65aef3f` — refactor(api): remove db cast + Q-B-02(b) comment block
+5. `ccbc37e` — test(prisma): smoke suite — connection + UNIQUE + CHECK trip
+
+**Cross-slot footer audit**: `git log --format="%B" feat/auth-core ^f92f4cc | grep "§4-D05"` — all 5 commits each carry the footer:
+- `2ff5587`: 1 occurrence (footer)
+- `e82ed19`: 1 occurrence (footer + inline reference in the migration SQL comment block counts once due to grep)
+- `def59a6`: 3 occurrences (subject mentions `§4-D05` + JSDoc header line + footer)
+- `65aef3f`: 1 occurrence (footer)
+- `ccbc37e`: 1 occurrence (footer)
+- Total grep count across T02 commit bodies: **7 occurrences across 5 commits** = 100% commit coverage ✓
+
+Migration.sql summary (`prisma/migrations/20260630042913_init/migration.sql`):
+- Lines 1-121: Prisma-generated DDL — 5 tables (`tiers`, `hotels`, `users`, `sessions`, `password_reset_tokens`) + UNIQUE indexes (`tiers_name_key`, `hotels_code_key`, `users_hotel_id_email_unique`) + FK constraints (hotels→tiers Restrict, users→hotels Restrict, sessions→users Cascade, password_reset_tokens→users Cascade) + `@@index` constraints (`hotels(status, tier_id)`, `users(role, hotelId+isActive)`, `sessions(userId+revokedAt, expiresAt)`, `password_reset_tokens(userId)`)
+- Lines 123-150: manually appended 5 CHECK constraints (per `prisma/schema.prisma:141-163` comment block):
+  - `tiers_name_check` (enum: lite | professional | luxury | enterprise)
+  - `hotels_status_check` (enum: active | suspended)
+  - `users_role_check` (enum: super_admin | gm_admin | dept_head | staff)
+  - `users_role_hotel_mutual_exclusion` (super_admin ↔ hotel_id NULL/NOT NULL)
+  - `users_language_check` (enum: id | en)
+- Apply verified via `docker compose exec postgres psql -U app -d app -c "SELECT conname FROM pg_constraint WHERE contype='c' ...;"` — all 5 CHECK constraints present.
+
+DoD self-check (~13 items per ASSIGNMENT)
+
+- [x] **Migration file generated** at `prisma/migrations/20260630042913_init/migration.sql` via `pnpm prisma migrate dev --create-only --name init` ✓
+- [x] **Schema applied locally** — `pnpm prisma migrate dev` exits 0 (Phase 3 zero-LOC DB-state shift) ✓
+- [x] **`prisma/migrations/migration_lock.toml`** present + committed (provider=postgresql) ✓
+- [x] **Prisma client regenerated** — `node_modules/.prisma/client/index.d.ts:56` exports typed `PrismaClient` class ✓ (typecheck PASS post-singleton swap)
+- [x] **`src/core/prisma/prisma-client.ts`** exports real `PrismaClient` singleton — template uncommented + line 29 placeholder removed + JSDoc `§4-D05` reference added. Lifecycle: SIGTERM/SIGINT process-level shutdown per template (matches Ruling #4) ✓ Q-B-02(b) resolved inline.
+- [x] **≥1 smoke integration test** at `src/core/prisma/__tests__/prisma-client.smoke.test.ts` passes against migrated DB — **3 sub-tests** per Open Item #3:
+  - (a) connection round-trip (tier insert/select/delete) ✓
+  - (b) UNIQUE(hotel_id, email) trip → Prisma `P2002` ✓
+  - (c) mutual-exclusion CHECK trip → Postgres error `23514` `users_role_hotel_mutual_exclusion` ✓ — **proves the manual SQL CHECK from Commit 2 is live in DB**
+- [x] **All existing 152 unit tests + 27 it.todo + 2 skipped still PASS** post-PrismaClient swap-in — verified: 155 pass (152 + 3 smoke) + 27 todo + 2 skipped suites ✓
+- [x] **Entrypoint cleanup**: `const prisma = db as unknown as PrismaClient;` cast removed; `import type { PrismaClient } from '.prisma/client'` (no longer needed) removed; Q-B-02(b) explanatory comment block removed. Unrelated `TODO(slot-A)` at line 50 (Q-B-02(d) error-handler gap) left intact per hard rules ✓
+- [x] **`make check` green** (lint + format-check + typecheck + test-unit including smoke) — exit 0 ✓
+- [x] **Cross-slot SUBMIT commit footer**: every T02 impl commit carries `Cross-slot execution per §4-D05 (Slot A canonical territory).` ✓ (5/5 verified above)
+- [x] **`prisma/schema.prisma` UNTOUCHED** — `git diff main..HEAD -- prisma/schema.prisma` returns empty ✓
+- [x] **No new packages** — `package.json` unchanged ✓
+- [x] **Drift floor zero** scoped to T02 files (`src/core/prisma/`, `src/entrypoints/api.ts`, `prisma/migrations/`) ✓ (audit below)
+
+Acceptance criteria mapping (8 items + AC#9 cross-slot)
+
+1. **Migration generated + applied locally without error** ✓
+2. **Real PrismaClient singleton exported (Q-B-02(b) closed); entrypoint cast removed** ✓
+3. **All existing 152 unit tests + 27 it.todo + 2 skipped still PASS** ✓ (155 total now)
+4. **≥1 smoke integration test against migrated DB green** ✓ (3 sub-tests)
+5. **Cross-slot heritage compliance verified** — header marker + 5/5 commit footers + code-header `§4-D05` JSDoc reference + this SUBMIT header carry the marker ✓
+6. **APPROVE convention: FULL** per PM B ACK AC #6 — quartet batch FULL APPROVE expected on T02 VERDICT ✓
+7. **`prisma/schema.prisma` UNTOUCHED** — `git diff` empty ✓
+8. **Drift floor zero T02 territory** ✓
+
+Quality gate
+
+- `make typecheck`: **PASS**
+- `make lint`: **PASS** (0 errors, 0 warnings, `--max-warnings 0`)
+- `make format-check`: **PASS**
+- `make test-unit`: **PASS** — 155 passed + 27 todo + 2 skipped suites (delta vs T07 SUBMIT: +3 smoke tests; ZERO existing regression)
+- `make check` exit 0 confirmed
+
+Test evidence
+
+```
+Test Suites: 2 skipped, 15 passed, 15 of 17 total
+Tests:       2 skipped, 27 todo, 155 passed, 184 total
+Time:        ~1.3s
+```
+
+Smoke sub-test (c) CHECK trip verification — raw Postgres error captured by Prisma:
+
+```
+ConnectorError(...PostgresError { code: "23514",
+  message: "new row for relation \"users\" violates check constraint
+            \"users_role_hotel_mutual_exclusion\"",
+  severity: "ERROR",
+  detail: "Failing row contains (..., null, ..., gm_admin, ...)."
+})
+```
+
+Drift scans (T02 territory: `src/core/prisma/`, `src/entrypoints/api.ts`, `prisma/migrations/`)
+
+```
+$ grep -rnE "(: any[^a-z]| any[^a-z_])|console\.(log|info)|@ts-ignore|@ts-nocheck|throw new Error\(|export default" \
+       src/core/prisma/ src/entrypoints/api.ts prisma/migrations/ --include="*.ts" | grep -v __tests__
+   (zero hits)
+```
+
+Q-B-02(b) cleanup audit:
+
+```
+$ grep -rn "db as unknown" src/ 2>/dev/null
+   (zero hits — cast removed at api.ts; no other instances)
+
+$ grep -rn "TODO(slot-A)" src/ 2>/dev/null
+   src/entrypoints/api.ts:50: // TODO(slot-A): replace with src/plugins/error-handler.plugin.ts ...
+   (1 hit — Q-B-02(d) error-handler gap, OUT of T02 scope; left intact per hard rules)
+```
+
+Schema-diff empty audit (CRITICAL — schema.prisma must NOT be touched):
+
+```
+$ git diff main..HEAD -- prisma/schema.prisma
+   (zero diff — schema.prisma UNTOUCHED)
+```
+
+Pre-flight gate retry (post owner-side Docker resolution):
+
+```
+$ docker info | grep -A1 ^Server
+Server:
+ Containers: 3
+
+$ make start
+→ Starting deps (postgres, redis)...
+docker compose up -d postgres redis
+→ Waiting for Postgres healthy...
+[postgres ready]
+
+$ nc -z localhost 5433
+Connection to localhost port 5433 [tcp/pyrrho] succeeded!
+
+$ docker ps | grep postgres
+ac904ffdee95   postgres:15-alpine   ...   Up (healthy)   0.0.0.0:5433->5432/tcp   qooma-postgres
+```
+
+Pre-flight passed on retry. No shim invoked. Pre-flight HALT condition from cycle-6 first attempt cleared cleanly.
+
+Notes (design decisions + observations)
+
+1. **DD1 — CHECK injection path A (`--create-only` then manual SQL append then full apply)** chosen over path B (second migration). Single coherent `init` migration. The 29 lines of manual SQL appended at the end of `migration.sql` translate `prisma/schema.prisma:141-163` comment block verbatim — exact CHECK names + SQL preserved.
+
+2. **DD2 — `test-setup.ts` env loader extension** (NOT in original PLAN file count, surfaced at impl time). The smoke test's `import { db } from '../prisma-client.js'` triggers `loadConfig()` at module-import time → requires `.env` to be loaded. Added a minimal `readFileSync` + KEY=VALUE parser in `test-setup.ts` (no `dotenv` dep — would need PO ask). Also coerced jest's default `NODE_ENV='test'` → `'development'` (env.ts enum only accepts the runtime triplet) and supplied a deterministic 64-char dummy `ENCRYPTION_KEY` (the `.env.example` placeholder is shorter than the 64-char `z.string().length(64)` requirement). All three changes are test-environment-only; no production code touched. File count revised from PLAN's `3 CREATE / 2 EDIT` → `3 CREATE / 3 EDIT`.
+
+3. **DD3 — Singleton `shutdown()` made sync** (instead of `async`) to satisfy `@typescript-eslint/no-misused-promises` lint when passed to `process.on('SIGTERM', shutdown)` (which expects `() => void`). Inside, `void db.$disconnect()` fires-and-forgets — process is exiting anyway, awaiting just delays SIGTERM propagation; PrismaClient handles in-flight queries gracefully.
+
+4. **DD4 — `PrismaClient` import path `.prisma/client`** (not `@prisma/client`). pnpm hoists `@prisma/client` to an isolated location whose `default.d.ts` is a stub with `PrismaClient` typed as `any` (triggers `@typescript-eslint/no-unsafe-*` lint). The generated `.prisma/client/index.d.ts:56` carries the real typed constructor — matching the pattern auth + users repositories already use for model type imports.
+
+5. **Smoke test tier name = `'lite'`** (canonical 4 per `tiers_name_check`). Originally planned UUID-suffixed `smoke-tier-<uuid>` per PLAN aux note, but the CHECK constraint restricts values to the spec 4 (`lite | professional | luxury | enterprise`). Switched to `'lite'` for the smoke fixture; cleanup is by PK (TIER_ID UUID), not natural key. **Cycle-7+ flag**: when T03 lands its tiers seed (4 canonical rows pre-created), this smoke will need a coexistence pattern (e.g., `findOrCreate` on `lite`, or seed once + reuse). Captured in smoke test source comment.
+
+6. **`make start` invokes `prisma-generate` and `db-migrate` after compose-up** (Makefile lines 47-52). On first run (pre-T02 state) these fail because Node 18 is system default while project requires Node 20. Not a T02 bug — works fine when `PATH` is set to Node 20. Future Slot A foundation cycle may want to bake nvm-shim into the Makefile so newcomers don't trip on this.
+
+Open items for PM B VERDICT consideration
+
+1. **Console-log noise during smoke (c)**: Prisma's own error logger surfaces the CHECK violation to stdout at `warn` level (visible during `pnpm test:unit` run). Acceptable per CLAUDE.md §7 (Prisma is internal logging, not application `console.log`). PM B may want a filter on PrismaClient construction (`log: ['error']` only in test env) — easy follow-up if desired.
+2. **Smoke test file naming**: chose `.smoke.test.ts` (runs in `test:unit` so it gates `make check`). PM B may prefer `.integration.test.ts` (separate `test:integration` suite, conditional on DB presence) — relocation is single-file rename + jest config tweak. Current default keeps Q-B-02(b) closure gated on `make check`.
+3. **`test-setup.ts` env loader is bootstrap-style** (manual KEY=VALUE parsing, no dotenv). PM B may eventually want a proper `dotenv` dep install — would be a new package ask. For T02 scope, manual parser keeps install-free.
+4. **Cycle 7 = chained T02-sub-1** per ASSIGNMENT line 3408: convert ~24 `it.todo()` integration placeholders to real assertions against migrated DB. Separate ASSIGNMENT, NOT bundled into T02. After cycle 7 batch FULL APPROVE → `feat/auth-core` merge to main (single merge event for entire quartet + T02).
+
+**Cycle 6 close summary**: T02 SUBMIT delivers the foundation migration + real Prisma singleton (Q-B-02(b) inline closure) + 3-sub-test smoke proving the migrated DB carries spec-mandated CHECK constraints. After this VERDICT (expected FULL APPROVE), the quartet (T05+T06+T11+T07) is eligible for batch FULL APPROVE upgrade. Cycle 7 opens with the chained T02-sub-1 ASSIGNMENT to backfill the ~24 `it.todo()` integration placeholders. No additional Slot B task pickup planned until PO direction.
+
+Requesting PM B VERDICT (expected: **FULL APPROVE**).
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
