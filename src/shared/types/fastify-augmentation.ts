@@ -9,6 +9,7 @@ import type { AppConfig } from '../../core/config/env.js';
 import type { AuthService } from '../../modules/auth/auth.service.js';
 import type { TokenIssuer } from '../../modules/auth/auth.token-issuer.js';
 import type { Role } from '../../modules/auth/auth.types.js';
+import type { UsersService } from '../../modules/users/users.service.js';
 
 /**
  * Claims-derived request session populated by `tenant-guard.ts` plugin per
@@ -52,4 +53,5 @@ declare module 'fastify' {
 
 export interface AppServices {
   auth: AuthService;
+  users: UsersService;
 }
