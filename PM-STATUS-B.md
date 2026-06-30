@@ -5236,6 +5236,138 @@ Yarn cache is the dominant reclaim candidate (same observation as cycle-2 ENOSPC
 
 **Awaiting owner resolution (disk reclaim + Postgres bring-up), then Executor B Phase A resume.**
 
+**RESUMED 2026-06-30 — host pre-flight cleared (disk + Postgres restart); no shim invoked; Phase A re-runs verbatim.**
+
+Phase A re-verify (2026-06-30 post-resume):
+
+```
+$ df -h /                            → 26 GiB free (well above 5 GiB floor)
+$ docker info | grep Containers      → Containers: 5; daemon reachable
+$ docker ps | grep qooma-postgres    → qooma-postgres healthy (Up 3 minutes)
+$ nc -z localhost 5433               → port open
+$ make check                         → 152 passed + 1 skipped suite; exit 0
+$ git status / branch                → clean tree on main @ 64470a4
+```
+
+All 6 pre-flight checks GREEN. Triggers 1-10 still apply for impl phase. Proceeding to PLAN T10 attempt 1 authoring (Phase A step 4).
+
+#### PLAN T10 — exec-B (Nanak) cycle 8 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D09 (Slot C canonical territory).
+
+**Scope recap (re-verified against ASSIGNMENT T10 lines 4992-5171)**
+
+3 endpoints + NEW module `src/modules/hotels/` — Auth-adjacent skill match (mirrors T07 users module scaffold + T06 `/me` pattern):
+
+1. `GET /api/hotels/me` — `authenticated` (all 4 roles per spec §1.5 line 199)
+   - non-super_admin (`tenantScope.type === 'single-hotel'`): `{ id, name, tier: { id, name }, status, timezone, branding, dnd }` scoped to `req.tenantScope.hotelId` (FULL hotel shape per ASSIGNMENT §Scope-1 recommendation; spec §1.5 line 197 "id + tier" is minimum)
+   - super_admin (`tenantScope.type === 'all-hotels'`): literal `{ id: null, tier: null }` per `MVP-AUTH-FIRST §5` line 92 option (b)
+2. `GET /api/settings/hotel` — `gm_admin` ONLY (own hotel) per spec §1.5 line 200; other roles → `ForbiddenError`. Response: `{ timezone, branding, dnd }`
+3. `PUT /api/settings/hotel` — `gm_admin` ONLY; super_admin → `ForbiddenError('Use /api/admin/hotels for platform-level edits')` (clean Slot A T09 separation). Body zod-strict `{ timezone?: string, branding?: object, dnd?: object }` — unknown fields rejected 400
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2 — re-verified Phase A 2026-06-30 post-resume)
+
+- Identity: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓
+- ASSIGNMENT T10 (PM-STATUS-B.md lines 4992-5171) ✓
+- Parent docs spot-read: `PM-STATUS-PARENT.md` §1 T10 row + §4-D09 deviation entry + §10 absorption coord ✓
+- Specs: `docs/spec/MVP-AUTH-FIRST.md §1` rows 8/10 + `§5` line 92 + `docs/spec/01-auth-identity.md §1.5` lines 197-207 ✓
+- Schema verified READ-ONLY at `prisma/schema.prisma:52-71`: `Hotel.timezone` VARCHAR(50) default 'Asia/Jakarta' + `Hotel.branding` JSONB nullable + `Hotel.dnd` JSONB nullable — all direct columns ✓. **NO schema change needed**, NO touch to `prisma/schema.prisma` (TRIGGER #3 honored)
+- Cross-slot ceremony precedents: §4-D01 (`src/plugins/tenant-guard.ts` JSDoc header) + §4-D05 (`src/core/prisma/prisma-client.ts` JSDoc header) ✓
+- Pre-flight post owner-resolution: Docker reachable, qooma-postgres healthy, port 5433 listening, disk 26 GiB free ✓
+- Baseline `make check` GREEN: 152 passed + 1 skipped, exit 0 ✓
+- On `main` working-tree-clean at `64470a4` ✓
+- Scaffolder risk: none (manual scaffold, mirrors T07 users module)
+
+**Branch plan**
+
+- NEW `feat/slot-c-absorption-b` from `main@64470a4` via `git checkout -b feat/slot-c-absorption-b main`
+- Every impl commit footer: `Cross-slot execution per §4-D09 (Slot C canonical territory).` (audit grep at SUBMIT: footer count == impl commit count)
+- PLAN/SUBMIT/VERDICT meta-commits remain on `main` per branch-hygiene §7 precedent (plain commit msg, no §4-D09 footer required — same pattern as §4-D01 cycle 4 + §4-D05 cycle 6/7 PLAN/SUBMIT meta-commits on main)
+
+**Files to create (9)**
+
+```
+src/modules/hotels/
+├── index.ts                       — barrel; export hotelsRoutes + hotelSettingsRoutes + HotelsService + HotelsRepository + types
+├── hotels.routes.ts               — TWO Fastify route plugins: hotelsRoutes (GET /me) + hotelSettingsRoutes (GET, PUT /hotel)
+│                                    JSDoc file header §4-D09 reference (cross-slot marker — minimum 1 file mandated by ASSIGNMENT)
+├── hotels.service.ts              — HotelsService class methods: getHotelContextForSession(session, tenantScope) + getSettings(scope) + updateSettings(scope, patch)
+│                                    super_admin branch → option (b); single-hotel scope → repo lookup
+│                                    Optional JSDoc §4-D09 header (Executor will add for clarity — extends ASSIGNMENT minimum)
+├── hotels.repository.ts           — HotelsRepository class methods: findHotelById(id) (with tier join) + findSettingsByHotelId(id) + updateSettings(id, patch)
+│                                    Prisma direct (no port wrap per §4 hexagonal disiplin)
+│                                    Optional JSDoc §4-D09 header (Executor will add for clarity)
+├── hotels.schema.ts               — zod: UpdateSettingsRequestSchema (.strict(), shape: { timezone?: string.max(50), branding?: record(unknown), dnd?: record(unknown) })
+│                                    Response shapes declared as TS types only (Fastify serializer outbound)
+├── hotels.types.ts                — HotelContext (super_admin variant `{ id: null, tier: null }` | scoped variant) + HotelSettings + HotelSettingsPatch domain types
+└── __tests__/
+    ├── hotels.service.test.ts     — unit: mock HotelsRepository class instance (TESTING.md §4 — no Prisma mock); 4-role coverage of getHotelContextForSession;
+    │                                tenant-scope hotelId mismatch defensive NotFoundError; super_admin option (b) branch; getSettings/updateSettings scope plumbing
+    ├── hotels.routes.test.ts      — unit: fastify.inject with mocked req.session + req.tenantScope (helper from existing routes test precedent T07);
+    │                                role-gate 403 for staff/dept_head on /settings/hotel (both GET + PUT);
+    │                                super_admin PUT 403 with literal 'Use /api/admin/hotels' message;
+    │                                super_admin GET /hotels/me → option (b) literal;
+    │                                gm_admin happy path read + write whitelisted body;
+    │                                400 zod-strict reject unknown PUT field
+    └── hotels.schema.test.ts      — unit: PUT body zod parse — strict reject unknowns (name/code/tierId/status/gmContact); accept partial body; accept full body
+```
+
+**Files to edit (2)**
+
+- `src/entrypoints/api.ts` — additive: import hotelsRoutes + hotelSettingsRoutes + HotelsService + HotelsRepository; instantiate `new HotelsRepository(db)` + `new HotelsService(repo)`; extend `fastify.decorate('services', { auth, users, hotels })`; register both route plugins after `usersRoutes` line (prefix `/api/hotels` + `/api/settings`). Estimated ~6-8 added lines.
+- `src/shared/types/fastify-augmentation.ts` — additive: extend `AppServices` interface with `hotels: HotelsService` (parallel to `auth` + `users`). Estimated ~1-2 added lines.
+
+**File count**: **9 CREATE / 2 EDIT** (matches ASSIGNMENT PM B file ownership exactly).
+
+**Approach (1 paragraf)**
+
+Single hotels module exposes TWO Fastify route plugins (`hotelsRoutes` + `hotelSettingsRoutes`) sharing one `HotelsService` instance — avoids near-empty sibling module while honoring spec's split path prefixes. `HotelsService.getHotelContextForSession` branches on `tenantScope.type`: `'all-hotels'` → returns literal `{ id: null, tier: null }` (option (b)); `'single-hotel'` → calls `repo.findHotelById(tenantScope.hotelId)` with tier join, returns full hotel shape (defensive `NotFoundError` if row missing — tenant-guard should have already validated upstream). Settings GET/PUT consume `tenantScope.hotelId` only (no super_admin branch — handler-level role-gate forbids non-gm_admin upfront with `ForbiddenError`). PUT body validated via zod `.strict()` (reject unknowns 400) — manual `safeParse()` in route handler per Fastify-4 AJV-on-zod precedent (T05/T07). PUT super_admin attempt → `ForbiddenError('Use /api/admin/hotels for platform-level edits')` (clean Slot A T09 territory boundary). Repository: Prisma direct — `db.hotel.findUnique({ where: { id }, include: { tier: true } })` for GET; `db.hotel.update({ where: { id }, data: <whitelisted patch> })` for PUT (whitelist enforced upstream at zod parse + repo signature). Tenant scoping is CONSUMED (not enforced) at the module — tenant-guard plugin (T11) already populates `req.tenantScope` upstream per §4-D01.
+
+**Cross-slot heritage compliance plan (§4-D09)**
+
+- Impl commits on `feat/slot-c-absorption-b`: footer `Cross-slot execution per §4-D09 (Slot C canonical territory).` on EVERY commit
+- File-level markers: JSDoc header `§4-D09` reference on `hotels.routes.ts` (mandatory minimum per ASSIGNMENT) + `hotels.service.ts` + `hotels.repository.ts` (Executor extends beyond minimum for cross-file clarity — mirrors how `prisma-client.ts` §4-D05 cycle 6 marked the single canonical file but T10 has 3 canonical files of comparable cross-slot mass)
+- SUBMIT block + VERDICT block header notes carry `cross-slot heritage per §4-D09`
+- Meta-commits on `main` (PLAN/SUBMIT/VERDICT updates to PM-STATUS-B.md): plain msg per precedent
+
+**Test strategy + coverage**
+
+- **Unit only** (no integration backfill) — T02-sub-1 cycle 7 already covered repo invariants for Auth + Users; T10's repo is pure `findUnique` + `update`, no atomicity guards or constraint mappings worth a real-DB assertion. Prisma type-safety + service-level unit coverage suffices.
+- **Service test**: mock `HotelsRepository` class instance per TESTING.md §4 (no Prisma mock); branches: super_admin option (b) / gm_admin scoped read / dept_head scoped read / staff scoped read / NotFoundError defensive path / getSettings + updateSettings tenant-scope plumbing
+- **Routes test**: `fastify.inject` with mocked `req.session` + `req.tenantScope` (pattern from `users.routes.test.ts`); role-gate matrix 4-role × 3-endpoint; verify exact error envelope shape (FORBIDDEN code + message); verify super_admin option (b) shape
+- **Schema test**: zod parse — strict-reject unknowns (`name`, `code`, `tierId`, `status`, `gmContact`); accept partial body (any subset of `{ timezone, branding, dnd }`); accept full body; accept empty body (no-op PUT — Prisma `update` with `{}` returns row unchanged, Executor will verify behavior at impl)
+- **Coverage target**: ≥80% line floor (CLAUDE.md §8); ≥90% on `hotels.service.ts` + `hotels.routes.ts` per ASSIGNMENT (security-critical role gate)
+
+**4 Open items — final stance (per PM B PLAN-prompt list)**
+
+1. **Hotel settings storage** — ACCEPT pre-resolved. Re-verified `prisma/schema.prisma:52-71` shows timezone/branding/dnd as direct columns on Hotel table; no `hotel_settings` table. PUT updates Hotel row via `db.hotel.update`. **No GAP, no schema change, TRIGGER #3 honored.**
+2. **super_admin `/hotels/me`** — ACCEPT spec-pinned option (b): literal `{ id: null, tier: null }` per `MVP-AUTH-FIRST §5` line 92. **No GAP.**
+3. **PUT field whitelist** — ACCEPT 3-field whitelist `{ timezone, branding, dnd }` per spec §1.5 line 198 + 205 + 207. Zod `.strict()` rejects all other fields (`name`/`code`/`tierId`/`status`/`gmContact`/`createdAt`/`updatedAt`). **No GAP.**
+4. **Idempotency on PUT** — ACCEPT simple last-write-wins per PM B default. Spec §1.5 + §2.14 audit shows no ETag/If-Match/version mandate. Prisma `updatedAt @updatedAt` auto-bumps. **No GAP.**
+
+Bonus confirmation on PM B "GET role gating" probe (ASSIGNMENT §Scope-2): spec §1.5 line 200 table cell `gm_admin (own hotel)` covers BOTH `GET, PUT /api/settings/hotel` (single row in the endpoint table, both methods). So GET role gate = gm_admin only (matches PUT). dept_head + staff + super_admin → `ForbiddenError` on GET /settings/hotel as well. Spec line 207 narrative ("writes are still gm_admin-scoped") is a writes-emphasis on the **migration rationale** (endpoint moved to Auth), not a hint that reads are wider.
+
+**GAPs / questions**
+
+(none)
+
+**Estimate**
+
+~3-5h ACK → SUBMIT (per PARENT §4-D09 ~3h + PM B convention). Distribution: ~30min branch + scaffold barrel/types/schema; ~1h service + repository; ~1h routes (2 plugins, role-gate, error envelope); ~1.5-2h tests + coverage; ~30min `make check` + drift scan + commit hygiene + push.
+
+**Drift floor commitment (T10-files-scoped)**
+
+- No `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / `.skip` / hardcoded URLs / `setTimeout()` / wrap-Prisma interface
+- Named exports only; explicit return types on public functions; `import type` for type-only imports
+- AppError subclasses: `NotFoundError` (defensive hotel-not-found by tenantScope hotelId) + `ForbiddenError` (role-gate failures + super_admin PUT redirect) — no new error subclass needed (reuse `@core/errors/app-errors.js`)
+
+**Pre-impl gate (post PM B ACK)**
+
+- `git checkout -b feat/slot-c-absorption-b main` (from current `64470a4` PM-A meta head — confirmed)
+- `make check` baseline re-run on new branch (sanity)
+- Then proceed scaffold per Files-to-create order
+
+Awaiting PM B ACK T10 PLAN APPROVED → proceed to impl on `feat/slot-c-absorption-b`.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
