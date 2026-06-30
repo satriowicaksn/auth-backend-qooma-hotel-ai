@@ -16,7 +16,7 @@
 - **🎯 SLOT A FOUNDATION CLOSED**: T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · T03 ✅ · **T04 ✅ APPROVED**.
 - **Merge-ready (notify Nathan)**: **T04** — branch `feat/seed-super-admin` @ `c7a7e76`. (T03 already merged via PR#3.) Nathan merges.
 - **New scope (Parent ruling `d40264e`)**: **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) → Slot A *execution* per §4-D08 (Slot C absorption; Slot C canonical + offline). **READY** (T04 closed). Gate **G3**, ~8h.
-- **Slot A remaining queue**: **tsc-alias** prod-boot fix (Q-A-04 §4-D06, PO-approved) + **T09** (§4-D08). Order pending Nathan (rec: tsc-alias quick-win first, then T09).
+- **Slot A remaining queue** (order DECIDED by Nathan): **1) TF-01 tsc-alias** prod-boot fix (Q-A-04 §4-D06) — ASSIGNMENT issued §2, **ACTIVE**, awaiting PLAN. **2) T09** (§4-D08 admin hotels CRUD, G3) — next.
 - **Next gate**: foundation/G1 done for Slot A; T09 = G3. `PM-STATUS-PARENT.md §5`. §4-D06 collision OK (Parent kept my tsc-alias D06; Slot C → D07/D08).
 
 ---
@@ -644,6 +644,27 @@ PM A re-ran the full SUBMIT checklist on `feat/seed-super-admin` @ `c7a7e76` (no
 _T04 done. Next: tsc-alias prod-boot fix + new T09 (per Parent ruling) — assignments to follow._
 
 _Awaiting Executor A SUBMIT T04._
+
+---
+
+### ASSIGNMENT TF-01 (tsc-alias prod-boot fix) — routed to exec-A (Nathan) by PM A at cycle 1 (2026-06-30)
+> Slot A foundation fix for **Q-A-04** (prod `node dist` can't boot). PO-approved dep per **§4-D06**. **Nathan priority: do this BEFORE T09.**
+- **Task**: make `node dist` boot — `tsc` emits TS path aliases verbatim (`@core/*`/`@modules/*`/`@plugins/*`/`@shared/*` + `.prisma/client`) → `ERR_MODULE_NOT_FOUND` (PM A reproduced: crashes on `@core/config`). Add `tsc-alias` to rewrite aliases in `dist` post-build.
+- **Branch**: off `main` → `fix/tsc-alias-dist-boot` (or similar). Code → branch, **Nathan merges**.
+- **Dep**: `pnpm add -D tsc-alias` — **PO-approved (§4-D06)**, no further approval needed. (Dev-dep only.)
+
+**DoD TF-01:**
+- [ ] `pnpm add -D tsc-alias` (devDependency).
+- [ ] `build` script → `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json` (rewrite aliases after compile).
+- [ ] Confirm `tsconfig.build.json` carries the path aliases tsc-alias needs (incl. `.prisma/client`) — if it `extends` `tsconfig.json` it inherits `paths`; verify, justify in PLAN.
+- [ ] **Prod boot proof**: `pnpm build` → `node dist/entrypoints/api.js` **boots (LISTENING :3000)** with DB/Redis up; resolve both the `@*/` aliases AND the `.prisma/client` value import in `dist`. (Also sanity `node dist/entrypoints/worker.js` if it imports aliases.)
+- [ ] `pnpm dev:api` (tsx) STILL boots (no regression to the dev path / tsconfig).
+- [ ] `make check` equiv green (lint/format/typecheck/test:unit) + `test:integration` green. No runtime/source behavior change beyond build output + the script.
+- [ ] Drift floor; git diff scoped to `package.json` (script + devDep) + `pnpm-lock.yaml` + (if needed) `tsconfig.build.json`. No `src/` logic change.
+
+**Catatan PM A**: This closes the last prod-readiness hole. Quick task (~1-2h). After APPROVE I notify Nathan to merge, then issue **T09** (admin hotels CRUD, §4-D08 cross-slot — that one carries the "Cross-slot execution per §4-D08 (Slot C canonical territory)" footer on every block + commit). Verify both boot paths (tsx dev + node dist prod) in SUBMIT — that's the whole point of this task.
+
+_Awaiting Executor A PLAN TF-01._
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
