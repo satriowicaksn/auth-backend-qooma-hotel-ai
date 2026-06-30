@@ -13,12 +13,12 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task**: T02-sub-1 — Quartet integration backfill (**27 it.todo()** across 3 files) · `assigned · READY-FULL (cycle 7 final pre-merge)` — ASSIGNMENT issued cycle 7 (2026-06-30). Mixed-scope: T11 file CROSS-SLOT per §4-D01 (footer WAJIB); T05+T06+T07 files canonical Slot B (plain commits). Satisfies quartet upgrade conditions (b)-(e).
-- **T02 status**: FULL APPROVE (cycle 6 close) — quartet upgrade condition (a) satisfied. Migrated DB + CHECK constraints + PrismaClient singleton ready.
-- **Quartet status**: T05+T06+T11+T07 STILL `APPROVE-PARTIAL` — cycle 7 satisfies (b)-(e); after batch VERDICT → quartet FULL APPROVE → merge.
-- **Cycle 7 = final pre-merge cycle**: After SUBMIT + batch VERDICT → merge `feat/auth-core` to `main` (single merge event for entire Slot B work: T02 + T05 + T06 + T11 + T07 + T02-sub-1).
-- **Branch**: `feat/auth-core` (44 impl commits ahead of `main`) — T02-sub-1 stacks on T02.
-- **It.todo count CORRECTED**: 27 total (verified by PM B at ASSIGNMENT time = 16 T05+T06 consolidated + 4 T11 + 7 T07). T06's placeholders were rolled into auth.repository file during cycle 3 SUBMIT — no separate auth.me.integration.test.ts.
+- **Slot B sequence COMPLETE**: ALL 6 tasks FULL APPROVE (T02 + T05 + T06 + T07 + T11 + T02-sub-1). Quartet upgrade conditions (a)-(e) ALL SATISFIED.
+- **Quartet status table**: T05+T06+T07+T11 all flipped `approved-partial → approved` via batch VERDICT cycle 7 close (this event); T02 (cycle 6 first FULL APPROVE); T02-sub-1 (cycle 7 FULL APPROVE direct).
+- **Branch state**: `feat/auth-core` (50 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07 + 5 T02 + 6 T02-sub-1). **READY for merge to `main`**.
+- **Cross-slot ceremony complete**: 7 §4-D01 footer commits (5 cycle-4 T11 + 2 cycle-7 T11 integration) + 5 §4-D05 footer commits (cycle 6 T02). Canonical record for Slot A future audit complete.
+- **Audit trail**: 185 total tests pass (155 unit + 30 integration); 1 PO escalation handled (Q-B-01); 2 cross-slot deviations executed clean (§4-D01 + §4-D05); 1 REQUEST-FIX round (T06 spec compliance); Q-B-02(b) resolved inline (3 others Slot A future pickup); zero branch hygiene violation; 100% ceremony compliance.
+- **Next phase**: PM B coordinate merge. **PM B recommend `git merge --no-ff` (option b)** to preserve 50-commit history + 12 cross-slot footer evidence. **PO decides** final merge convention.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -33,11 +33,11 @@
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
-| T02-sub-1 | Quartet integration backfill (27 it.todo → real across 3 files) | `assigned · READY-FULL (cycle 7 final pre-merge)` | —              | Cycle 7 task. ASSIGNMENT issued 2026-06-30. **Mixed-scope**: T11 file CROSS-SLOT per §4-D01 (footer WAJIB on T11 commit only); T05+T06+T07 files canonical Slot B (plain commits). Satisfies quartet upgrade conditions (b)-(e): integration tests fill + repo coverage ≥80% line + drift re-scan + re-issue VERDICT. 3 EDIT + 1 optional CREATE (shared fixture helpers). 5 open items for PLAN. After SUBMIT → batch FULL APPROVE quartet → merge feat/auth-core to main. |
-| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
-| T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
-| T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
-| T07 | Per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring | `approved-partial · cycle 5 close · full APPROVE held (T02)` | PM B — cycle 5 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. **FINAL Slot B sequence item** — canonical Slot B confirmed (0 §4-D01 hits in 14 commits). 17/17 verifications match; coverage 94.62% line overall, users.routes/schema 100%, users.service 95.08% (≥90% target MET); drift zero T07; 6 DDs ACCEPT; 5 open items resolved (#1 crypto fallback ACCEPT-as-is, #2 dead-code KEEP defense-in-depth). Wiring tenant-guard-FIRST per Ruling #3 verified. super_admin reject 4/4 endpoints via `assertGmAdminScope`. Last-gm tx atomicity via `$transaction`. Full APPROVE batched with T05+T06+T11 pending T02. |
+| T02-sub-1 | Quartet integration backfill (27 it.todo → 30 real assertions across 3 files) | `approved · cycle 7 close (FULL APPROVE direct)` | PM B — cycle 7 (2026-06-30) batch attempt 1 | BATCH VERDICT cycle 7 (2026-06-30) → FULL APPROVE. 17/17 verifications match. 6 DDs ACCEPT; 4 open items resolved. Cross-slot ceremony 2/6 §4-D01 both T11-file-only ✅. Mixed-scope clean: 4 PLAIN + 2 §4-D01 commits. 30 integration assertions (+3 over 27 plan: 1 happy-demote symmetry T07 + 2 tenant-guard coverage T11 lift 75→88.88%). Critical repo line coverage ALL ≥80% (auth.repo 85.18% / users.repo 82.5% / tenant-guard 88.88%). Quartet upgrade conditions (b)-(e) ALL SATISFIED. |
+| T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) via auth.repository.integration.test.ts 16 tests T05+T06 consolidated; repo coverage ≥80% ✓ (c) auth.repository.ts 85.18%; drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 2 unit-scope baseline preserved (98.56% stmt / 100% line / critical 100%). |
+| T06 | Auth current-user + password rotation gate | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) consolidated in auth.repository file — T06 paths (rotation + revokeAllOtherSessions + getMe + updateMeLanguage) covered; repo coverage ≥80% ✓ (c); drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 3 attempt 2 BusinessRuleError 422 fix (spec §1.1) preserved. |
+| T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | **`approved · cycle 7 close (FULL APPROVE batch, cross-slot per §4-D01 preserved)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) tenant-guard.plugin.integration.test.ts 4 base + 2 coverage = 6 assertions (Commits 4 + 6 both §4-D01 footer); repo coverage ≥80% ✓ (c) tenant-guard.ts 88.88% post-Commit-6 lift; drift zero ✓ (d); VERDICT FULL ✓ (e). **Cross-slot heritage COMPLETE**: 7 §4-D01 footer commits total (5 cycle-4 + 2 cycle-7) + plugin file JSDoc + integration test line-6 marker preserved. Slot A re-takes future tenant-guard amendments. |
+| T07 | Per-hotel users CRUD (gm_admin scope) + first tenant-guard wiring | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) users.repository.integration.test.ts 7 base + 1 happy-demote symmetry = 8 assertions; repo coverage ≥80% ✓ (c) users.repository.ts 82.5%; drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 5 final Slot B sequence item (canonical) honored verbatim. |
 
 ---
 
@@ -4803,6 +4803,190 @@ Open items for PM B batch VERDICT consideration
 **Cycle 7 close summary**: T02-sub-1 SUBMIT delivers all 27 integration assertions (30 actual, +3 for coverage/symmetry), shared fixture helpers, and `test:unit` regex tighten. Quartet upgrade conditions (b)+(c)+(d) ALL satisfied by this cycle; condition (e) pending PM B batch VERDICT. After batch VERDICT, Slot B work loop closes — `feat/auth-core` merges to `main` (single merge event for entire 50-commit body of work). No additional Slot B task pickup planned until PO direction.
 
 Requesting PM B BATCH VERDICT (T02-sub-1 FULL + quartet T05+T06+T11+T07 batch FULL APPROVE upgrade).
+
+##### BATCH VERDICT T02-sub-1 + quartet T05+T06+T11+T07 — FIVE TASK FULL APPROVE event (cycle 7 close; FINAL pre-merge cycle). Slot B sequence COMPLETE. by PM B (cycle 7, 2026-06-30)
+
+**Outcome**: ✅ **FIVE TASK FULL APPROVE in single batch event**. T02-sub-1 FULL APPROVE direct + quartet T05+T06+T11+T07 all PARTIAL→FULL transition. Cross-slot ceremony 2/6 §4-D01 both T11-file-only ✅. 17/17 independent verifications match Executor klaim. **Slot B sequence COMPLETE. Branch `feat/auth-core` (50 commits) READY for merge to `main`.**
+
+---
+
+## A. T02-sub-1 — FULL APPROVE direct (cycle 7)
+
+**Cross-slot ceremony audit (extended rule: ANY commit touching T11 file = §4-D01 footer required) — PASS**
+
+| Commit | Subject | Footer | T11 file? |
+|---|---|---|---|
+| `1ee1c33` | chore(test): tighten test:unit regex | PLAIN | NO |
+| `b9307b4` | test(integration): shared fixture helpers | PLAIN | NO |
+| `254ef5c` | test(auth): backfill 16 auth.repository integration | PLAIN | NO |
+| `65a94e0` | test(plugins): backfill 4 tenant-guard.plugin integration | **§4-D01** ✓ | YES |
+| `7e6c2e1` | test(users): backfill 7 users.repository integration | PLAIN | NO |
+| `d1cf477` | test(plugins): tenant-guard deny + allowlist coverage | **§4-D01** ✓ | YES |
+
+**2/6 footer-bearing commits, both T11-file-only. Mixed-scope ceremony 100% compliant. Rule extended cleanly from "1 commit" plan to "any T11 file commit". ZERO ceremony violation.**
+
+**Independent verification — 17/17 PASS**
+
+| # | Check | Status |
+|---|---|---|
+| 1 | `make check` exit 0; 155 pass + 1 skipped; negative-lookbehind regex `__tests__/.*(?<!\.integration)\.test\.ts` working | ✅ |
+| 2 | `pnpm test:integration` 30 pass + 1 skipped | ✅ |
+| 3 | `auth.repository.ts` line 85.18% ≥80% | ✅ |
+| 4 | `users.repository.ts` line 82.5% ≥80% | ✅ |
+| 5 | `tenant-guard.ts` line 88.88% ≥80% (post-Commit-6 lift from 75%) | ✅ |
+| 6 | Drift T02-sub-1 territory ZERO hits | ✅ |
+| 7 | Schema-diff EMPTY (`prisma/schema.prisma` untouched) | ✅ |
+| 8 | T11 line-6 marker `// Cross-slot execution per §4-D01...` preserved verbatim | ✅ |
+| 9 | it.todo remaining 0/0/0 across 3 files | ✅ |
+| 10 | Q-B-02(a) `jest.config.json` preserved | ✅ |
+| 11 | Q-B-02(c) eslint-disable at api.ts:20 preserved | ✅ |
+| 12 | Q-B-02(d) error-handler TODO at api.ts:50 preserved | ✅ |
+| 13 | Cross-slot §4-D01 footer count 2/6 (Commits 4 + 6) both T11-file-only | ✅ |
+| 14 | 27 it.todo → 30 real assertions (+3: 1 happy-demote symmetry + 2 tenant-guard coverage) | ✅ |
+| 15 | Coverage scope Path α (CLI flag override) per DD4 working | ✅ |
+| 16 | Postgres healthy on 5433 | ✅ |
+| 17 | Mixed-scope ceremony rule extended cleanly (1→2 footer commits all T11-only) | ✅ |
+
+**Zero discrepancies.**
+
+**15 DoD ✓** + **8 AC ✓**
+
+**6 DD rulings — ALL ACCEPT**: regex tighten (DD1) / +1 happy-demote symmetry T07 (DD2) / +2 tenant-guard coverage lift T11 with §4-D01 footer (DD3) / Path α CLI flag override (DD4) / per-suite connect + per-test sweepByHotel cascade cleanup (DD5) / tier 'lite' canonical + UUID PK idempotency (DD6)
+
+**4 Open Items**:
+- #1 BRANCH coverage <80% → ACCEPT-as-is (AC #2 line floor only; hedge T_AUX_07 backlog if PO wants branch gate)
+- #2 30 tests vs 27 planned → ACCEPT (net positive, exceeds floor)
+- #3 @testcontainers/postgresql unused devDep → ACK (T_AUX_08 backlog)
+- #4 6 commits vs ACK 5 → ACK (transparent +1 with correct §4-D01 ceremony)
+
+**Aux note on global coverage thresholds**: `pnpm test:integration --coverage` reports jest global threshold warnings (~50% line) — JEST MECHANICAL ARTIFACT from including `auth.service.ts` in `collectCoverageFrom` while integration doesn't exercise service directly (service tested via unit at 100%). AC #2 specifies PER-FILE LINE floor — 3 critical repos all MET. Global threshold = jest config gate, not deliverable. ACCEPT as expected behavior.
+
+---
+
+## B. T05 — PARTIAL → FULL APPROVE
+
+All upgrade conditions satisfied:
+- (a) T02 ships ✓ (cycle 6)
+- (b) Integration fill ✓ (`auth.repository.integration.test.ts` 16 tests T05+T06 consolidated)
+- (c) Repo coverage ≥80% line ✓ (`auth.repository.ts` 85.18%)
+- (d) Drift re-scan zero ✓
+- (e) Re-issue VERDICT FULL ✓ (this batch event)
+
+**Status**: `approved-partial · cycle 2 close` → **`approved · cycle 7 close (FULL APPROVE batch)`**
+
+---
+
+## C. T06 — PARTIAL → FULL APPROVE
+
+All conditions satisfied (T06 integration tests CONSOLIDATED in auth.repository.integration.test.ts during cycle 3 — no separate auth.me.integration file):
+- (a) ✓ T02 ships
+- (b) ✓ consolidated rotation + revokeAllOtherSessions + getMe + updateMeLanguage paths
+- (c) ✓ covered via auth.repository.ts 85.18%
+- (d) ✓ drift zero
+- (e) ✓ this batch event
+
+**Status**: `approved-partial · cycle 3 attempt 2` → **`approved · cycle 7 close (FULL APPROVE batch)`**
+
+T06 attempt 2 BusinessRuleError 422 fix honored.
+
+---
+
+## D. T11 — PARTIAL → FULL APPROVE (CROSS-SLOT per §4-D01 preserved)
+
+All conditions satisfied:
+- (a) ✓ T02 ships
+- (b) ✓ `tenant-guard.plugin.integration.test.ts` 4 base + 2 coverage = 6 real assertions
+- (c) ✓ `tenant-guard.ts` 88.88% line
+- (d) ✓ drift zero
+- (e) ✓ this batch event
+
+**Status**: `approved-partial · cycle 4 close (cross-slot per §4-D01)` → **`approved · cycle 7 close (FULL APPROVE batch, cross-slot per §4-D01 preserved)`**
+
+**Cross-slot heritage canonical record COMPLETE** (Slot A future audit-ready):
+- 7 §4-D01 footer commits total: 5 (cycle 4 T11 impl) + 2 (cycle 7 T11 integration)
+- Plugin file `src/plugins/tenant-guard.ts` JSDoc §4-D01 header preserved (cycle 4)
+- `tenant-guard.plugin.integration.test.ts` line 6 marker preserved verbatim through 2 backfill commits
+- ASSIGNMENT cycle 4 + PLAN + ACK + SUBMIT + VERDICT + this batch VERDICT all carry §4-D01 markers
+- Future amendment audit trail: complete
+
+---
+
+## E. T07 — PARTIAL → FULL APPROVE
+
+All conditions satisfied:
+- (a) ✓ T02 ships
+- (b) ✓ `users.repository.integration.test.ts` 7 base + 1 happy-demote symmetry (DD2) = 8 assertions
+- (c) ✓ `users.repository.ts` 82.5% line
+- (d) ✓ drift zero
+- (e) ✓ this batch event
+
+**Status**: `approved-partial · cycle 5 close` → **`approved · cycle 7 close (FULL APPROVE batch)`**
+
+T07 final Slot B sequence item honored.
+
+---
+
+## F. Slot B work loop summary
+
+| Metric | Value |
+|---|---|
+| Cycles closed | 7 (cycle 1 ASSIGNMENT → cycle 7 close) |
+| Commits on `feat/auth-core` | **50** (10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07 + 5 T02 + 6 T02-sub-1) |
+| Total tests | **185 pass** (155 unit + 30 integration) + 1 skipped |
+| Tasks FULL APPROVE | **6** (T02 + T05 + T06 + T07 + T11 + T02-sub-1) |
+| PO escalations | 1 (Q-B-01 cycle 1 → §4-D02/D03/D04) |
+| Cross-slot deviations executed clean | **2** (§4-D01 T11 / §4-D05 T02) |
+| REQUEST-FIX rounds | 1 (T06 attempt 1 → BusinessRuleError 422 spec compliance → attempt 2) |
+| Q-B-02 foundation gaps resolved | 1 of 4 (Q-B-02(b) Prisma singleton inline cycle 6); 3 remain Slot A future pickup |
+| Branch hygiene §7 violations | **ZERO** |
+| Ceremony compliance | **100%** (7 §4-D01 + 5 §4-D05 commits; canonical Slot B never carries cross-slot footer) |
+| Audit trail completeness | ALL events in PM-STATUS files + git log; deviations §4-D01..§4-D05 fully documented |
+
+---
+
+## G. Merge readiness statement
+
+**ALL six Slot B tasks FULL APPROVE. Branch `feat/auth-core` (50 commits) READY for merge to `main`.**
+
+Branch state:
+- 50 commits ahead of `main` (HEAD: `d1cf477`)
+- All conventional commit format
+- Cross-slot footers preserved (7 §4-D01 + 5 §4-D05 = 12 footer-bearing commits) for future Slot A canonical audit
+- ZERO pending TODOs in Slot B scope; Q-B-02(a)/(c)/(d) Slot A territory
+
+**Single merge event recommended** for entire Slot B work loop. PM B merge convention recommendation:
+
+| Option | Pros | Cons | PM B preference |
+|---|---|---|---|
+| (a) Squash merge | clean main history (1 commit) | **LOSES** sub-cycle audit + 12 cross-slot footer evidence in git log | ❌ |
+| **(b) Merge-commit `--no-ff`** | preserves 50 commits + 12 footers; full granularity; merge anchor point | longer main history | **✅ RECOMMEND** |
+| (c) Rebase + fast-forward | linear history | loses branch boundary | ❌ |
+
+**PM B recommend (b)** — workflow relies on commit-by-commit narrative; squash would erase 12 cross-slot footer evidence built up across cycles 4-7. **PO decides** final convention.
+
+---
+
+## H. Cycle 7 close confirmation
+
+**Slot B sequence COMPLETE. All 6 tasks FULL APPROVE.**
+
+| Cycle | Task | Status | Cross-slot |
+|---|---|---|---|
+| 2 | T05 (auth core) | FULL APPROVE ← batch | canonical |
+| 3 attempt 2 | T06 (/me + rotation) | FULL APPROVE ← batch | canonical |
+| 4 | T11 (tenant-guard) | FULL APPROVE ← batch | **§4-D01** preserved |
+| 5 | T07 (users CRUD) | FULL APPROVE ← batch | canonical |
+| 6 | T02 (initial migration) | FULL APPROVE (cycle 6 — first) | **§4-D05** |
+| **7** | **T02-sub-1 (integration backfill)** | **FULL APPROVE (this VERDICT)** | mixed (T11 file = §4-D01) |
+
+---
+
+**Roll-up + cross-references**:
+- §1 task tracker rows T05/T06/T07/T11 → flips `approved-partial → approved`; T02-sub-1 → `assigned → approved`; all 5 verified-by = `PM B — cycle 7 (2026-06-30) batch attempt 1`
+- §0 current focus → Slot B sequence COMPLETE; merge readiness statement
+- `PM-STATUS-PARENT.md §2` short roll-up appended (significant milestone marker)
+
+PM B exits to **wait-mode for PO direction on merge convention + post-merge state**. Branch `feat/auth-core` stays open until PO/Parent PM authorizes merge sequence. After merge → Slot B work loop fully closed; PM B + Executor B idle until next Slot B task issued.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
