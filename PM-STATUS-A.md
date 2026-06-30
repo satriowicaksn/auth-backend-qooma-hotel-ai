@@ -733,7 +733,9 @@ QOOMA BE A (Nathan) — Standup — cycle 1 (criteria-based, no deadline)
 | T03 | Tiers seed (4 rows) | 🔵 `ACTIVE` — ASSIGNMENT §2, awaiting PLAN | T02 ✓ | G1 |
 | T04 | `seed-super-admin` CLI | `READY (un-blocked, next)` | T02 ✓ | G1 |
 
-Sequence: ~~T01~~ ✅ → ~~adopt-T02~~ ✅ → ~~adopt-T11~~ ✅ → **T03 (active)** → **T04 (next)**.
+Sequence: ~~T01~~ ✅ → ~~adopt-T02~~ ✅ → ~~adopt-T11~~ ✅ → **T03 (active)** → **T04 (next)** → **Q-A-04 prod-boot fix** (`tsc-alias`, PO-approved §4-D06, Slot A foundation task, queued AFTER T03/T04).
+
+> **Note**: T03 dev unblock = `tsconfig.json` path `.prisma/client` (no dep, Option A). Separate from the prod `tsc-alias` task above. Both Slot A; both code → branch → Nathan merges (I notify when each verified-ready).
 
 <!-- Mirror format dari PM-STATUS-PARENT.md §8 template. -->
 
