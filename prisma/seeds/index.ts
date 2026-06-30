@@ -1,32 +1,15 @@
-/**
- * Seed entry point.
- *
- * Run: `pnpm seed` atau `make db-seed`.
- *
- * Sesuaikan dengan kebutuhan service. Default: insert 1 row contoh.
- */
+import './load-env.js';
 
-// TODO(boilerplate): uncomment setelah `pnpm install` + `pnpm prisma:generate`.
-//
-// import { PrismaClient } from '@prisma/client';
-//
-// const db = new PrismaClient();
-//
-// async function main(): Promise<void> {
-//   await db.exampleResource.upsert({
-//     where: { id: '00000000-0000-0000-0000-000000000001' },
-//     update: {},
-//     create: {
-//       id: '00000000-0000-0000-0000-000000000001',
-//       name: 'Seed example',
-//       status: 'active',
-//     },
-//   });
-//   console.warn('✓ Seed selesai');
-// }
-//
-// main()
-//   .catch((err) => { console.error(err); process.exit(1); })
-//   .finally(() => db.$disconnect());
+import { db } from '@core/prisma/prisma-client.js';
 
-console.warn('[seed] Belum diimplementasi. Edit prisma/seeds/index.ts.');
+import { SEEDED_TIER_NAMES, seedTiers } from './tiers.js';
+
+try {
+  await seedTiers(db);
+  console.warn(`[seed] tiers: ${SEEDED_TIER_NAMES.length} canonical rows upserted (idempotent)`);
+} catch (err) {
+  console.error('[seed] failed:', err);
+  process.exitCode = 1;
+} finally {
+  await db.$disconnect();
+}
