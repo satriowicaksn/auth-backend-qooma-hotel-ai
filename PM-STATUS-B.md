@@ -5170,6 +5170,72 @@ src/shared/types/fastify-augmentation.ts  EDIT optional: extend AppServices with
 
 Awaiting Executor B PLAN T10 attempt 1.
 
+#### HALT T10 (pre-PLAN) — exec-B (Nanak) cycle 8 (2026-06-30) attempt 1. CROSS-SLOT execution per §4-D09.
+
+**Trigger**: pre-flight gate FAILED at Phase A bootstrap — TWO concurrent guard violations (TRIGGER #10 ENOSPC-class + Postgres unavailable). Per auto-mode safety guards, "HALT + post HALT block to PM-STATUS-B.md §2 + wait human review BEFORE … (10) Pre-flight gate fail (Docker down, port unreachable, ENOSPC, baseline tests not green pre-impl). HALT + GAP, NO ad-hoc shim."
+
+**Observed (2026-06-30 cycle 8 Phase A pre-flight)**:
+
+```
+$ df -h /
+/dev/disk3s1s1   228Gi    11Gi   3.5Gi    77%    451k   37M    1%   /
+                                  ▲ 3.5 GiB free — below 5 GiB floor
+
+$ docker ps | grep postgres
+(no rows — postgres container not running)
+
+$ nc -z localhost 5433
+(port closed — consistent with no PG container)
+
+$ docker info | grep -A1 ^Server
+Server:
+ Containers: 5         # daemon REACHABLE; containers exist but are stopped
+```
+
+**Disk top consumers (informational only — owner-side decision)**:
+
+```
+22 GiB  ~/Library/Caches/Yarn   (Yarn classic offline cache; repo is pnpm-managed)
+452 MB  ~/.npm                  (npm cache)
+```
+
+Yarn cache is the dominant reclaim candidate (same observation as cycle-2 ENOSPC recovery). Repo uses pnpm — Yarn cache is unused-by-this-project. Reclaiming it would lift free space ~22 GiB. **NOT actioned by Executor B per TRIGGER #10 + no-ad-hoc-shim rule.** Owner-local decision.
+
+**Action taken**:
+- **NO** `make start` invocation attempted (TRIGGER #9 + the broader no-shim rule — Postgres bring-up is owner-side per cycle-6 + cycle-2 precedent)
+- **NO** disk cleanup attempted (TRIGGER #10 + no-shim rule)
+- **NO** `make check` baseline run (would consume more disk + may surface false negatives at 3.5 GiB free)
+- **NO** branch creation (`feat/slot-c-absorption-b` not created yet — PLAN block not posted, ACK gate not reached)
+- **NO** `src/` or `prisma/` touches
+- Working tree CLEAN on `main` at `3777180` (latest commit `PM A: ASSIGNMENT TF-01`)
+- Only this HALT block edit will be committed/pushed this turn
+
+**Resolution path (owner-local — outside Executor harness scope)**:
+
+1. **Disk reclaim** (target ≥ 5 GiB free; comfortable ≥ 10 GiB):
+   - Easiest single win: `rm -rf ~/Library/Caches/Yarn` (~22 GiB freed; safe — repo is pnpm-managed, Yarn rebuilds on demand for other projects)
+   - Other options: `pnpm store prune`, `npm cache clean --force`, IDE caches, Xcode derived data, Docker `system prune -a --volumes` (CAUTION on the last — would wipe stopped Postgres data; consider start-then-prune-other ordering)
+2. **Postgres bring-up**:
+   - `cd <repo>` then `make start` (runs `docker compose up -d postgres redis` + waits for healthy + runs `prisma generate` + `db-migrate`)
+   - Existing `qooma-postgres` container exists (just stopped per `Containers: 5` in `docker info`) — `docker start qooma-postgres` would resume without re-migration. `make start` is the canonical path.
+3. After both resolved, re-trigger Executor B Phase A — pre-flight will re-verify `df`/`docker ps`/`nc 5433` and proceed to PLAN block authoring once green.
+
+**Cross-slot heritage carried through HALT**:
+- This HALT block header carries the `CROSS-SLOT execution per §4-D09` marker (consistent with the to-come PLAN/SUBMIT/VERDICT chain — audit trail unbroken)
+- No commits on `feat/slot-c-absorption-b` during HALT (branch not created) → no commit-footer compliance to check
+- The PM-STATUS-B.md edit on main does NOT carry the §4-D09 footer in its commit msg (PM-STATUS commits are infrastructure-meta, not T10 impl work) — same pattern as PLAN/SUBMIT meta-commits in prior cycles
+- Future Slot C onboarding: this HALT block is part of the §4-D09 audit trail under "Cycle 8 — Slot C absorption attempt 1, halted pre-PLAN, resumed once host pre-flight cleared"
+
+**Classification**: INCIDENT-class (host environment), not a planning or code gap. No PM B planning action needed. No re-ASSIGNMENT, no re-ACK required. Resume happens once owner reclaims disk + brings Postgres up; Phase A re-runs verbatim.
+
+**Cycle-history pattern reference**:
+- Cycle 1 (ENOSPC at PLAN T05 retry): host disk reclaim → resumed
+- Cycle 2 (ENOSPC at T05 impl-start): `npm cache clean --force` → 1.3 GiB → 8.4 GiB → resumed
+- Cycle 6 (Docker daemon down at T02 impl-start): owner `open -a Docker` → resumed
+- **Cycle 8 (THIS — pre-flight at Phase A): combined disk + PG halt; same owner-resolution pattern**
+
+**Awaiting owner resolution (disk reclaim + Postgres bring-up), then Executor B Phase A resume.**
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
