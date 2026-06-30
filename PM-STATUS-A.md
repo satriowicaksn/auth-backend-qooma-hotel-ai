@@ -16,7 +16,9 @@
 - **🎯 SLOT A FOUNDATION CLOSED**: T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · T03 ✅ · **T04 ✅ APPROVED**.
 - **Merge-ready (notify Nathan)**: **T04** — branch `feat/seed-super-admin` @ `c7a7e76`. (T03 already merged via PR#3.) Nathan merges.
 - **New scope (Parent ruling `d40264e`)**: **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) → Slot A *execution* per §4-D08 (Slot C absorption; Slot C canonical + offline). **READY** (T04 closed). Gate **G3**, ~8h.
-- **Slot A remaining queue** (order DECIDED by Nathan): **1) TF-01 tsc-alias** prod-boot fix (Q-A-04 §4-D06) — ASSIGNMENT issued §2, **ACTIVE**, awaiting PLAN. **2) T09** (§4-D08 admin hotels CRUD, G3) — next.
+- **TF-01 tsc-alias** ✅ APPROVED — prod `node dist` boots (Q-A-04 CLOSED). **MERGE-READY**: branch `fix/tsc-alias-dist-boot` @ `cacbb69` (Nathan merges). T04 already merged (PR#4).
+- **Active task**: **T09** (admin hotels CRUD, §4-D08 cross-slot, G3 ~8h) — ASSIGNMENT issued §2, awaiting PLAN.
+- **Slot A status**: foundation done (T01–T04 + adopts) + TF-01 done. Remaining: **T09** (last Slot A item, Slot C absorption).
 - **Next gate**: foundation/G1 done for Slot A; T09 = G3. `PM-STATUS-PARENT.md §5`. §4-D06 collision OK (Parent kept my tsc-alias D06; Slot C → D07/D08).
 
 ---
@@ -32,7 +34,7 @@
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently verified: CLI exit 0 · 1 row (super_admin/hotel_id NULL/must_rotate=false) · argon2 login-compat (verify=true) · idempotent (Q-OPS-01) · fail-clean (exit 1, no pw leak) · 152 unit + 37 integ. **MERGE-READY** branch `feat/seed-super-admin` @ `c7a7e76`. **Closes Slot A foundation.** Gate **G1**. |
-| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | `assigned · READY (T04 closed)` — **NEW (Parent ruling d40264e)** | — | **Slot C canonical · Slot A execution per §4-D08** (Slot C absorption; Satrio offline; tx/foundation expertise match). Atomic `$transaction` insert(hotels)+insert(users[gm]) + generate-pw + suspend-cascade (revoke sessions same-tx). Deps T01–T04 (all ✓). ADR-0001/0007. Gate **G3**, ~8h. Audit footer "Cross-slot execution per §4-D08 (Slot C canonical territory)" on every block+commit. ASSIGNMENT pending (order vs tsc-alias — Nathan). |
+| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | 🔵 `wip · ACTIVE` (ASSIGNMENT §2, awaiting PLAN) | — | **Slot C canonical · Slot A execution per §4-D08** (Slot C absorption; Satrio offline). Atomic `$transaction` insert(hotels)+insert(users[gm], must_rotate=TRUE generated-pw) + suspend-cascade (revoke sessions same-tx). Deps T01–T04 + T11 (all ✓ merged). ADR-0001/0007. Gate **G3**, ~8h, coverage ≥80%. Footer §4-D08 every block+commit. Branch `feat/slot-c-absorption-a`. (tsc-alias TF-01 done first per Nathan.) |
 
 ---
 
@@ -664,7 +666,113 @@ _Awaiting Executor A SUBMIT T04._
 
 **Catatan PM A**: This closes the last prod-readiness hole. Quick task (~1-2h). After APPROVE I notify Nathan to merge, then issue **T09** (admin hotels CRUD, §4-D08 cross-slot — that one carries the "Cross-slot execution per §4-D08 (Slot C canonical territory)" footer on every block + commit). Verify both boot paths (tsx dev + node dist prod) in SUBMIT — that's the whole point of this task.
 
+#### PLAN TF-01 — exec-A (Nathan) at cycle 1 (2026-06-30)
+
+**Scope recap**
+- Make `node dist` boot: `tsc` emits TS path aliases (`@core/*`/`@modules/*`/`@plugins/*`/`@shared/*` + `.prisma/client`) verbatim → `ERR_MODULE_NOT_FOUND` in prod. Add a `tsc-alias` post-build step to rewrite all aliases in `dist`. Branch `fix/tsc-alias-dist-boot` off `main`. Dev-dep + build-script only; **no `src/` logic change**.
+
+**Session-start gate** (§2)
+- Identity Executor/Slot A ✓ · CLAUDE.md ✓
+- Spec read: ASSIGNMENT TF-01 DoD + §4-D06 (PO-approved `tsc-alias`) + Q-A-04 (§3 GAP T03-#2).
+- Verified read-only: `tsconfig.build.json` **`extends ./tsconfig.json`** → inherits `paths` incl. `.prisma/client` (T03) + the 4 `@*` aliases → `tsc-alias -p tsconfig.build.json` resolves all 5. `build` = `tsc -p tsconfig.build.json`; outDir `dist`, rootDir `src` → `dist/entrypoints/api.js`.
+- Deps: Slot A foundation merged (T04/PR#4 `d3768b8`). DB up (5433/6380). `lint`/`typecheck`/`test` green on main.
+- Dep to add: `pnpm add -D tsc-alias` — **PO-approved §4-D06** (posting per protocol; no further approval).
+
+**Files to modify**
+- `package.json` — add `tsc-alias` devDep + `build` → `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`.
+- `pnpm-lock.yaml` — from the add.
+- `tsconfig.build.json` — **only if** tsc-alias needs explicit `paths` (it inherits via `extends`; will confirm — expect no change).
+- No `src/` change.
+
+**Approach**
+`pnpm add -D tsc-alias` → update `build` script → `pnpm build` → tsc-alias rewrites the 5 path-alias specifiers in `dist/**` to relative paths. Then verify BOTH boot paths.
+
+**Verify (DoD)**
+1. `pnpm build` clean.
+2. **Prod proof**: `node dist/entrypoints/api.js` boots **LISTENING :3000** (DB/Redis up) — both `@*/` AND `.prisma/client` resolved in `dist`. Sanity-import `dist/entrypoints/worker.js`.
+3. **Dev no-regression**: `pnpm dev:api` (tsx) still boots.
+4. `make check` equiv (lint/format/typecheck/test:unit) + `test:integration` green.
+
+**Risk (will verify, flag if it bites — not guess):** the `.prisma/client` rewrite is the non-trivial one — it maps to `node_modules/.prisma/client` (a package dir, not a `src` file), so tsc-alias must rewrite it to a relative path *into* `node_modules` that Node actually resolves at runtime. DoD #2 is exactly the proof. If tsc-alias can't cleanly rewrite that one mapping, I'll BLOCKED/GAP with options (targeted config / postbuild shim) rather than ship a half-fix that leaves prod broken on the prisma import.
+
+**GAPs**: none up-front.
+
+Awaiting PM A ACK.
+
 _Awaiting Executor A PLAN TF-01._
+
+#### SUBMIT TF-01 — exec-A (Nathan) at cycle 1 (2026-06-30) (attempt 1)
+
+Task: `tsc-alias` prod-boot fix (Q-A-04 prod half — `node dist` boot).
+**Branch `fix/tsc-alias-dist-boot` @ `cacbb69`** (pushed). Code → branch, Nathan merges.
+
+**Process note**: proceeded on Nathan's explicit go-ahead ("gas TF-01" + PLAN echo); no PM-A tracker ACK block was posted — flagging so you can still VERDICT. Pre-flight **despite Slot B's concurrent HALT** (T10: disk<5GB / Postgres down): **my env healthy — 32 GB free, `qooma-postgres`+`qooma-redis` Up (healthy)**. (Slot B's reading didn't match my mount/moment.)
+
+Files changed: **2, build-only, no `src/`** —
+- `package.json` — `tsc-alias` devDep (`^1.8.17`) + `build` → `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths`.
+- `pnpm-lock.yaml` — from the add.
+- `tsconfig.build.json` **unchanged** — inherits `paths` (incl. `.prisma/client`) via `extends ./tsconfig.json` (confirmed; no edit needed — DoD #3).
+
+**DoD self-check:**
+- [x] `pnpm add -D tsc-alias` (PO-approved §4-D06) → `tsc-alias 1.8.17`.
+- [x] `build` → tsc + tsc-alias (with `--resolve-full-paths`, see below).
+- [x] aliases inherited by `tsconfig.build.json` (via extends) — verified, no edit.
+- [x] **Prod boot**: `node --env-file=.env dist/entrypoints/api.js` → **LISTENING :3000** (HTTP 404 = Fastify up), DB/Redis up — both `@*/` AND `.prisma/client` resolved in dist. Worker sanity: `node dist/entrypoints/worker.js` → stub message, **no module error**.
+- [x] **Dev no-regression**: `pnpm dev:api` (tsx) still boots LISTENING :3000.
+- [x] `make check` equiv green + `test:integration` green.
+- [x] Drift floor; diff scoped (package.json + pnpm-lock.yaml); no `src/` change.
+
+**The `.prisma/client` rewrite (flagged risk — hit + resolved):** plain `tsc-alias` rewrote `.prisma/client` → `'../../../node_modules/.prisma/client'` (a **directory**) → `node dist` crashed `ERR_UNSUPPORTED_DIR_IMPORT` (Node-ESM rejects directory imports). Fix = `tsc-alias --resolve-full-paths` → rewrites to the explicit file `'../../../node_modules/.prisma/client/index.js'` (package `main`) → Node-ESM resolves → api boots. The `@*/` aliases already targeted `.js` files (unaffected). This is why `--resolve-full-paths` is in the build script.
+
+**Verify evidence:**
+- `pnpm build` clean (tsc → tsc-alias).
+- dist alias audit — bare `@core/`·`@modules/`·`@plugins/`·`@shared/`·`.prisma/client` specifiers = **0 remaining** (all rewritten to relative files).
+- `node dist/entrypoints/api.js` **LISTENING :3000** ✓ (lsof + HTTP 404). `pnpm dev:api` (tsx) **LISTENING :3000** ✓. worker dist: stub msg, no error ✓.
+- Quality gate: lint 0/0 · typecheck · format:check · test:unit **152** · test:integration **37**.
+
+**Security/notes:** no secret committed; `--env-file=.env` used only for the LOCAL prod-boot proof (prod injects env). `JWT_ACCESS_TTL` 8h-vs-15m note still open (§4-D04, not this task).
+
+**TF-01 READY TO MERGE — `fix/tsc-alias-dist-boot` @ `cacbb69`.** Closes the Q-A-04 prod-boot hole (last prod-readiness gap). Requesting PM A VERDICT.
+
+##### VERDICT TF-01 — ✅ APPROVED (cycle 1, attempt 1) by PM A — independently verified — **Q-A-04 prod-boot CLOSED**
+
+PM A re-ran the build + boot on `fix/tsc-alias-dist-boot` @ `cacbb69`:
+- **Diff** = `package.json` (build script + `tsc-alias ^1.8.17` devDep) + `pnpm-lock.yaml`. **No `src/` change** ✓ (build-only).
+- **Build** — `pnpm build` (`tsc && tsc-alias -p tsconfig.build.json --resolve-full-paths`) clean. **dist has 0 bare aliases** (grepped). `.prisma/client` rewritten to the explicit file `../../../node_modules/.prisma/client/index.js` — resolves under Node-ESM (not a directory import; the `--resolve-full-paths` flag is exactly the fix for the `ERR_UNSUPPORTED_DIR_IMPORT` you hit).
+- **🎯 PROD BOOT** — `node dist/entrypoints/api.js` (env + DB up) → **LISTENING :3000**, Fastify answering (HTTP 404 on non-route). The defect that crashed on `@core/config` is GONE. **Q-A-04 prod-boot RESOLVED.**
+- **No dev regression** — build-only change (doesn't touch `tsconfig.json` dev paths or `src/`); `dev:api` (tsx) unaffected (executor confirmed). Gates green (152 unit + 37 integ, lint/typecheck).
+- Dep `tsc-alias` = PO-approved §4-D06 ✓. `tsconfig.build.json` inherits paths via `extends` (no change needed) ✓.
+
+**Process notes (both fair, acknowledged):**
+1. **No formal PM-A ACK block for TF-01 PLAN** — true; you proceeded on my "gas" + the precise ASSIGNMENT DoD + PO-pre-approved dep. For this small, fully-specified, pre-approved task that shortcut was **acceptable** — and this VERDICT is the formal close. For larger tasks (e.g. T09) we keep the normal PLAN→ACK→SUBMIT→VERDICT loop.
+2. **Slot B HALT (disk<5GB / Postgres down) vs your healthy env (32GB, DB up)** — good cross-slot flag. Raising to Parent (§2 roll-up) as a possible **shared-disk fluctuation** to monitor; relevant because **T09 needs Postgres + disk** for its integration test. Your moment/mount read healthy, so TF-01 unaffected.
+
+→ §3 Q-A-04 → resolved (dev=tsconfig path T03 + prod=tsc-alias TF-01). → **TF-01 verified-ready to merge** — PM A notifies Nathan (branch `fix/tsc-alias-dist-boot` @ `cacbb69`). → roll-up PARENT §2. → **ASSIGNMENT T09 issued below** (per Nathan's order: tsc-alias done → T09).
+
+_TF-01 done. Prod `node dist` now boots. Next: T09 (admin hotels CRUD, §4-D08 cross-slot)._
+
+---
+
+### ASSIGNMENT T09 — routed to exec-A (Nathan) by PM A at cycle 1 (2026-06-30) · **CROSS-SLOT per §4-D08**
+> **Cross-slot execution per §4-D08 (Slot C canonical territory).** Slot C (Satrio) offline; Slot A executes one-off (tx/foundation expertise). **Ownership-of-record = Slot C** (future amendments return to Satrio). **Footer mandate**: every PLAN/SUBMIT/VERDICT sub-block + every impl commit carries `Cross-slot execution per §4-D08 (Slot C canonical territory).`
+- **Task**: Admin hotels CRUD + atomic GM-create + suspend cascade — `/api/admin/hotels` family. Gate **G3**, ~8h. **super_admin scope** (admin surface).
+- **Branch**: off `main` → `feat/slot-c-absorption-a` (or `feat/admin-hotels`). Module `src/modules/admin/hotels/`. Code → branch, **Nathan merges**.
+- **Deps (all merged ✓)**: T02 (hotels/users/sessions tables) · T03 (tiers) · T04 (super_admin for auth/integration) · T11 (tenant-guard). 
+- **Spec (read before PLAN)**: `MVP-AUTH-FIRST §1` row 9 + **§4.5 atomic GM-create** + **§4.3 suspend cascade** + `01-auth-identity §1.5` + `SERVICE-CHARTER §2`. ADR-0001, **0007 (Prisma `$transaction`)**.
+
+**Scope / DoD T09:**
+- [ ] `GET /api/admin/hotels` — list with tier JOIN + `agent_count`/`user_count`; super_admin only (403 otherwise).
+- [ ] `POST /api/admin/hotels` — **atomic `$transaction`**: generate 16-char crypto-secure password **before** tx (reuse existing generate-password helper — `src/shared/utils/` / T07 helper; do NOT hand-roll) → `INSERT hotels` + `INSERT users (role='gm_admin', hotel_id=new.id, must_rotate_password=TRUE)` → **return the generated password once**. (Note: GM here is the *generated-password* flow → `must_rotate=true`, unlike T04's env-seeded founder which was false — per Q-OPS-01.) Respect `users_role_hotel_mutual_exclusion` (gm_admin ⇒ hotel_id NOT NULL) + `UNIQUE(hotel_id,email)`.
+- [ ] `PATCH /api/admin/hotels/:id` — update name/tier/etc. (zod whitelist); tier FK valid.
+- [ ] `PATCH /api/admin/hotels/:id/status {status:'suspended'}` — **same-transaction suspend cascade**: `UPDATE sessions SET revoked_at=NOW() WHERE user_id IN (SELECT id FROM users WHERE hotel_id=$1)` (per §4.3). **Soft only — no hard delete.** `hotels_status_check` (active/suspended).
+- [ ] **AuthZ**: super_admin-only via tenant-guard/role check; AppError subclasses (no `throw new Error`).
+- [ ] **Tests**: unit (service branching — mock ports, **NOT** Prisma) + **integration** (atomic tx commit/rollback, suspend-cascade revokes sessions, last-X guards) against real DB. **Coverage ≥80% line** on changed files (G3 bar).
+- [ ] `make check` equiv green + `test:integration` green (needs Postgres + disk — see env note). Drift floor (no `any`/`console.log`/`throw new Error`/default-export/cross-module-internal-import). zod validation on all mutating verbs.
+- [ ] **§4-D08 footer** on every block + commit. No schema change (verify; tables exist). git diff scoped to `src/modules/admin/hotels/` + wiring (`api.ts`) + tests.
+
+**Catatan PM A**: This is the big one — **PLAN first** (normal loop: PLAN → I ACK → SUBMIT → VERDICT → Nathan merges). Surface GAPs in PLAN (e.g. exact `/hotels` list response shape, tier-change validation rules, last-active-GM guard semantics). **Env caveat**: Slot B just HALTED T10 on `disk<5GB + Postgres down`; your env read healthy (32GB), but T09 integration tests need Postgres + disk — if you hit the same condition, raise BLOCKED immediately (don't fight it). Atomic-tx correctness (commit + rollback paths) is the highest-risk area — test both.
+
+_Awaiting Executor A PLAN T09._
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
 
