@@ -2581,6 +2581,192 @@ src/modules/users/
 
 Awaiting Executor B PLAN T07 attempt 1.
 
+#### PLAN T07 — exec-B (Nanak) cycle 5 (2026-06-30) attempt 1. Final Slot B sequence item. Canonical Slot B (no cross-slot marker).
+
+**Scope recap**
+
+NEW `src/modules/users/` (Open Item #1) implementing 4 `/api/users/*` endpoints (gm_admin-scoped, per-hotel users CRUD): `GET` (list with offset pagination + spec query filters), `POST` (create dept_head/staff with generate-and-return password), `PATCH /:id` (update name/role/dept_id/is_active/language; email immutable; last-gm-admin guard), `POST /:id/reset-password` (admin-initiated reset; revokes ALL target sessions per Open Item #6). Reuses T05 building blocks: `Argon2Hasher` (via `PasswordHasherPort`), `ConflictError`/`ValidationError`/`NotFoundError`/`BusinessRuleError`/`ForbiddenError` (all already in `@core/errors/app-errors.js` — verified). Adds `generatePassword(length: number = 16): string` to `src/shared/utils/crypto.ts` (Open Item #2 — additive, sibling pattern to T05's `hashToken`). First substantive `src/entrypoints/api.ts` edit since T05: **T11 Amendment 3 deferred tenant-guard wiring NOW EXECUTED** — `registerTenantGuard(fastify, { allowlist: ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health'] })` slotted between `@fastify/jwt` registration + `tokenIssuer` decoration and route registration. Repo extends `User` table only (NO schema change — PM B pre-verified soft-delete column `isActive` + `@@unique([hotelId, email])` at `prisma/schema.prisma:87/97`). Last-gm-admin guard implemented at service layer with `repo.countActiveGmAdmins(hotelId, excludingUserId)` + atomic Prisma `$transaction` wrap (read count + update in single tx) to avoid race condition. `req.tenantScope` consumed via `req.session.hotelId` (populated by tenant-guard); handler explicitly rejects non-`gm_admin` callers (super_admin uses `/api/admin/users` Slot C) with `ForbiddenError` — addresses scope-boundary question raised in directive. Unit tests cover all 4 endpoints + role constraint + duplicate email + last-gm guard + soft-delete + tenant scoping + generatePassword statistical compliance. Integration placeholder with ≥ 5 `it.todo()` entries gated on T02. APPROVE-PARTIAL convention batches with T05/T06/T11 trio for T02 ship event. Final Slot B sequence item per PARENT §10.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+
+- Identity confirmed: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓ (auto-load)
+- Task spec read: `MVP-AUTH-FIRST §1` row 6; `01-auth-identity §1.2` (lines 95-136 — canonical SettingsUser shape, server-enforced constraints, role whitelist `'dept_head' | 'staff' only`, last-gm guard, soft-delete); `§4.7` (UNIQUE(hotel_id, email)); `§6` (req.tenantScope consumption — read-only here); `SERVICE-CHARTER §3` (gm_admin canonical Slot B); `MVP-AUTH-FIRST §4.6` (last-super_admin guard — NOT this task's concern but adjacent)
+- Parent docs spot-read: `CLAUDE.md §3/§4/§5/§6/§7/§8`; `docs/MODULE_TEMPLATE.md §1-§4` (new module structure — first time this cycle creating fresh module vs extending); `docs/SECURITY.md §2/§5`; `docs/TESTING.md §4/§9`; `ADR-0001`; `ADR-0008`; `PARENT §1 T07 row` + `§8 T07 detail` (PM B amended baseline)
+- Existing surface verified via `git show origin/feat/auth-core`:
+  - `auth.errors.ts`: `BusinessRuleError` (T06, 422 `BUSINESS_RULE`) + `PasswordRotationRequiredError` (403) + `TenantScopeViolationError` (403)
+  - `@core/errors/app-errors.ts`: `ValidationError` (400) + `AuthError` (401) + `ForbiddenError` (403) + `NotFoundError` (404) + `ConflictError` (409) + `RateLimitError` (429) — full AppError inventory satisfies T07's needs WITHOUT introducing new subclass (last-gm guard discriminated via `details.reason: 'LAST_GM_ADMIN_PROTECTED'`)
+  - `shared/utils/crypto.ts`: existing `hashToken` (T05) + stubs `encrypt`/`decrypt` — `generatePassword` will append at bottom (additive, sibling pattern)
+  - `entrypoints/api.ts`: current chain `setErrorHandler → @fastify/cookie → @fastify/jwt → must-rotate-password gate → authRoutes` — T07 INSERT point: tenant-guard call after must-rotate-password (or before — see DD below); then `usersRoutes` register
+  - `plugins/tenant-guard.ts`: signature `registerTenantGuard(fastify, deps): void`, deps `{ allowlist: readonly string[] }` — exact T11 contract reuse
+  - `prisma/schema.prisma:78-101`: User row confirmed — `isActive`, `mustRotatePassword`, `@@unique([hotelId, email])`, `@@index([hotelId, isActive])`, `role` is `VarChar(20)` (text — validation at service layer, not DB-enum)
+- Dependencies: T05/T06/T11 all APPROVE-PARTIAL ✓ (cycle-5 IMPL-READY pending PM B ACK on this PLAN)
+- `make typecheck` clean ✓ + `make lint` clean ✓ (verified on `feat/auth-core` baseline — last known green at `99bb0cb` T11 SUBMIT)
+- Scaffolder risk: **none** — no `pnpm create`, no Prisma init. No package install needed.
+
+**Files to create** (10 NEW — new module + 4 test files)
+
+```
+src/modules/users/
+├── index.ts                              (barrel — usersRoutes + UsersService type; NO repo/internal export)
+├── users.routes.ts                       (Fastify plugin — 4 handlers: GET / POST / PATCH /:id / POST /:id/reset-password)
+├── users.service.ts                      (orchestrator: hash port + repo + last-gm guard tx + revokeAllSessions)
+├── users.repository.ts                   (Prisma direct — listByHotel + countByHotel + findById + insertUser + updateUser + setPassword + countActiveGmAdmins + revokeAllSessions)
+├── users.schema.ts                       (zod: ListQuery, CreateUserRequest, UpdateUserRequest, SettingsUserResponse, CreateUserResponse, ResetPasswordResponse, ListResponse)
+├── users.types.ts                        (SettingsUser domain type; UserRole = 'dept_head' | 'staff' subset)
+└── __tests__/
+    ├── users.service.test.ts             (unit — mock port + mock repo class instance; plain-object cast per T05 pattern)
+    ├── users.routes.test.ts              (unit — Fastify inject + mocked service decorator + mocked req.session)
+    ├── users.schema.test.ts              (unit — zod parse for each schema)
+    └── users.repository.integration.test.ts  (PLACEHOLDER ≥ 5 it.todo entries, T02-gated)
+```
+
+**Files to modify** (2 EDIT, additive only)
+
+```
+src/entrypoints/api.ts        WIRE: import usersRoutes + UsersRepository + UsersService;
+                              construct usersService; decorate fastify.services.users; call
+                              registerTenantGuard(fastify, { allowlist: [...] }) AFTER
+                              must-rotate-password gate, BEFORE authRoutes/usersRoutes register;
+                              register usersRoutes with prefix '/api/users'.
+src/shared/utils/crypto.ts    EXTEND: append generatePassword(length: number = 16): string at
+                              bottom. Uses crypto.randomBytes; charset
+                              [a-zA-Z0-9!@#$%^&*]; guarantees ≥1 digit + ≥1 symbol per
+                              SECURITY.md §2 floor. Zero modification to existing exports
+                              (hashToken/encrypt/decrypt/encryptDsn/decryptDsn).
+```
+
+**Files explicitly NOT touched**
+
+- `src/modules/auth/auth.errors.ts` — **ZERO new error subclass** (AppError inventory covers all T07 cases; last-gm guard discriminated via `BusinessRuleError` `details.reason` field — see DD below)
+- `src/modules/auth/*` other files — users domain is separate bounded context (CLAUDE.md §3)
+- `src/plugins/tenant-guard.ts` — T11 plugin, used as-is via factory call
+- `src/plugins/must-rotate-password.plugin.ts` — T06 plugin, untouched
+- `src/modules/auth/auth.jwt-context.ts` — consumed indirectly through tenant-guard's `req.session` population
+- `prisma/schema.prisma` — PM B verified all fields present
+- `package.json` / `pnpm-lock.yaml` — no new dep
+- Q-B-02 workarounds — reuse verbatim
+
+**File count**: **10 CREATE / 2 EDIT** (revised from ASSIGNMENT's "8 CREATE" header — the §"File ownership" listing block shows 10 actual files when index.ts + 4 test files counted; PM B's "8" likely excluded the test files OR was a typo. Confirm at ACK. ZERO new error subclass means `auth.errors.ts` EDIT collapses; EDIT count drops to 2 vs ASSIGNMENT baseline of 3.)
+
+**Approach**
+
+`users.routes.ts` registers 4 handlers under `/api/users` prefix (registered at entrypoint). Each handler: (1) verify `req.session?.role === 'gm_admin'` else throw `ForbiddenError` (super_admin must use Slot C's `/api/admin/users`; non-gm_admin roles forbidden per spec §1.2 line 100 "Roles" column); (2) extract `req.session.hotelId` (guaranteed non-null by tenant-guard for non-super_admin via `TenantScopeViolationError`); (3) zod-parse body / query params (`safeParse` → `ValidationError` on failure); (4) call corresponding `fastify.services.users.<method>(hotelId, ...)`; (5) shape response per spec line 126 verbatim. Same pattern as T05/T06 routes (FastifyPluginCallback sync + done callback for any plugin-style if needed, but routes use `async (req, reply)` because handler bodies await service calls).
+
+`users.service.ts` orchestrates: `listUsers(hotelId, filters, page)` calls `repo.listByHotel(hotelId, filters, take, skip)` + `repo.countByHotel(hotelId, filters)` returning `{ users, total, limit, offset }`. `createUser(hotelId, input)` validates `input.role ∈ {'dept_head', 'staff'}` (zod already enforced; defense-in-depth at service via narrow type) — but service additionally checks via `input.role` type guard (impossible to fail given zod, but lint-narrower); generates 16-char password via `generatePassword()`; hashes via `PasswordHasherPort.hash`; calls `repo.insertUser(hotelId, { ...input, passwordHash, isActive: true, mustRotatePassword: true })`; catches Prisma `P2002` unique-violation rethrown as `ConflictError('Email already exists for this hotel', { hotelId, email: maskEmail(input.email) })`; returns `{ user: toSettingsUser(row), generated_password: plaintext }`. `updateUser(hotelId, userId, patch)` first verifies `findById` returns row (else `NotFoundError`); rejects `patch.role` ∈ `{'gm_admin', 'super_admin'}` via `ValidationError` (server-enforced per spec line 134); for last-gm-admin guard, when `patch.role !== 'gm_admin'` OR `patch.isActive === false` AND the target's CURRENT role is `'gm_admin'`, wrap the operation in `prisma.$transaction(async tx => { count = repo.countActiveGmAdmins(hotelId, exceptUserId: userId); if (count === 0) throw new BusinessRuleError(...); return repo.updateUser(...) })` — atomic check-and-set inside a single tx (prevents race when two concurrent PATCHes both observe count=1 before either updates). Soft-delete = `patch.isActive: false` is a normal `UPDATE` — NEVER `DELETE`. `resetUserPassword(hotelId, userId)` verifies target exists; generates new password; hashes; calls `repo.setPassword(userId, newHash, mustRotatePassword=true)` (atomic single Prisma update); then calls `repo.revokeAllSessions(userId)` — NEW repo method (DIFFERENT from T11's `revokeAllOtherSessions` which preserved current; here we revoke ALL because actor ≠ target per Open Item #6). Revocation is best-effort (try/catch + `logger.warn`); password rotation must succeed even if sweep fails (same defensive pattern as T06 `rotatePassword`). Returns `{ user: toSettingsUser(row), generated_password: plaintext }`.
+
+`users.repository.ts` Prisma-direct per ADR-0001 (no `IUsersRepository` wrap). Methods: `listByHotel(hotelId, filters, take, skip): Promise<UserRow[]>`, `countByHotel(hotelId, filters): Promise<number>` (separate query — Prisma doesn't auto-paginate with count), `findById(hotelId, id): Promise<UserRow | null>` (scoped to hotel for defense-in-depth — even though tenant-guard already isolates, repo enforces too), `insertUser(hotelId, data): Promise<UserRow>` (catches and rethrows `P2002`), `updateUser(hotelId, id, data): Promise<UserRow>` (whitelist of allowed fields via Prisma type-narrow), `setPassword(id, hash, mustRotate): Promise<void>` (no scope — userId is the PK, single row), `countActiveGmAdmins(hotelId, excludingUserId?: string): Promise<number>` (used inside tx for last-gm guard), `revokeAllSessions(userId): Promise<{ revokedCount: number }>` (best-effort, returns count for log). Note: `countActiveGmAdmins` accepts the `excludingUserId` to count gm_admins OTHER than the target — useful when validating "PATCH self-demote would leave hotel with 0 gm_admins". The "self vs other" semantic matters because spec line 135 specifically says "cannot demote yourself out of gm_admin if you're the only gm_admin" — but the practical query is "after this PATCH commits, would the active gm_admin count for this hotel be 0?" That's `countActiveGmAdmins(hotelId, excludingUserId: targetUserId)` — count gm_admins EXCEPT the target; if 0, the target IS the last gm_admin and the PATCH is forbidden.
+
+`users.schema.ts` zod schemas: `ListQuerySchema` with `role?: enum(['dept_head', 'staff', 'gm_admin'])` (spec query line 122 filter — but creation/elevation is restricted; the LIST filter accepts all roles including gm_admin since the gm_admin caller can see their own role; super_admin not in list since this is gm_admin-scope endpoint), `dept_id?: uuid().nullable()`, `is_active?: coerce.boolean()`, `limit?: coerce.number().int().min(1).max(200).default(50)`, `offset?: coerce.number().int().min(0).default(0)`. `CreateUserRequestSchema.strict()` with `email: string().email()`, `name: string().min(1).max(100)`, `role: enum(['dept_head', 'staff'])` (STRICT — gm_admin/super_admin EXCLUDED per spec line 134), `dept_id?: uuid().nullable()`, `language?: enum(['id', 'en']).default('id')`. `UpdateUserRequestSchema.strict().partial()` with `name`, `role: enum(['dept_head', 'staff'])` (STRICT — gm_admin/super_admin EXCLUDED), `dept_id`, `is_active: boolean()`, `language`. Email field absent (immutable per spec line 103). `SettingsUserSchema` matches spec §1.2 lines 108-119 verbatim with snake_case fields. `CreateUserResponseSchema` = `{ user: SettingsUserSchema, generated_password: string }`. `ResetPasswordResponseSchema` = same. `ListResponseSchema` = `{ users: SettingsUserSchema[], total: number, limit: number, offset: number }`.
+
+`users.types.ts` exports `SettingsUser` domain type + `UserRole = 'dept_head' | 'staff'` narrow + re-exports `Role` from `auth.types` for service-layer role narrowing.
+
+`generatePassword` in `crypto.ts`: rejection-sampling approach — generate `length` random chars from charset `[a-zA-Z0-9!@#$%^&*]` (78-char universe), retry whole-string if it doesn't contain ≥1 digit AND ≥1 symbol. Expected ≤2 iterations for length ≥ 12 (probability of missing a class in 12 chars is small). Uses `crypto.randomBytes(length * 2)` to get raw bytes, modulo into the charset alphabet. Unit test: 100 samples × length 16 → all contain digit + symbol, length correct, distribution roughly uniform across alphabet (Chi-squared check optional; floor test is membership + length).
+
+Wiring in `src/entrypoints/api.ts`: insert AFTER `registerMustRotatePasswordGate(fastify, { repo: authRepo })` line, BEFORE `await fastify.register(authRoutes, ...)`:
+
+```ts
+const usersRepo = new UsersRepository(prisma);
+const usersService = new UsersService(usersRepo, new Argon2Hasher(), config, logger);
+
+fastify.decorate('services', { auth: authService, users: usersService });
+
+registerTenantGuard(fastify, {
+  allowlist: ['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health'],
+});
+
+await fastify.register(authRoutes, { prefix: '/api/auth' });
+await fastify.register(usersRoutes, { prefix: '/api/users' });
+```
+
+Note: the `fastify.decorate('services', ...)` call CURRENTLY only sets `{ auth: authService }`. I'll need to UPDATE the decoration to include `users: usersService` — that's a 1-line change (object literal extension). Also need to extend `AppServices` interface in `src/shared/types/fastify-augmentation.ts` from `{ auth: AuthService }` to `{ auth: AuthService; users: UsersService }`. That augmentation file edit is a small additive type touch — counts as edit but per Q-B-02 ethos, additive-only flag in commit msg.
+
+**Wiring order DD**: jwt → tokenIssuer decoration → must-rotate-password → tenant-guard → routes. Why tenant-guard AFTER must-rotate? Both are `preHandler` hooks; Fastify executes registered preHandler hooks in registration order. Order matters because: (a) must-rotate-password is invoked first → for users that need rotation, it 403s out fast without doing the tenant-guard work (efficiency); (b) tenant-guard runs second → populates `req.session` and `req.tenantScope` only for users who passed the rotation check (consistency — `req.session` only ever set for "fully ready" users). Alternative order (tenant-guard before must-rotate) would still work behaviorally but would set `req.session` for users who then get 403'd by must-rotate — wasted work. Both are valid; cycle-5 picks must-rotate-first per the above efficiency rationale. **Flag for PM B**: if you prefer tenant-guard-first (so `req.session` is always populated even for must-rotate failures, easing future audit-log correlation), say so at ACK — easy switch.
+
+**Sub-touch: `src/shared/types/fastify-augmentation.ts`** — third additive EDIT to add `users: UsersService` to `AppServices` interface. ~3-line touch. File count becomes **10 CREATE / 3 EDIT** (or 2 if AppServices augmentation collapses into the file count of entrypoint touch — counting it separately is more accurate). PM B audit at ACK; if the augmentation edit isn't allowed for some reason, alternative is to inline a module declaration in `users.service.ts` — less clean but works.
+
+**7 Open items — stance final (all 7 confirmed, NO rebuttals)**
+
+| # | Topic | Stance |
+|---|---|---|
+| 1 | Module placement | ✅ **NEW `src/modules/users/`** per PM B (a). Domain separation — `auth` = identity self-service; `users` = admin-on-others. |
+| 2 | `generatePassword` placement | ✅ **`src/shared/utils/crypto.ts`** additive per PM B. Sibling to `hashToken` (T05 Q-B-02 ethos). Charset `[a-zA-Z0-9!@#$%^&*]`, default length 16, rejection-sample to guarantee digit+symbol presence. |
+| 3 | Soft-delete | ✅ **CONFIRM** — PM B pre-verified `User.isActive Boolean @default(true) @map("is_active")` at `prisma/schema.prisma:87`. Repo `updateUser` with `isActive: false` does `UPDATE`, never `DELETE`. No schema GAP. |
+| 4 | Pagination | ✅ **Offset-based** per PM B. `limit?: 1..200 (default 50)`, `offset?: ≥0 (default 0)`. Response shape: `{ users, total, limit, offset }` (no `hasMore` — derivable from `offset + users.length < total`). |
+| 5 | tenant-guard allowlist | ✅ **`['/api/auth/login', '/api/auth/logout', '/api/auth/refresh', '/health']`** per PM B. Verified current `api.ts` chain on branch: only `authRoutes` at `/api/auth` registered; `/health` route does NOT yet exist (Slot A foundation territory) but adding it to allowlist is future-proof (no crash — `Set.has()` simply misses today). Authenticated `/api/auth/me` + `/api/auth/me/password` correctly EXCLUDED (super_admin gets `{type: 'all-hotels'}`; non-super_admin needs `hotelId` claim — works for both per spec §1.1). |
+| 6 | Reset-password session handling | ✅ **revoke ALL sessions for target user** per PM B. NEW repo method `revokeAllSessions(userId): Promise<{ revokedCount }>` — differs from T11's `revokeAllOtherSessions(userId, exceptSessionId)` in that there's no `except` filter (actor ≠ target; full re-login required for target). Best-effort wrap with `try/catch + logger.warn` mirroring T06 pattern. |
+| 7 | Response shape | ✅ **`{ user: SettingsUser, generated_password: string }`** verbatim per spec §1.2 line 126/127. Snake-case `generated_password` field matched exactly. Both POST (201) and reset (200) use this shape. |
+
+**Auxiliary design questions / GAP-adjacent flags (intent-stated, NOT PLAN-blocking)**
+
+- **`fastify.services.users` decoration + AppServices type extension** — requires 1-3 line edit to `src/shared/types/fastify-augmentation.ts` (extend `AppServices` interface) + update to the `fastify.decorate('services', ...)` call site in entrypoint. Counts as additive type-touch; **EDIT count revised to 10 CREATE / 3 EDIT**. PM B ruling needed if shared/types/ touch is restricted (I expect not — already touched in T05 + T06 + T11 additively).
+- **Last-gm guard transactional atomicity** — current intent: `prisma.$transaction(async tx => { count = await tx.user.count({ where: {hotelId, role: 'gm_admin', isActive: true, NOT: {id: targetUserId}} }); if (count === 0) throw new BusinessRuleError(...); return tx.user.update({ where: {id: targetUserId}, data: patch }); })`. The `BusinessRuleError` throw inside the tx callback causes Prisma to roll back the (un-executed) update — clean semantics. Alternative: do read + update outside tx → race condition possible. Picking transactional. PM B audit at ACK.
+- **`BusinessRuleError` reuse with `details.reason: 'LAST_GM_ADMIN_PROTECTED'` discriminator** — PM B prefers no new subclass. Existing `BusinessRuleError` has fixed `code = 'BUSINESS_RULE'` (T06); discriminator goes in `details` field. Throw signature: `throw new BusinessRuleError('Cannot demote the last gm_admin for this hotel', { reason: 'LAST_GM_ADMIN_PROTECTED', hotelId })`. FE routes on `error.details.reason` if needed. **Flag for PM B**: if you prefer a top-level distinct `code` field for spec-compliance (e.g., spec says "422 BUSINESS_RULE" — would a sub-code like `'LAST_GM_ADMIN_PROTECTED'` violate that?), small alternative is `LastGmAdminGuardError extends AppError` with `code = 'LAST_GM_ADMIN_PROTECTED'` and statusCode 422 — would add 1 new class + bump EDIT count back to 3. Default proceed with reuse.
+- **`/api/users` super_admin handling** — spec line 100 says role = `gm_admin`. tenant-guard bypasses super_admin globally; route handler explicitly rejects with `ForbiddenError('Use /api/admin/users instead', { role: 'super_admin' })` — Slot C territory for super_admin. Confirms boundary with Slot C T08. This is NOT a GAP — spec is clear; just calling out the handler-level role check explicitly.
+- **Role whitelist for PATCH update** — spec lines 113 + 134 imply `role` field on PATCH is restricted to `'dept_head' | 'staff'`. zod schema enforces; service double-checks defensively. NOT a GAP.
+
+**GAPs / questions (PLAN-blocking)**
+
+- **(none).** All open items resolved; auxiliary flags above are ACK-time confirms, not blockers. No new dep, no schema change, no new env var, no Q-B-02 re-fight, no cross-team file touch beyond the standard Slot B surface.
+
+**Test plan summary (per TESTING.md §4 + §11)**
+
+- `users.service.test.ts` (~18 tests): listUsers happy + empty + scoped + filter combinations (3); createUser happy + 409 duplicate email + 400 invalid role + sets must_rotate=true + returns cleartext + masks email in log (5); updateUser happy + 404 + last-gm guard 422 + elevate-to-gm rejection + email-immutable (5); resetUserPassword happy + 404 + revokeAllSessions called + best-effort sweep failure logs warning + new password returned cleartext (5)
+- `users.routes.test.ts` (~12 tests): GET happy + 422 invalid query (limit > 200, offset < 0); POST 201 happy + 409 + 400 invalid role + 403 super_admin caller; PATCH 200 + 404 + 422 last-gm + 422 elevate; POST reset-password 200 + 404; tenant-scope assertion (handler reaches via req.session.hotelId mocked) (12)
+- `users.schema.test.ts` (~14 tests): ListQuerySchema pagination edge cases (3); CreateUserRequestSchema role whitelist (3) + email format + name length; UpdateUserRequestSchema role whitelist; SettingsUserSchema response shape; CreateUserResponseSchema spec verbatim (14)
+- `users.repository.integration.test.ts` (≥ 5 it.todo): listByHotel tenant-scoping + insertUser P2002 mapping + countActiveGmAdmins last-gm calculation + setPassword + mustRotatePassword atomicity + revokeAllSessions sweep
+- `crypto.test.ts` (NEW or extend existing — if no existing `__tests__/crypto.test.ts`, add as part of T07): generatePassword length compliance + charset coverage + digit/symbol guarantee (100-sample regex check) — 3-5 tests. **Verify at code-time whether existing test file exists**; otherwise add `src/shared/utils/__tests__/crypto.test.ts` — would add 1 more CREATE.
+
+**Coverage targets** per file (T07 scope):
+- `users.service.ts`, `users.routes.ts`, `users.schema.ts`: target **≥ 90% line** (critical security per TESTING.md §9)
+- `users.repository.ts`: excluded from coverage scope (integration-deferred like `auth.repository.ts`)
+- `crypto.ts`: existing line coverage maintained; new `generatePassword` covered ≥ 80%
+- `entrypoints/api.ts`: unchanged exclusion (entrypoints exempt per `collectCoverageFrom`)
+
+**Security checklist (CLAUDE.md §6 + SECURITY.md §2 + §5)**
+
+- Cleartext password returned ONLY in response body, NEVER logged. Log lines touching create/reset: `logger.info('users.created', { email: maskEmail(input.email), userId: created.id, role })` — no `generated_password`, no `req.body`
+- Email masked at every log line via `maskEmail()` (T05 reuse)
+- argon2id stored hash via `PasswordHasherPort.hash` (T05 `Argon2Hasher`) — never plaintext
+- `generatePassword` charset includes ≥1 digit + ≥1 symbol guaranteed by rejection-sample; SECURITY.md §2 floor met
+- tenant-guard active on `/api/users/*` — verified via mocked `req.session` test; tenant-guard plugin ALREADY tested separately (T11 unit tests)
+- gm_admin role check at handler — explicit `if (req.session?.role !== 'gm_admin') throw new ForbiddenError(...)` for each of the 4 handlers; super_admin gets `ForbiddenError('Use /api/admin/users')`
+- No new endpoint exposes raw user secrets or session contents
+- Last-gm guard atomicity via `prisma.$transaction` — race-free check-and-set
+
+**Risks + assumptions**
+
+- **Risk**: PATCH handler must validate that the FIELDS being changed are the allowed whitelist. zod schema enforces shape; service does NOT need extra check since unknown fields would be rejected by `.strict()`. Defense-in-depth: service uses Prisma's `Omit<UpdateInput, 'email' | 'passwordHash' | 'id'>` type to make accidental field-spread impossible at type level.
+- **Risk**: `generatePassword` rejection-sampling for guaranteed character classes could theoretically loop forever if charset is misconfigured. Charset `[a-zA-Z0-9!@#$%^&*]` (78 chars: 26+26+10+9) has digit class (~13%) + symbol class (~12%) — probability of missing both in 16 draws is `(1-0.13)^16 + (1-0.12)^16 - intersection ≈ 0.10 + 0.13 ≈ 0.20` so retry rate ~20%. Hard cap loop at 10 iterations to guarantee termination; if cap hit, fall back to first-char-digit + last-char-symbol replacement (deterministic). Document in helper JSDoc.
+- **Risk**: `revokeAllSessions` for reset-password — current best-effort semantic means a transient DB failure leaves stale sessions valid until expiry (max 30d refresh, 15min access). Mitigation: log at `error` level (not `warn`) on failure so ops can manually intervene. OR escalate from best-effort → required (rotate password + revoke sessions in single tx). PM B audit — for cycle-5 unit-only, best-effort matches T06 pattern; defer "strict revoke" to backlog.
+- **Risk**: `entrypoints/api.ts` is now substantively edited (4-5 lines added). Eslint rule `no-restricted-imports` on adapters still requires the `// eslint-disable-next-line` for `Argon2Hasher` import — same T05 workaround pattern reused for `UsersRepository`/`UsersService` imports (these aren't adapter imports though — they're module-public per barrel; should NOT need disable comment). Verify at code-time.
+- **Assumption**: `req.session?.role` and `req.session?.hotelId` are populated by tenant-guard for non-allowlist routes (per T11 contract). Route handlers explicitly check `req.session?.role === 'gm_admin'`; if `req.session` is undefined (allowlisted route, but `/api/users/*` is NOT allowlisted), throw `ForbiddenError`.
+- **Assumption**: PM B's stated "8 CREATE / 3 EDIT" was a summary count; actual file listing in ASSIGNMENT §"File ownership" enumerates 10 files. Reconciling to 10 CREATE / 3 EDIT (including augmentation touch + crypto + entrypoint).
+
+**ETA**
+
+- PLAN ACK cycle: ~15-30 min
+- Implementation (module scaffold + service + repo + routes + schemas + types + generatePassword helper + wiring): ~3-4h
+- Unit tests (~50 tests across 4 files + crypto helper test): ~2-3h
+- Self-validate (`make check` + drift + coverage + cross-slot N/A): ~30 min
+- **Total wall-time exec**: **~5-7h from ACK to SUBMIT** (matches ASSIGNMENT estimate; slightly heavier than T11 because new module scaffolding + 4 endpoints + first substantive `api.ts` edit; lighter than T05 because patterns thoroughly established)
+
+**Status: ready-for-ACK. No PLAN-blocking GAPs. 7 open items confirmed. 3 ACK-time confirms requested:** (1) file count clarification 10 vs 8; (2) `BusinessRuleError.details.reason` discriminator vs new `LastGmAdminGuardError` subclass; (3) wiring order must-rotate-first vs tenant-guard-first.
+
+**Cross-slot marker NOT required** — T07 is canonical Slot B territory per `SERVICE-CHARTER §3` (gm_admin scope owned by Slot B). Commits use plain conventional-commit format, no `§4-D01` footer needed.
+
+**Workflow next**:
+1. PM B ACK on main
+2. `git checkout feat/auth-core` + rebase atop main (sync ACK context)
+3. Implement per ~9 atomic commits per the file-create order (errors → types → schemas → repo → service → routes → barrel → generatePassword → wiring → tests bundle)
+4. `make check` green + coverage + drift scans
+5. `git checkout main` per §7
+6. Post SUBMIT T07 attempt 1 block on main
+
+**NOT switching to `feat/auth-core` / NOT touching `src/` until PM B ACK posted.**
+
+Awaiting PM B ACK.
+
 <!--
 TEMPLATE — copy untuk task baru:
 
