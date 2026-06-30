@@ -29,7 +29,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:reset": "prisma migrate reset",
-    "seed": "tsx prisma/seeds/index.ts"
+    "seed": "tsx prisma/seeds/index.ts",
+    "seed:super-admin": "tsx prisma/seeds/super-admin.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^9.4.0",
