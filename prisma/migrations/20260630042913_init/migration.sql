@@ -119,3 +119,32 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user
 
 -- AddForeignKey
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- =============================================================================
+-- MANUAL CHECK CONSTRAINTS (per prisma/schema.prisma:141-163 comments)
+--
+-- Prisma 5 has no first-class CHECK constraint declaration, so the schema
+-- author committed these as a comment block in the schema and asked the
+-- migration generator to append them by hand. Translated verbatim from the
+-- schema comment block.
+--
+-- Cross-slot execution per §4-D05 (Slot A canonical territory).
+-- =============================================================================
+
+ALTER TABLE "tiers" ADD CONSTRAINT "tiers_name_check"
+  CHECK ("name" IN ('lite', 'professional', 'luxury', 'enterprise'));
+
+ALTER TABLE "hotels" ADD CONSTRAINT "hotels_status_check"
+  CHECK ("status" IN ('active', 'suspended'));
+
+ALTER TABLE "users" ADD CONSTRAINT "users_role_check"
+  CHECK ("role" IN ('super_admin', 'gm_admin', 'dept_head', 'staff'));
+
+ALTER TABLE "users" ADD CONSTRAINT "users_role_hotel_mutual_exclusion"
+  CHECK (
+    ("role" = 'super_admin' AND "hotel_id" IS NULL)
+    OR ("role" <> 'super_admin' AND "hotel_id" IS NOT NULL)
+  );
+
+ALTER TABLE "users" ADD CONSTRAINT "users_language_check"
+  CHECK ("language" IN ('id', 'en'));
