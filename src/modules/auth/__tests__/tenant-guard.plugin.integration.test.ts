@@ -18,6 +18,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/glob
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import { loadConfig } from '@core/config/env.js';
+import { AppError } from '@core/errors/app-errors.js';
 
 import {
   connectPrisma,
@@ -53,6 +54,16 @@ async function buildApp(): Promise<FastifyInstance> {
 
   const tokenIssuer = new FastifyJwtTokenIssuer(app);
   app.decorate('tokenIssuer', tokenIssuer);
+
+  // Mirror entrypoint setErrorHandler so AppError subclasses (e.g.,
+  // TenantScopeViolationError) map to their statusCode + JSON body.
+  app.setErrorHandler((err, _req, reply) => {
+    if (err instanceof AppError) {
+      void reply.code(err.statusCode).send({ error: err.toJson() });
+      return;
+    }
+    void reply.code(500).send({ error: { code: 'INTERNAL', message: err.message } });
+  });
 
   registerTenantGuard(app, { allowlist: ['/api/auth/login', '/health'] });
 
@@ -179,6 +190,31 @@ describe('tenant-guard plugin (integration — real Postgres at localhost:5433)'
     const body = JSON.parse(res.body) as InjectedScope;
     expect(body.session).toBeNull();
     expect(body.tenantScope).toBeNull();
+  });
+
+  it('should respond 403 TENANT_SCOPE_VIOLATION when a non-super_admin JWT carries hotelId=null (deny path)', async () => {
+    const token = signJwt({
+      sub: tenantA.userId,
+      sid: `sid-${uuidSuffix()}`,
+      role: 'gm_admin',
+      hotelId: null, // illegal for non-super_admin per tenant-guard
+      deptId: null,
+    });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/scope-probe',
+      cookies: { token },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { error?: { code?: string } };
+    expect(body.error?.code).toBe('TENANT_SCOPE_VIOLATION');
+  });
+
+  it('should skip enforcement entirely on allow-listed routes (no JWT inspection, no scope set)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ ok: true });
   });
 
   it('should rotate scope context across two distinct JWTs (different tenants in sequence)', async () => {
