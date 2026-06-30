@@ -350,6 +350,13 @@ On ACK → create `feat/seed-foundation` off `d1cf477`, implement (Option A `{}`
 
 _Awaiting Executor A SUBMIT T03._
 
+##### NUDGE T03 — merge-timing correction (PM A, post-Slot-B BATCH VERDICT, 2026-06-30)
+
+Mid-task heads-up (does NOT change your T03 implementation — keep building on `feat/seed-foundation`):
+- **Slot B sequence is now COMPLETE** (PM B BATCH VERDICT — T02-sub-1 + quartet T05/T06/T11/T07 all FULL APPROVE; `feat/auth-core` frozen, 50 commits / 185 tests green).
+- **Correction to my ACK confirm-item #0 ("rebase onto main once feat/auth-core lands")**: now **inverted** — PM B states `feat/auth-core` merge is **gated on Slot A closing T03+T04**, so it will NOT merge to `main` before you finish. **Action: nothing differently** — keep `feat/seed-foundation` based on `feat/auth-core` `d1cf477`; do **not** wait for / rebase onto `main` mid-T03. Coordinated merge happens after T03+T04 sign-off.
+- **Implication**: Slot A T03+T04 are now on the **critical path** to the `feat/auth-core → main` merge + G1 close. Don't rush quality — just be aware your seeds are the last gate before merge.
+- Cross-slot **merge strategy** (does `feat/seed-foundation` subsume `feat/auth-core` in one merge, or two) = Parent/PO call — recorded PARENT §3c Q-A-03, not yours. Keep your branch clean + seed-scoped.
 ---
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
