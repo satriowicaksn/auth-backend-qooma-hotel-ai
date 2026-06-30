@@ -13,11 +13,11 @@
 ## 0. Current focus (slot A)
 
 - **Day**: cycle 1 — Slot A ONLINE (Nathan hadir, 2026-06-30). First Slot A session.
-- **Active task**: **T04 (seed-super-admin CLI)** — ASSIGNMENT issued §2, awaiting Executor A PLAN. (T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · **T03 ✅ APPROVED**.)
-- **Merge-ready (notify Nathan)**: **T03** — branch `fix/prisma-client-tsx-resolve` @ `22009e8` (Option-A 1-line tsconfig fix; seed code already on main via PR#2). Nathan merges.
-- **Next gate (global)**: G1 (criteria-based, no deadline) — lihat `PM-STATUS-PARENT.md §5`.
-- **My queue**: ~~T01~~ ✅ → ~~adopt T02~~ ✅ → ~~adopt T11~~ ✅ → ~~T03~~ ✅ → **T04 (active)** → Q-A-04 `tsc-alias` prod-boot fix (queued).
-- **Progress**: 4 / 5 signed-off (T01 · T02 · T11 · **T03**). T04 active = last foundation task. G1 foundation nearly closed for Slot A.
+- **🎯 SLOT A FOUNDATION CLOSED**: T01 ✅ · adopt-T02 ✅ · adopt-T11 ✅ · T03 ✅ · **T04 ✅ APPROVED**.
+- **Merge-ready (notify Nathan)**: **T04** — branch `feat/seed-super-admin` @ `c7a7e76`. (T03 already merged via PR#3.) Nathan merges.
+- **New scope (Parent ruling `d40264e`)**: **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) → Slot A *execution* per §4-D08 (Slot C absorption; Slot C canonical + offline). **READY** (T04 closed). Gate **G3**, ~8h.
+- **Slot A remaining queue**: **tsc-alias** prod-boot fix (Q-A-04 §4-D06, PO-approved) + **T09** (§4-D08). Order pending Nathan (rec: tsc-alias quick-win first, then T09).
+- **Next gate**: foundation/G1 done for Slot A; T09 = G3. `PM-STATUS-PARENT.md §5`. §4-D06 collision OK (Parent kept my tsc-alias D06; Slot C → D07/D08).
 
 ---
 
@@ -32,6 +32,7 @@
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
 | T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently re-ran all 4 verify points on `fix/prisma-client-tsx-resolve` @ `22009e8`: seed exit 0 + 4 exact §1.4 rows + idempotent (DB-queried) · typecheck+lint clean · 152 unit + 35 integ · **dev:api LISTENING :3000**. Fix = Option A (1-line tsconfig path). `features:{}` per Q-A-02. **MERGE-READY** (notify Nathan). Test-isolation footgun noted (non-blocking). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED — PM A independently verified: CLI exit 0 · 1 row (super_admin/hotel_id NULL/must_rotate=false) · argon2 login-compat (verify=true) · idempotent (Q-OPS-01) · fail-clean (exit 1, no pw leak) · 152 unit + 37 integ. **MERGE-READY** branch `feat/seed-super-admin` @ `c7a7e76`. **Closes Slot A foundation.** Gate **G1**. |
+| T09 | Admin hotels CRUD + atomic GM-create + suspend cascade (`/api/admin/hotels` family + `/:id/status`) | `assigned · READY (T04 closed)` — **NEW (Parent ruling d40264e)** | — | **Slot C canonical · Slot A execution per §4-D08** (Slot C absorption; Satrio offline; tx/foundation expertise match). Atomic `$transaction` insert(hotels)+insert(users[gm]) + generate-pw + suspend-cascade (revoke sessions same-tx). Deps T01–T04 (all ✓). ADR-0001/0007. Gate **G3**, ~8h. Audit footer "Cross-slot execution per §4-D08 (Slot C canonical territory)" on every block+commit. ASSIGNMENT pending (order vs tsc-alias — Nathan). |
 
 ---
 
