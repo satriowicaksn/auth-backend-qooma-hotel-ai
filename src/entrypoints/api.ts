@@ -8,7 +8,6 @@
  * - Graceful shutdown
  */
 
-import type { PrismaClient } from '.prisma/client';
 import cookiePlugin from '@fastify/cookie';
 import jwtPlugin from '@fastify/jwt';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -77,12 +76,10 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     transports: [new transports.Console()],
   });
 
-  // db is the Prisma singleton from `@core/prisma/prisma-client.js`. The stub
-  // currently returns a placeholder until Slot A's T02 foundation lands; cast
-  // keeps wiring type-correct so auth surface compiles ahead of foundation.
-  const prisma = db as unknown as PrismaClient;
-  const authRepo = new AuthRepository(prisma);
-  const usersRepo = new UsersRepository(prisma);
+  // `db` is the typed PrismaClient singleton from `@core/prisma/prisma-client.js`
+  // (T02 cycle-6 Q-B-02(b) inline resolution). Repositories consume it directly.
+  const authRepo = new AuthRepository(db);
+  const usersRepo = new UsersRepository(db);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
   const hasher = new Argon2Hasher();
 
