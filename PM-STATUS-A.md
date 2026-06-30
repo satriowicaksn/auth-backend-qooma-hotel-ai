@@ -30,7 +30,7 @@
 | T01 | pnpm install verify + `make check` green | ✅ `approved (cycle 1, attempt 1)` | **PM A ✓** | APPROVED + GAP T01-#1 ratified (Option A — make-binary absent, underlying recipe equiv, CI runs literal make). DB verified independently (5 tables, migration applied). VERDICT §2. Gate **G1**. |
 | T02 | Initial Prisma migration (tiers/hotels/users/sessions/prt) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D05, no re-exec). All constraints verified (UNIQUE/FK ON DELETE/mutual-exclusion CHECK proven live). Ownership-of-record = Slot A. Full APPROVE rides Slot B batch+CI. VERDICT §2. |
 | T11 | tenant-guard middleware (Fastify plugin) | ✅ `adopted (PM A canonical)` | **PM A ✓** | ADOPTED (exec Slot B §4-D01, no re-exec). Clean; recorded fail-open invariant (pass-through-on-missing-cookie requires upstream jwt). Ownership = Slot A. VERDICT §2 + invariant §6. |
-| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🔵 `assigned · ACTIVE (un-blocked)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT issued §2. Branch `feat/seed-foundation` off `feat/auth-core`. First Slot A code task. Awaiting PLAN. Gate **G1**. |
+| T03 | Tiers seed (4 rows: lite/professional/luxury/enterprise) | 🔵 `wip · PLAN ACKED` | — | PLAN ACKED cycle 1: GAP T03-#1 → Option A (`features:{}`, Q-A-02 raised to PO) · env amendment (no `--env-file-if-exists`, Node 20 baseline) · base `d1cf477` ✓. Branch `feat/seed-foundation`. Awaiting SUBMIT (test:unit + test:integration). Gate **G1**. |
 | T04 | `seed-super-admin` CLI (`pnpm seed:super-admin`) | `assigned · READY (un-blocked, next)` | — | Deps T01 ✓ + adopt-T02 ✓ satisfied. ASSIGNMENT after T03 PLAN (single-focus). Branch `feat/seed-foundation`. Must reuse auth argon2 params. DoD §2. Gate **G1**. |
 
 ---
@@ -270,6 +270,86 @@ Slot A adopts T11 tenant-guard (executed by Slot B §4-D01, APPROVE-PARTIAL by P
 
 _Awaiting Executor A PLAN T03._
 
+#### PLAN T03 — exec-A (Nathan) at cycle 1 (2026-06-30)
+
+**Scope recap**
+- Tiers seed: 4 idempotent rows (`lite`/`professional`/`luxury`/`enterprise`) per `01-auth-identity §1.4` + `MVP-AUTH-FIRST §3` step 1. First Slot A code task. Real `PrismaClient` singleton, `upsert`-by-`name`, integration test, drift floor.
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2)
+- Identity: Executor, Slot A (Nathan) ✓ · CLAUDE.md loaded ✓
+- Task spec read: ASSIGNMENT T03 DoD (9 butir) + `01-auth-identity §1.4` + `MVP-AUTH-FIRST §3` + `API-CONTRACT §2.1b` (Tier shape/example)
+- Deps: T01 ✓ approved · adopt-T02 ✓ (5 tables live, init migration applied). Containers up (5433/6380, left from T01).
+- Base branch: see Decision #0 (origin/feat/auth-core advanced `25d2007`→`d1cf477`, +6 Slot B cycle-7 commits — prereqs unchanged).
+- `lint`/`typecheck`/`test:unit` were green on `feat/auth-core` (T01); will re-confirm on the new branch before editing.
+- Scaffolder risk: none.
+
+**Decisions (DoD: "your call, justify in PLAN"):**
+- **#0 Base commit** — branch `feat/seed-foundation` off **current tip `d1cf477`**, not the stale `25d2007` in the ASSIGNMENT. `git diff 25d2007..d1cf477 -- prisma/ src/core/prisma/` = only ADD `src/core/prisma/__tests__/integration-helpers.ts`; schema/migration/prisma-client/seeds all unchanged → T03 prereqs identical + I reuse the new helpers. Confirm OK.
+- **#1 File structure** — logic+data in `prisma/seeds/tiers.ts` (`export async function seedTiers(db): Promise<void>` + `TIER_SEEDS`); `prisma/seeds/index.ts` → thin runner (env-preload → singleton `db` → `seedTiers` → exit/disconnect), replacing placeholder. Keeps `pnpm seed = index.ts` (DoD-literal) + isolates testable logic.
+- **#2 PrismaClient** — reuse real singleton `db` from `@core/prisma/prisma-client.js` (already does mandatory `.prisma/client` import + `loadConfig`). No 2nd client.
+- **#3 `pnpm seed` env** — tsx does NOT auto-load `.env`; singleton's `loadConfig()` runs at import → would throw locally. Fix: `seed` script → `tsx --env-file-if-exists=.env prisma/seeds/index.ts`. `-if-exists` loads `.env` locally but is **CI-safe** (CI injects real env, no `.env` file → no error). 1-line `package.json` edit (seed scope; same pattern aids T04). Confirm acceptable (alt: side-effect preload import — but this is cleaner, dep-free).
+- **#4 Test location** — jest `roots: ["src","scripts"]` (cycle-7 `jest.config.json`) → tests under `prisma/` aren't discovered. Test at `src/core/prisma/__tests__/tiers-seed.integration.test.ts` (co-located w/ smoke + `integration-helpers.ts`), imports `seedTiers` from `prisma/seeds/tiers.ts` + `connectPrisma`/`disconnectPrisma`. Runs under `pnpm test:integration` (`--runInBand`, DB up); NOT `test:unit`/`make check` (cycle-7 regex excludes `.integration`). Caveat: `prisma/seeds/*.ts` is outside tsconfig `include:["src/**"]` so `pnpm typecheck` won't cover it — matches the existing placeholder convention (seed = eslint+runtime-checked). Coverage thresholds scoped to auth/users/plugins only → seed not counted.
+
+**Seed values** (from §1.4 + §2.1b; luxury `8000/5/3/6/5` + display `"Luxury"` confirmed by §2.1b example):
+
+| name | display_name | outbound | agent_cap | agent_min | user_cap | dept_cap | is_custom |
+|---|---|---|---|---|---|---|---|
+| lite | Lite | 2000 | 1 | 3 | 2 | 1 | false |
+| professional | Professional | 4000 | 3 | 3 | 4 | 3 | false |
+| luxury | Luxury | 8000 | 5 | 3 | 6 | 5 | false |
+| enterprise | Enterprise | -1 | -1 | 3 | -1 | -1 | true |
+
+- `agent_minimum = 3` all tiers (§1.4 "3 — all tiers, server-enforced floor"; schema default 3, set explicitly).
+- enterprise unlimited = `-1` (schema `Int` non-null → not `null`).
+- `is_custom = true` only enterprise (§1.4 + §2.1b); else false.
+
+**Files to create**
+- `prisma/seeds/tiers.ts` (new — `seedTiers` + `TIER_SEEDS`)
+- `src/core/prisma/__tests__/tiers-seed.integration.test.ts` (new)
+
+**Files to modify**
+- `prisma/seeds/index.ts` (placeholder → thin runner)
+- `package.json` (1 line: `seed` script + `--env-file-if-exists=.env`)
+
+**Approach**
+`seedTiers(db)` iterates `TIER_SEEDS` (typed `ReadonlyArray`) → `db.tier.upsert({ where:{name}, update:{<config>}, create:{<config>} })` — idempotent by unique `name`, re-run converges config (4 stays 4). `index.ts`: `await seedTiers(db)` → `console.warn('[seed] tiers: 4 rows ✓')`; `.catch(e=>{console.error(e);process.exit(1)}).finally(()=>db.$disconnect())`. Test: `beforeAll(connectPrisma)` → `seedTiers(db)` → assert `count===4` + per-row fields → re-run → assert still 4 + no throw → `afterAll` delete the 4 canonical names (serial `--runInBand` + cleanup keeps shared DB clean vs other integration tests' `createTestTier` default `name:'lite'`) + `disconnectPrisma`.
+
+**GAPs / questions**
+- **GAP T03-#1 — `features` JSONB per-tier map is unspecified in this repo.** §1.4 sources it from `src/mocks/fixtures/feature-flags.ts` (**absent** — no `src/mocks/`); `API-CONTRACT:208` from `docs/DEVELOPMENT-PLAN.md` (**absent**) + product CLAUDE.md §1 (this repo ships the *boilerplate* CLAUDE.md — no feature matrix); §2.1b's luxury example is truncated (`"..."`), not a full 4-tier × 19-key map.
+  - **Options**: **A)** seed `features: {}` (schema default) for all 4 as MVP placeholder — `/api/admin/tiers` returns `{}` until matrix sourced; §1.4 says it "evolves as flags are added" + PATCH out-of-MVP → no runtime dependency; non-destructive backfill later. **B)** you/PO supply the 19-key per-tier matrix (FE `feature-flags.ts` / DEVELOPMENT-PLAN) → I seed exact. **C)** guess partial map from §2.1b hint — rejected (violates "don't guess").
+  - **My intent: A** (empty `{}`) + a code comment noting source-of-record + backfill follow-up. Escalate to PO via you only if a real matrix is required at seed-time for G1.
+- **Q #2 (confirm, non-blocking):** base off `d1cf477` (#0), `--env-file-if-exists` package.json edit (#3), test in `src/core/prisma/__tests__` (#4), `displayName` Title-case. Proceeding on these unless you object in ACK.
+
+Awaiting PM A ACK.
+
+##### PM A ACK — T03 PLAN APPROVED · GAP T03-#1 ruled (Option A) · 1 amendment (env) · confirm-items (cycle 1, 2026-06-30)
+
+Strong PLAN — values verified, idempotency + cleanup sound, test-runner classification correct. **Proceed** after the env amendment below; no re-PLAN.
+
+**Independently verified by PM A (read-only):**
+- ✅ **Tier values** match `01-auth-identity §1.4` (lines 176-189) + DDL (270-281) exactly: outbound 2000/4000/8000/-1 · agent_cap 1/3/5/-1 · agent_minimum 3 all · user_cap 2/4/6/-1 · dept_cap 1/3/5/-1 · is_custom enterprise-only. `-1`=unlimited explicitly allowed (§1.4:189).
+- ✅ **`features: {}` is safe** — grep of built code (T05/T06/T07/T11) shows **nothing reads `tier.features`**; DDL default is literally `'{}'::jsonb` (§1.4:277).
+- ✅ **Base `d1cf477`** — confirmed +6 commits = Slot B T02-sub-1 integration backfill (integration-helpers + assertions + `1ee1c33` test:unit regex tighten). No seed-file conflict. Approved.
+
+**🟢 GAP T03-#1 — RULED: Option A (`features: {}`).** Confirmed your source-analysis independently: the per-tier matrix sources are genuinely absent (`src/mocks/fixtures/feature-flags.ts` ❌, `docs/DEVELOPMENT-PLAN.md` ❌); feature flags are Hotel Core's domain (SERVICE-CHARTER); `open-questions.md:205` even hints MVP tier-gating may be just "row exists." So:
+- Seed `features: {}` (= schema default) for all 4 — MVP placeholder. **Add a code comment** at the `features` field: `// MVP placeholder — per-tier feature matrix pending PO (Q-A-02); backfill via re-run upsert. Source-of-record: feature-flags.ts (FE) + DEVELOPMENT-PLAN.md (absent).`
+- I am **NOT** silently deciding contract data. The real matrix IS needed before **T08** (`GET /api/admin/tiers` returns features, Slot C, G3). **Raised to PO as Q-A-02** (PM-STATUS-A §3 + PARENT §3a; cross-ref existing Q-CONTRACT-08). T03 ships now with `{}` (non-blocking); upsert-by-name makes backfill a one-line-per-tier change later. Option C (guess) correctly rejected.
+
+**⚠️ Amendment (MANDATORY) — env loading, reject `--env-file-if-exists`.** That flag is **Node 22.9+**; project baseline + CI = **Node 20 LTS** (CLAUDE.md §2). A committed `seed` script must run on Node 20 — `pnpm seed` would error on the Node-20 baseline (`make db-seed`/`start-fresh`/deploy). Use the repo's established **dep-free** pattern instead (your `loadConfig()` reads `process.env` at module-load; `test-setup.ts` already solves this with a no-dep KEY=VALUE parser, ratified DD2 cycle 6):
+- **Preferred**: create `src/shared/utils/load-env.ts` (new Slot A file — minimal no-dep `.env` parser, graceful-if-missing like test-setup) and **side-effect import it FIRST** in `prisma/seeds/index.ts`, before the `db` singleton import (ESM evaluates imports in source order → env in `process.env` before `loadConfig()` fires). **Do NOT refactor `test-setup.ts`** (Slot B file on shared branch — avoid cross-slot edit; minor parser duplication is fine). Bonus: `load-env.ts` is reused by T04's CLI.
+- **Acceptable alt**: `tsx --env-file=.env` (`--env-file` IS Node 20.6+) — 1-liner, but errors if `.env` absent. Your call between these two; **not** `--env-file-if-exists`. No new dep either way.
+
+**Confirm-items:**
+- #0 base `d1cf477` ✅ (verified). **Rebase-aware**: feat/auth-core is "cycle-7 final pre-merge" → rebase `feat/seed-foundation` onto `main` once it lands (trivial, seed-only files). Pin base commit in SUBMIT.
+- #1 file structure (`tiers.ts` + thin `index.ts`) ✅. #4 test location `src/core/prisma/__tests__/tiers-seed.integration.test.ts` ✅. displayName Title-case ✅.
+- **Correction to your #4 typecheck note**: `tiers.ts` **IS** typechecked — the `src/` integration test imports `seedTiers` from it, so `tsc` covers it transitively (only the `index.ts` runner is uncovered — trivial, OK).
+
+**Test-runner reminder (from `1ee1c33`):** `test:unit` regex now `(?<!\.integration)\.test\.ts` → your `.integration.test.ts` runs under **`pnpm test:integration`** (`--runInBand`), NOT `make check`/`test:unit`. But `make check` (test:unit) STILL needs DB up (the pre-existing `prisma-client.smoke.test.ts` rides it). So: keep DB up throughout; **SUBMIT must show BOTH `test:unit` green (make-check equiv) AND `test:integration` green (your new tiers-seed test)** — don't conflate the runners.
+
+On ACK → create `feat/seed-foundation` off `d1cf477`, implement (Option A `{}` + comment, env via load-env util or `--env-file`), run test:unit + test:integration both green (DB up), SUBMIT. → After APPROVE I issue ASSIGNMENT T04.
+
+_Awaiting Executor A SUBMIT T03._
+
 ---
 
 ### 📋 PRE-STAGED — adopt + T03/T04 (DoD visible up-front; ASSIGNMENT formal di-issue setelah T01 green)
@@ -407,6 +487,7 @@ Re-run `make check` after fix, confirm pass, resubmit (attempt N+1).
 | ID            | Question | Source         | Status | Resolution |
 | ------------- | -------- | -------------- | ------ | ---------- |
 | GAP T01-#1    | `make` binary unavailable on host (macOS CLT absent → `/usr/bin/make` = xcode-select stub). Literal `make check/start/db-migrate` cannot run. | SUBMIT T01 §2 (exec-A) | **resolved** 2026-06-30 by PM A | **Option A ratified**: underlying-recipe (pnpm/docker) substitution accepted for G1 sign-off — `make` is thin wrapper; each recipe reproduced green; canonical `make` runs in CI on PR. Option B (Xcode CLT install) NOT required. Slot-internal (no PO escalation). Forward: T03/T04 use `pnpm seed`/`pnpm seed:super-admin` directly. See §6 incident. |
+| Q-A-02        | Per-tier `tiers.features` JSONB unlock map — exact 19-key matrix × 4 tiers. Sources absent in-repo: `src/mocks/fixtures/feature-flags.ts` (FE) + `docs/DEVELOPMENT-PLAN.md`. Needed before **T08** (`GET /api/admin/tiers` returns features, G3). | GAP T03-#1 (exec-A PLAN T03) | **open → PO** (raised PARENT §3a, 2026-06-30) | **PO action**: supply the per-tier feature matrix (or confirm `{}`-until-Hotel-Core). T03 ships now with `features: {}` (schema default, nothing reads it in auth scope) — **non-blocking**; backfill via upsert re-run. Cross-ref `open-questions.md` Q-CONTRACT-08 (FE feature-flags shape / 19 names). |
 
 ---
 
