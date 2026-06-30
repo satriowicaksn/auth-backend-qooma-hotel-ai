@@ -17,6 +17,9 @@ import { loadConfig, type AppConfig } from '@core/config/env.js';
 import { AppError } from '@core/errors/app-errors.js';
 import { db } from '@core/prisma/prisma-client.js';
 
+import { AdminHotelsRepository } from '@modules/admin/hotels/hotels.repository.js';
+import { adminHotelsRoutes } from '@modules/admin/hotels/hotels.routes.js';
+import { AdminHotelsService } from '@modules/admin/hotels/hotels.service.js';
 // eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary that instantiates adapters per CLAUDE.md §4 + ADR-0001 (services consume the port).
 import { Argon2Hasher } from '@modules/auth/adapters/argon2-hasher.adapter.js';
 import { AuthRepository } from '@modules/auth/auth.repository.js';
@@ -80,14 +83,20 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // (T02 cycle-6 Q-B-02(b) inline resolution). Repositories consume it directly.
   const authRepo = new AuthRepository(db);
   const usersRepo = new UsersRepository(db);
+  const adminHotelsRepo = new AdminHotelsRepository(db);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
   const hasher = new Argon2Hasher();
 
   const authService = new AuthService(authRepo, hasher, tokenIssuer, config, logger);
   const usersService = new UsersService(usersRepo, hasher, logger);
+  const adminHotelsService = new AdminHotelsService(adminHotelsRepo, hasher, logger);
 
   fastify.decorate('tokenIssuer', tokenIssuer);
-  fastify.decorate('services', { auth: authService, users: usersService });
+  fastify.decorate('services', {
+    auth: authService,
+    users: usersService,
+    adminHotels: adminHotelsService,
+  });
 
   // Plugin order (PM B ACK T07 Ruling #3 — tenant-guard FIRST):
   //   1. tenant-guard — cheap claims-only filter; sets req.session +
@@ -103,6 +112,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(usersRoutes, { prefix: '/api/users' });
+  await fastify.register(adminHotelsRoutes, { prefix: '/api/admin/hotels' });
 
   return fastify;
 }

@@ -6,6 +6,7 @@ import '@fastify/cookie';
 import '@fastify/jwt';
 
 import type { AppConfig } from '../../core/config/env.js';
+import type { AdminHotelsService } from '../../modules/admin/hotels/hotels.service.js';
 import type { AuthService } from '../../modules/auth/auth.service.js';
 import type { TokenIssuer } from '../../modules/auth/auth.token-issuer.js';
 import type { Role } from '../../modules/auth/auth.types.js';
@@ -54,4 +55,5 @@ declare module 'fastify' {
 export interface AppServices {
   auth: AuthService;
   users: UsersService;
+  adminHotels: AdminHotelsService;
 }
