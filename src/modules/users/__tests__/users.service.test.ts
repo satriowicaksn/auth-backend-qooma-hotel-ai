@@ -7,6 +7,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '@core/errors/app-errors.js';
+
 import { BusinessRuleError } from '@modules/auth/auth.errors.js';
 import type { PasswordHasherPort } from '@modules/auth/ports/password-hasher.port.js';
 import type { Session } from '@shared/types/fastify-augmentation.js';
@@ -127,23 +128,23 @@ describe('UsersService — assertGmAdminScope (super_admin reject boundary)', ()
         role,
         hotelId: role === 'super_admin' ? null : HOTEL_ID,
       });
-      await expect(
-        m.service.listUsers(session, { limit: 50, offset: 0 }),
-      ).rejects.toThrow(ForbiddenError);
+      await expect(m.service.listUsers(session, { limit: 50, offset: 0 })).rejects.toThrow(
+        ForbiddenError,
+      );
     },
   );
 
   it('should throw ForbiddenError when session is undefined', async () => {
-    await expect(
-      m.service.listUsers(undefined, { limit: 50, offset: 0 }),
-    ).rejects.toThrow(ForbiddenError);
+    await expect(m.service.listUsers(undefined, { limit: 50, offset: 0 })).rejects.toThrow(
+      ForbiddenError,
+    );
   });
 
   it('should throw ForbiddenError when gm_admin session has null hotelId', async () => {
     const session = aGmAdminSession({ hotelId: null });
-    await expect(
-      m.service.listUsers(session, { limit: 50, offset: 0 }),
-    ).rejects.toThrow(ForbiddenError);
+    await expect(m.service.listUsers(session, { limit: 50, offset: 0 })).rejects.toThrow(
+      ForbiddenError,
+    );
   });
 });
 
@@ -244,7 +245,9 @@ describe('UsersService.updateUser', () => {
     m.findById.mockResolvedValue(aSettingsUser({ role: 'staff' }));
     m.updateUser.mockResolvedValue(aSettingsUser({ role: 'staff', name: 'Renamed' }));
 
-    const result = await m.service.updateUser(aGmAdminSession(), OTHER_USER_ID, { name: 'Renamed' });
+    const result = await m.service.updateUser(aGmAdminSession(), OTHER_USER_ID, {
+      name: 'Renamed',
+    });
 
     expect(result.user.name).toBe('Renamed');
     expect(m.updateUser).toHaveBeenCalledWith(HOTEL_ID, OTHER_USER_ID, { name: 'Renamed' });
@@ -289,7 +292,9 @@ describe('UsersService.updateUser', () => {
 
   it('should invoke the last-gm tx wrap when deactivating a current gm_admin (is_active: false)', async () => {
     m.findById.mockResolvedValue(aSettingsUser({ role: 'gm_admin' }));
-    m.updateUserWithLastGmGuard.mockResolvedValue(aSettingsUser({ role: 'gm_admin', is_active: false }));
+    m.updateUserWithLastGmGuard.mockResolvedValue(
+      aSettingsUser({ role: 'gm_admin', is_active: false }),
+    );
 
     await m.service.updateUser(aGmAdminSession(), OTHER_USER_ID, { is_active: false });
 
@@ -331,9 +336,9 @@ describe('UsersService.resetUserPassword', () => {
 
   it('should throw NotFoundError when target user does not exist', async () => {
     m.findById.mockResolvedValue(null);
-    await expect(
-      m.service.resetUserPassword(aGmAdminSession(), OTHER_USER_ID),
-    ).rejects.toThrow(NotFoundError);
+    await expect(m.service.resetUserPassword(aGmAdminSession(), OTHER_USER_ID)).rejects.toThrow(
+      NotFoundError,
+    );
     expect(m.setPassword).not.toHaveBeenCalled();
   });
 
@@ -363,8 +368,8 @@ describe('UsersService.resetUserPassword', () => {
       language: 'id' as const,
     } as unknown as Parameters<UsersService['createUser']>[1];
 
-    await expect(
-      m.service.createUser(aGmAdminSession(), badInput),
-    ).rejects.toThrow(ValidationError);
+    await expect(m.service.createUser(aGmAdminSession(), badInput)).rejects.toThrow(
+      ValidationError,
+    );
   });
 });

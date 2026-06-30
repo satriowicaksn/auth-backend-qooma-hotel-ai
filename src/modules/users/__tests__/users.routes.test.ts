@@ -282,7 +282,10 @@ describe('POST /api/users/:id/reset-password', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body) as { generated_password: string; user: { must_rotate_password: boolean } };
+    const body = JSON.parse(res.body) as {
+      generated_password: string;
+      user: { must_rotate_password: boolean };
+    };
     expect(body.generated_password).toBe('Reset-Random-Pw1!');
     expect(body.user.must_rotate_password).toBe(true);
     await app.close();
