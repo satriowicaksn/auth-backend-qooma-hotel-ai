@@ -13,11 +13,12 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **T02 status**: `approved · cycle 6 close (FIRST FULL APPROVE in repo)` ✓ — VERDICT attempt 1 posted 2026-06-30; 15/15 verifications match; cross-slot 5/5 mandates + bonus code-header all satisfied; smoke (c) CHECK trip CONFIRMED Postgres 23514 fires; Q-B-02(b) inline resolution COMPLETE.
-- **Quartet status**: T05+T06+T11+T07 STILL `APPROVE-PARTIAL`. T02 satisfies upgrade condition (a); conditions (b)-(e) require cycle 7 integration test backfill.
-- **Cycle 7 sequence**: chained T02-sub-1 batch backfill ~24 it.todo across T05/T06/T11/T07 integration test files → batch FULL APPROVE quartet → merge `feat/auth-core` to `main`.
-- **Branch**: `feat/auth-core` (44 impl commits ahead of `main`: 10 T05 + 9 T06 + 1 fix + 5 T11 + 14 T07 + 5 T02) — T02-sub-1 will stack on T02.
-- **First FULL APPROVE milestone**: cycles 2-5 all APPROVE-PARTIAL; T02 (cycle 6) is the first FULL APPROVE event. Foundation milestone unlocked. CHECK constraints live in DB.
+- **Active task**: T02-sub-1 — Quartet integration backfill (**27 it.todo()** across 3 files) · `assigned · READY-FULL (cycle 7 final pre-merge)` — ASSIGNMENT issued cycle 7 (2026-06-30). Mixed-scope: T11 file CROSS-SLOT per §4-D01 (footer WAJIB); T05+T06+T07 files canonical Slot B (plain commits). Satisfies quartet upgrade conditions (b)-(e).
+- **T02 status**: FULL APPROVE (cycle 6 close) — quartet upgrade condition (a) satisfied. Migrated DB + CHECK constraints + PrismaClient singleton ready.
+- **Quartet status**: T05+T06+T11+T07 STILL `APPROVE-PARTIAL` — cycle 7 satisfies (b)-(e); after batch VERDICT → quartet FULL APPROVE → merge.
+- **Cycle 7 = final pre-merge cycle**: After SUBMIT + batch VERDICT → merge `feat/auth-core` to `main` (single merge event for entire Slot B work: T02 + T05 + T06 + T11 + T07 + T02-sub-1).
+- **Branch**: `feat/auth-core` (44 impl commits ahead of `main`) — T02-sub-1 stacks on T02.
+- **It.todo count CORRECTED**: 27 total (verified by PM B at ASSIGNMENT time = 16 T05+T06 consolidated + 4 T11 + 7 T07). T06's placeholders were rolled into auth.repository file during cycle 3 SUBMIT — no separate auth.me.integration.test.ts.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -32,6 +33,7 @@
 | T## | Title                              | Status                                   | Verified by PM | Notes                                                                                                  |
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
+| T02-sub-1 | Quartet integration backfill (27 it.todo → real across 3 files) | `assigned · READY-FULL (cycle 7 final pre-merge)` | —              | Cycle 7 task. ASSIGNMENT issued 2026-06-30. **Mixed-scope**: T11 file CROSS-SLOT per §4-D01 (footer WAJIB on T11 commit only); T05+T06+T07 files canonical Slot B (plain commits). Satisfies quartet upgrade conditions (b)-(e): integration tests fill + repo coverage ≥80% line + drift re-scan + re-issue VERDICT. 3 EDIT + 1 optional CREATE (shared fixture helpers). 5 open items for PLAN. After SUBMIT → batch FULL APPROVE quartet → merge feat/auth-core to main. |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | `assigned · APPROVE-PARTIAL (cycle 2 unit-scope; full APPROVE held for T02)` | PM B — cycle 2 (2026-06-29) | VERDICT cycle 2 (2026-06-29) attempt 1 → APPROVE-PARTIAL. Branch `feat/auth-core` 11 commits ahead of `main` (no merge). 13/13 verifications match; 5 DDs ACCEPT; coverage 98.56% stmt / 100% line / critical files 100%. 4 foundation gaps → Q-B-02 (§3). PARTIAL→FULL upgrade conditions in §2 VERDICT block. |
 | T06 | Auth current-user + password rotation gate | `approved-partial · cycle 3 close · full APPROVE held (T02)` | PM B — cycle 3 (2026-06-29) attempt 2 | VERDICT attempt 2 (2026-06-29) → APPROVE-PARTIAL. Fix commit `e753b38` on `feat/auth-core` (BusinessRuleError 422 per spec §1.1). 14/14 verifications match; coverage 99.57% line; drift zero. 6 DDs ACCEPT; 3 open items closed (#1 RESOLVED, #2/#3 deferred to T_AUX_01/02 backlog). Full APPROVE batched with T05 pending T02. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | `approved-partial · cycle 4 close · full APPROVE held (T02)` | PM B — cycle 4 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → APPROVE-PARTIAL. Cross-slot mandate ✓ (5/5 commits + SUBMIT + plugin header + heritage section). 14/14 verifications match; coverage 98.9% line overall / 94.44% plugin (≥90% target MET); drift zero; 4 DDs ACCEPT; 4 open items resolved (Open #1 defensive branch ACCEPT Option A). Full APPROVE batched with T05+T06 pending T02. Slot A re-takes future tenant-guard amendments. |
@@ -4120,6 +4122,198 @@ Cycle 7 SUBMIT triggers batch FULL APPROVE quartet VERDICT (conditions (b)-(e) s
 - `PM-STATUS-PARENT.md §2` short roll-up appended
 
 PM B exits to **wait-mode for cycle-7 opening decision**: (a) chain T02-sub-1 ASSIGNMENT now (PM B recommendation per cycle 5→6 chain precedent), or (b) wait fresh cycle. See brief.
+
+### ASSIGNMENT T02-sub-1 — claimed by exec-B (Nanak) cycle 7 (2026-06-30). Quartet integration backfill. CROSS-SLOT scope for T11 file only (per §4-D01); T05+T06+T07 files canonical Slot B.
+
+- **Spec row pointer**: VERDICT blocks of T05/T06/T11/T07 (each lists upgrade conditions (b)-(e)) + PARENT §1 T05+T06+T07+T11 rows (all `APPROVE-PARTIAL`) + T02 VERDICT (FIRST FULL APPROVE — quartet condition (a) satisfied)
+- **Routed from**: T02 VERDICT (cycle 6 close) confirms migrated DB infrastructure ready; quartet conditions (b)-(e) require batch backfill
+- **Branch**: `feat/auth-core` (continues — T02-sub-1 stacks on T02; same branch per §7 hygiene)
+- **Status flag**: `assigned · READY-FULL (cycle 7 final pre-merge)`
+- **Gate target**: G3 (auth/users domain integration complete) + post-merge G2 closure (auth module ready)
+- **Unblocks**: batch FULL APPROVE event for quartet T05+T06+T11+T07 + `feat/auth-core` merge to `main` (single merge for entire Slot B work)
+
+#### Cycle 7 context — quartet upgrade conditions (b)-(e) satisfaction cycle
+
+Per T02 VERDICT clarification, quartet T05+T06+T11+T07 upgrade requires:
+
+| Cond | Action | Cycle |
+|---|---|---|
+| (a) T02 ships | ✓ cycle 6 close — DONE |
+| **(b) Integration tests fill** | Convert 27 `it.todo()` placeholders to real assertions | **THIS CYCLE** |
+| **(c) Repo coverage ≥80% line at integration scope** | `pnpm test:integration --coverage` ≥80% line on repos | **THIS CYCLE** |
+| **(d) Drift re-scan post-integration** | Re-scan all 3 integration test files + any cross-touched code | **THIS CYCLE** |
+| **(e) Re-issue VERDICT FULL untuk quartet** | PM B VERDICT block(s) covering T05+T06+T11+T07 batch | **THIS CYCLE** |
+
+After cycle 7 APPROVE → quartet T05+T06+T11+T07 batch FULL APPROVE event → merge `feat/auth-core` to `main` (single merge for entire Slot B work).
+
+#### Mixed-scope commit ceremony (PER-FILE OWNERSHIP)
+
+| File | Owner | Commit ceremony |
+|---|---|---|
+| `src/modules/auth/__tests__/auth.repository.integration.test.ts` (T05 + T06 consolidated — 16 placeholders) | Canonical Slot B | PLAIN conventional commits (no §4 footer) |
+| `src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts` (T11 — 4 placeholders) | Slot A canonical / Slot B execution per **§4-D01** | **CROSS-SLOT** — commit body footer WAJIB: `Cross-slot execution per §4-D01 (Slot A canonical territory).` |
+| `src/modules/users/__tests__/users.repository.integration.test.ts` (T07 — 7 placeholders) | Canonical Slot B | PLAIN conventional commits |
+
+**Suggested commit split per file scope** (Executor decide final granularity):
+1. `test(auth): backfill T05+T06 repo integration (consolidated, 16 tests)` — PLAIN footer
+2. `test(plugins): backfill T11 tenant-guard integration (4 tests)` — **CROSS-SLOT per §4-D01** footer WAJIB
+3. `test(users): backfill T07 users repo integration (7 tests)` — PLAIN footer
+4. (optional) `test(integration): shared fixture helpers` (kalau Executor extracts per Open Item #1) — PLAIN footer
+
+**Critical**: only commit (2) carries §4-D01 footer. Commits (1)+(3)+(4) are PLAIN canonical Slot B.
+
+#### PM B notes — Scope this cycle (FULL convention — no PARTIAL)
+
+**In scope this submission**:
+
+1. **27 it.todo() conversions** across 3 files (corrected count from ASSIGNMENT — Executor verified 16+4+7=27 via PM B at ASSIGNMENT-time):
+   - `auth.repository.integration.test.ts` — **16 placeholders** (T05 + T06 consolidated; T06's 5 placeholders were rolled into this file during cycle 3 SUBMIT per Executor's consolidation decision — no separate `auth.me.integration.test.ts` exists)
+   - `tenant-guard.plugin.integration.test.ts` — **4 placeholders** (T11; CROSS-SLOT per §4-D01)
+   - `users.repository.integration.test.ts` — **7 placeholders** (T07)
+   - Total: **27** = matches existing test count `Tests: 27 todo` in every cycle's output
+2. **Real Prisma + real DB** for each test (no mock; mirror T02 smoke fixture pattern)
+3. **Fixture pattern consistency**: `beforeAll connect`, `afterAll disconnect`, `afterEach` cleanup OR UUID-suffixed natural keys for idempotency (mirror T02 smoke at `src/core/prisma/__tests__/prisma-client.smoke.test.ts`)
+4. **Repo coverage ≥80% line floor** post-integration on:
+   - `src/modules/auth/auth.repository.ts` (T05 scope)
+   - `src/modules/auth/auth.service.ts` repo-touching paths (T05+T06)
+   - `src/plugins/tenant-guard.ts` (T11 scope — integration with real JWT + claim flow)
+   - `src/modules/users/users.repository.ts` (T07 scope)
+5. **Drift re-scan zero hits** in 3 integration test files + any cross-touched code
+6. **`make check` + `make test:integration` green** — verify both unit suite (155 baseline unchanged) AND integration suite (27 new assertions) pass
+7. **No regression**: 155 unit tests still pass + ~27 integration ≈ 182+ total pass
+
+**Explicitly OUT-of-scope this cycle**:
+- New business logic OR new repo methods — use existing methods only
+- Schema changes — `prisma/schema.prisma` UNTOUCHED (verify via `git diff main..HEAD -- prisma/schema.prisma` returns empty)
+- New package install — `prisma` + `@prisma/client` + `@testcontainers/postgresql` (already devDep per package.json) cover all needs
+- Cross-slot deviation for T05/T06/T07 files — canonical Slot B; only T11 file carries §4-D01 marker
+- Re-implementing T02 smoke tests — use as fixture pattern reference, don't duplicate
+- T02 CHECK extension to other 4 CHECKs (tiers_name/hotels_status/users_role/users_language) — see Open Item #4; recommend defer to **T_AUX_05** backlog
+- Q-B-02(a)/(c)/(d) workarounds (jest config, eslint, error-handler plugin) — NOT T02-sub-1 scope
+- Refactoring existing integration test file headers — keep T11 file's existing `Cross-slot execution per §4-D01` marker (line 6) intact
+
+#### PM B notes — DoD this submission (~15 items)
+
+- [ ] **27 it.todo() converted to real assertions** across 3 files (count match per-file: 16+4+7)
+- [ ] Each integration test uses real PG via Prisma client (NO mock)
+- [ ] **Fixture pattern consistent** with T02 smoke: `beforeAll connect` + `afterAll disconnect` + `afterEach` cleanup OR UUID-suffixed natural keys
+- [ ] **Repo coverage ≥80% line** post-integration on:
+  - `auth.repository.ts` ✓
+  - `auth.service.ts` repo-touching paths ✓
+  - `tenant-guard.ts` ✓
+  - `users.repository.ts` ✓
+- [ ] **Drift re-scan zero hits** scoped to 3 integration test files + any cross-touched code: no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / forbidden imports / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+- [ ] **`make check` green** (lint + format-check + typecheck + test-unit at 155 baseline)
+- [ ] **`pnpm test:integration` green** — 27 new integration assertions pass against migrated PG
+- [ ] All existing 155 unit tests STILL pass (no regression)
+- [ ] **Cross-slot footer** on T11 integration test commit(s) per §4-D01 (mirrors T11 cycle 4 ceremony)
+- [ ] **PLAIN commits** for T05/T06/T07 integration test commits (canonical Slot B — no §4 footer)
+- [ ] **Security floor preserved**: no plaintext credentials in test fixtures; test data scoped + cleaned up; argon2 used for password hashes (reuse T05's `Argon2Hasher`)
+- [ ] **Test naming convention**: `should <expected> when <condition>` (CLAUDE.md §8)
+- [ ] **Coverage report verify**: ≥80% line on 4 critical repo files
+- [ ] **Schema-diff EMPTY** audit: `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT
+- [ ] **Q-B-02(a)/(c)/(d) workarounds preserved** — jest.config.json, eslint inline disable at api.ts, inline setErrorHandler at api.ts:36 all intact (NOT in T02-sub-1 scope)
+- [ ] **T11 file header `Cross-slot execution per §4-D01` marker preserved** (line 6 of `tenant-guard.plugin.integration.test.ts`) — Executor must NOT modify the comment header during backfill
+- [ ] **FULL APPROVE convention** — direct (NOT PARTIAL). Cycle 7 SUBMIT triggers batch FULL APPROVE event for quartet T05+T06+T11+T07 + merge feat/auth-core to main
+
+#### PM B notes — File ownership
+
+**EDIT** (3 integration test files):
+```
+src/modules/auth/__tests__/auth.repository.integration.test.ts    EDIT: convert 16 it.todo() → real (T05 + T06 consolidated)
+src/modules/auth/__tests__/tenant-guard.plugin.integration.test.ts EDIT: convert 4 it.todo() → real (T11 — CROSS-SLOT per §4-D01)
+src/modules/users/__tests__/users.repository.integration.test.ts   EDIT: convert 7 it.todo() → real (T07)
+```
+
+**POTENTIAL CREATE** (Open Item #1 — Executor decide):
+```
+src/core/prisma/__tests__/integration-helpers.ts   OPTIONAL: shared fixture helpers (connection setup, sweep cleanup, common seed). Per PM B recommendation: EXTRACT for DRY across 3 files.
+```
+
+**NO TOUCH ZONES** (CRITICAL):
+- `prisma/schema.prisma` — ABSOLUTE NO-TOUCH per §4-D05 precedent
+- `src/modules/auth/auth.repository.ts`, `auth.service.ts` — NO impl changes; only test conversion
+- `src/modules/users/users.repository.ts`, `users.service.ts` — same
+- `src/plugins/tenant-guard.ts` — same; T11 plugin unchanged
+- `src/core/prisma/prisma-client.ts` — T02 deliverable; untouched
+- `package.json` / `pnpm-lock.yaml` — no new dep; verify `@testcontainers/postgresql` already in devDep
+- `PM-STATUS-A.md` / `PM-STATUS-C.md` / `PM-STATUS-PARENT.md` (PM B writes §2 roll-up only — not Executor's scope)
+- Q-B-02(a)/(c)/(d) workarounds — slot-internal, NOT this cycle's scope
+- T11 file header comment `// Cross-slot execution per §4-D01` at line 6 — PRESERVE verbatim during backfill (audit trail)
+
+**File count**: **3 EDIT** baseline + **1 optional CREATE** (per Open Item #1).
+
+#### PM B notes — Parent doc refs (WAJIB baca executor sebelum PLAN)
+
+- **`CLAUDE.md §8`** — testing WAJIB (unit + integration + coverage 80% floor)
+- **`docs/TESTING.md §4`** (unit pattern — for reference; this cycle = integration) + **`§5`** (integration pattern — `@testcontainers/postgresql` reference) + **`§9`** (coverage targets — auth = critical 90% recommended, 80% floor)
+- **`docs/SECURITY.md`** — security floor preserve in test fixtures (no plaintext credential leak)
+- **`docs/SERVICE-CHARTER.md §3`** — scope context for T11 cross-slot per §4-D01
+- **`docs/decisions/0007-prisma-vs-alternatives.md`** — Prisma direct in repo (no `IUserRepository` wrap; integration tests hit real DB per ADR-0001 trade-off)
+- **`PARENT §4-D01`** — T11 cross-slot context (for `tenant-guard.plugin.integration.test.ts` commit footer)
+- **`PARENT §4-D05`** — T02 cross-slot context (completeness reference)
+- **`PARENT §1`** T05+T06+T11+T07 rows — APPROVE-PARTIAL upgrade conditions
+- **PM-STATUS-B.md §2** T05+T06+T11+T07 VERDICT blocks — upgrade conditions (b)-(e) specifications
+- **`src/core/prisma/__tests__/prisma-client.smoke.test.ts`** — T02 fixture pattern reference (beforeAll connect, afterAll disconnect, afterEach cleanup, UUID-suffix idempotency)
+
+#### PM B notes — Acceptance criteria (~8 items)
+
+1. **27 it.todo() converted** to real assertions (count match per-file: 16+4+7)
+2. **Repo coverage ≥80% line floor** met di 4 critical files (auth.repository, auth.service, tenant-guard, users.repository)
+3. **All real assertions PASS** against migrated PG (`pnpm test:integration` exit 0)
+4. **Cross-slot footer compliance** on T11 commit per §4-D01 (Slot A canonical territory)
+5. **`make check` green; drift zero; schema-diff empty**
+6. **Quartet upgrade conditions (b)-(e) ALL satisfied** (current T02 satisfies (a); this cycle satisfies (b)-(e))
+7. **No regression** (155 baseline unit tests still pass + ~27 new integration ≈ 182+ total)
+8. **FULL APPROVE convention** — direct (NOT PARTIAL); cycle 7 SUBMIT triggers batch FULL APPROVE event for quartet + merge feat/auth-core to main
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 7 = T02-sub-1 batch backfill** — final cycle pre-merge
+- After cycle 7 SUBMIT → PM B issues:
+  - **Single batch VERDICT block** covering T05+T06+T11+T07 batch FULL APPROVE (PM B decision: single block vs 4 separate blocks; recommend **single batch block** for clean audit trail — flag at VERDICT time)
+  - **T02-sub-1 own VERDICT** also FULL APPROVE
+- After quartet batch FULL APPROVE → **merge `feat/auth-core` to `main`** (single merge event for entire Slot B work: T02 + T05 + T06 + T11 + T07 + T02-sub-1)
+- Branch `feat/auth-core` stays open until merge
+- Single-dev cycle still active (Slot A/C PARKED) — no parallel coordination needed
+- Branch hygiene per §7: integration test commits on `feat/auth-core`; PM-STATUS commits on `main`
+
+#### PM B notes — 5 Open items untuk Executor B raise di PLAN
+
+1. **Fixture sharing strategy** — extract shared `integration-helpers.ts` (connection setup + sweep cleanup + common seed) OR per-file duplication?
+   - **PM B recommend EXTRACT** for DRY across 3 files. Smoke test pattern (T02) has ~25 LOC of fixture; multiplied by 3 = ~75 LOC duplicate. Single helper module is cleaner.
+   - Alternative: per-file duplication keeps each test file self-contained (easier individual run). Trade-off.
+   - Executor decide + justify di PLAN.
+
+2. **Test isolation strategy** — per-test cleanup (afterEach) OR per-suite cleanup (afterAll) OR UUID-suffix idempotency?
+   - **PM B recommend same as T02 smoke**: `afterEach` cleanup + UUID-suffix on natural keys (e.g., `email: smoke-<uuid>@example.com`) for re-run safety + parallel CI safety
+   - Per-suite (afterAll only) faster but risks state pollution between sub-tests
+   - Executor confirm + adapt per file (T11 plugin test may need different pattern since it doesn't directly INSERT rows but exercises JWT flow)
+
+3. **Coverage measurement** — how to measure integration coverage?
+   - PM B verified `package.json`: `test:unit` regex `__tests__/.*\.test\.ts` (matches BOTH `.test.ts` AND `.integration.test.ts`); `test:integration` regex `__tests__/.*\.integration\.test\.ts --runInBand`
+   - **Concern**: currently `test:unit` would run integration files alongside unit (no isolation); when integration files have real `it()` assertions hitting DB, `make check` (which runs `test:unit`) would require DB present
+   - **PM B recommend**: tighten `test:unit` regex to EXCLUDE `.integration.test.ts` files (e.g., `__tests__/.*(?<!\.integration)\.test\.ts` — negative lookbehind) OR add `testPathIgnorePatterns` for integration files in `test:unit`. Then `test:integration` becomes the authoritative integration runner.
+   - Executor verify jest config + propose tighten pattern di PLAN. If complex regex unsupported, GAP raise for cleaner solution.
+   - Coverage measurement: `pnpm test:integration --coverage` post-conversion will report repo file coverage.
+
+4. **T02 CHECK extension scope** — should cycle 7 extend smoke (c) ke cover other 4 CHECKs (`tiers_name`, `hotels_status`, `users_role`, `users_language`)?
+   - **PM B recommend DEFER** to **T_AUX_05** backlog. Mutual-exclusion CHECK (cycle 6 smoke (c)) is the security-critical one; other 4 are simple enum validation that Prisma already type-narrows at compile-time + runtime
+   - Executor confirm; raise GAP if disagrees (e.g., spec audit demands all 5 CHECKs proven live)
+
+5. **Integration test execution speed** — ~27 tests × beforeAll connect/teardown could be slow (30-60s total). Acceptable OR worth parallel?
+   - **PM B recommend acceptable for single-dev cycle**; parallel optimization defer to CI cycle (T_AUX_06 backlog)
+   - `test:integration` already has `--runInBand` (sequential for DB safety)
+   - Executor confirm wall-time estimate at PLAN
+
+**Notes for Executor B**:
+- **Mechanical cycle** — no new business logic, no architectural decisions, no spec interpretation gaps. Convert `it.todo('foo')` → `it('foo', async () => {...real assertions...})` per file's existing TODO contract.
+- **Pattern reuse heavy** — T02 smoke test is the canonical fixture reference; each integration test mirrors the connect/disconnect/cleanup discipline
+- **Cross-slot ceremony LIGHT** — only T11 file commit(s) carry §4-D01 footer; T05/T06/T07 file commits are PLAIN
+- **Final pre-merge cycle** — after this VERDICT, quartet batch FULL APPROVE → merge feat/auth-core to main. Entire Slot B work loop closes.
+- **Estimate**: ~4-6h impl + test + self-validate. Heavier than T02 (~2-3h) because 27 conversions vs 3 smoke; lighter than T05 (~6-8h) because foundation patterns thoroughly established.
+
+Awaiting Executor B PLAN T02-sub-1 attempt 1.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
