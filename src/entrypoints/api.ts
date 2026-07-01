@@ -20,6 +20,12 @@ import { db } from '@core/prisma/prisma-client.js';
 import { AdminHotelsRepository } from '@modules/admin/hotels/hotels.repository.js';
 import { adminHotelsRoutes } from '@modules/admin/hotels/hotels.routes.js';
 import { AdminHotelsService } from '@modules/admin/hotels/hotels.service.js';
+import { AdminTiersRepository } from '@modules/admin/tiers/admin-tiers.repository.js';
+import { adminTiersRoutes } from '@modules/admin/tiers/admin-tiers.routes.js';
+import { AdminTiersService } from '@modules/admin/tiers/admin-tiers.service.js';
+import { AdminUsersRepository } from '@modules/admin/users/admin-users.repository.js';
+import { adminUsersRoutes } from '@modules/admin/users/admin-users.routes.js';
+import { AdminUsersService } from '@modules/admin/users/admin-users.service.js';
 // eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary that instantiates adapters per CLAUDE.md §4 + ADR-0001 (services consume the port).
 import { Argon2Hasher } from '@modules/auth/adapters/argon2-hasher.adapter.js';
 import { AuthRepository } from '@modules/auth/auth.repository.js';
@@ -88,6 +94,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const usersRepo = new UsersRepository(db);
   const hotelsRepo = new HotelsRepository(db);
   const adminHotelsRepo = new AdminHotelsRepository(db);
+  const adminUsersRepo = new AdminUsersRepository(db);
+  const adminTiersRepo = new AdminTiersRepository(db);
   const tokenIssuer = new FastifyJwtTokenIssuer(fastify);
   const hasher = new Argon2Hasher();
 
@@ -95,6 +103,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const usersService = new UsersService(usersRepo, hasher, logger);
   const hotelsService = new HotelsService(hotelsRepo);
   const adminHotelsService = new AdminHotelsService(adminHotelsRepo, hasher, logger);
+  const adminUsersService = new AdminUsersService(adminUsersRepo, hasher, logger);
+  const adminTiersService = new AdminTiersService(adminTiersRepo);
 
   fastify.decorate('tokenIssuer', tokenIssuer);
   fastify.decorate('services', {
@@ -102,6 +112,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     users: usersService,
     hotels: hotelsService,
     adminHotels: adminHotelsService,
+    adminUsers: adminUsersService,
+    adminTiers: adminTiersService,
   });
 
   // Plugin order (PM B ACK T07 Ruling #3 — tenant-guard FIRST):
@@ -121,6 +133,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await fastify.register(hotelsRoutes, { prefix: '/api/hotels' });
   await fastify.register(hotelSettingsRoutes, { prefix: '/api/settings' });
   await fastify.register(adminHotelsRoutes, { prefix: '/api/admin/hotels' });
+  await fastify.register(adminUsersRoutes, { prefix: '/api/admin/users' });
+  await fastify.register(adminTiersRoutes, { prefix: '/api/admin/tiers' });
 
   return fastify;
 }
