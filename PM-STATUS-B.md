@@ -5924,6 +5924,146 @@ Total: **~20 files** — 10 admin-users + 7 admin-tiers module files + 3 more te
 
 Awaiting Executor B PLAN T08 attempt 1.
 
+#### PLAN T08 — exec-B (Nanak) cycle 9 (2026-07-01) attempt 1. CROSS-SLOT execution per §4-D07 (Slot C canonical territory). LAST Slot C absorption task (3/3).
+
+**Scope recap (re-verified against ASSIGNMENT T08 lines 5688-5925)**
+
+6 endpoints + 2 NEW modules (`src/modules/admin/users/` + `src/modules/admin/tiers/`) — mirrors T07 users CRUD + T09 admin/hotels naming + T10 §4-D09 cross-slot ceremony precedents.
+
+Admin users (spec §1.3, 4 endpoints, super_admin scope):
+1. `GET /api/admin/users` — cross-hotel list (query `?hotel_id=` + `?role=`); paginated per T07 shape `{ users, total, limit, offset }`
+2. `POST /api/admin/users` — create user of ANY role in ANY hotel; body `{ email, name, role, hotel_id?, dept_id?, language }`; mutual-exclusion enforced at zod parse; response 201 `{ user, generated_password }`
+3. `PATCH /api/admin/users/:id` — partial update; last-super_admin guard via `prisma.$transaction`; mutual-exclusion re-validation on role/hotel_id change
+4. `POST /api/admin/users/:id/reset-password` — 16-char password + argon2 hash + `must_rotate_password: true` + `revokeAllSessions` best-effort
+
+Admin tiers (spec §1.4, 2 GET endpoints, super_admin scope):
+5. `GET /api/admin/tiers` — list all 4 tier rows
+6. `GET /api/admin/tiers/:name` — single tier by name (enum-validated in path); 404 if name not among 4 canonical
+
+**Session-start gate** (EXECUTOR-PROTOCOL §2 — verified Phase A 2026-07-01)
+
+- Identity: Executor, Slot B (Nanak) ✓
+- CLAUDE.md loaded ✓
+- ASSIGNMENT T08 (PM-STATUS-B.md lines 5688-5925) ✓
+- Parent docs spot-read: `PM-STATUS-PARENT.md` §1 T08 row + §4-D07 deviation entry + §10 absorption coord ✓
+- Specs: `docs/spec/MVP-AUTH-FIRST.md §1` rows 5 + 7 + `docs/spec/01-auth-identity.md §1.3` (lines 138-160) + `§1.4` (lines 162-191) + `§4.4` mutual-exclusion + `§4.6` last-super_admin + `§4.7` email uniqueness ✓
+- Schema verified READ-ONLY at `prisma/schema.prisma`: `Tier` model (line 30-47) — `name @unique`, seed data live from T03; `User` model with mutual-exclusion CHECK from T02 migration (`users_role_hotel_mutual_exclusion`) + `@@unique([hotelId, email])` composite. **NO schema change needed**, NO touch to `prisma/schema.prisma` (TRIGGER #3 honored)
+- Pattern reference read:
+  - `src/modules/admin/hotels/` (T09 Slot A — admin/* naming + super_admin scope precedent)
+  - `src/modules/users/` (T07 — users CRUD + last-gm-admin `$transaction` guard + `revokeAllSessions` best-effort)
+  - `src/modules/hotels/` (T10 — Slot C absorption cross-slot ceremony precedent §4-D09; 4-file JSDoc marker extension pattern)
+  - `src/modules/auth/auth.errors.ts` — `BusinessRuleError` (T06) available for reuse
+  - `src/shared/utils/crypto.ts:83` — `generatePassword()` helper T07 addition
+- Pre-flight (post-T10 merge): Docker reachable, qooma-postgres healthy (9h up), port 5433 open, disk 24 GiB free ✓
+- Baseline `make check` GREEN: 225 unit passed + 1 skipped, exit 0 ✓
+- On `main` working-tree-clean at `5b24b19` (post PM B ASSIGNMENT T08) ✓
+- Scaffolder risk: none (manual scaffold; mirrors admin/hotels T09 module shape)
+
+**Branch plan**
+
+- NEW `feat/slot-c-absorption-b-t08` from `main@5b24b19` (post ASSIGNMENT commit; `fc4e257` referenced in ASSIGNMENT is the pre-ASSIGNMENT tree; using `5b24b19` since PM B ACK acknowledges post-PLAN main HEAD)
+- Every impl commit footer: `Cross-slot execution per §4-D07 (Slot C canonical territory).` (audit grep at SUBMIT: footer count == impl commit count)
+- PLAN/SUBMIT/VERDICT meta-commits stay on `main` per branch-hygiene §7 precedent (plain msg, no §4-D07 footer required for status-doc meta-commits — same pattern as §4-D01/§4-D05/§4-D09)
+
+**Files to create (~19)**
+
+```
+src/modules/admin/users/                            [10 files]
+├── index.ts                              (barrel — export adminUsersRoutes + AdminUsersService + repo + types + schemas)
+├── admin-users.routes.ts                 (Fastify plugin — 4 endpoints; MANDATORY JSDoc §4-D07 header)
+├── admin-users.service.ts                (orchestrator: inline assertSuperAdminScope + generatePassword + last-super_admin tx guard + email uniqueness pre-check + revokeAllSessions best-effort; bonus JSDoc §4-D07 header)
+├── admin-users.repository.ts             (Prisma direct: listUsersFiltered + insertUser + updateUser + updateUserWithLastSuperAdminGuard + setPassword + revokeAllSessions + findByEmailForSuperAdminCheck; sentinels UniqueConstraintError + LastSuperAdminError; bonus JSDoc §4-D07 header)
+├── admin-users.schema.ts                 (zod: ListQuerySchema + CreateUserRequestSchema (.refine mutual-exclusion) + UpdateUserRequestSchema (.refine + .strict))
+├── admin-users.types.ts                  (AdminUser response type; bonus JSDoc §4-D07 header)
+└── __tests__/
+    ├── admin-users.service.test.ts       (~22 unit tests — 4-role gate × 4 write endpoints + mutual-exclusion + last-super_admin guard + email pre-check + reset-password sweep)
+    ├── admin-users.routes.test.ts        (~14 unit tests — 4-role gate × 4 endpoints via fastify.inject + error propagation matrix)
+    ├── admin-users.schema.test.ts        (~14 unit tests — mutual-exclusion happy/reject + strict reject unknowns + role enum + empty patch reject)
+    └── admin-users.repository.integration.test.ts  (~8 integration tests — countActiveSuperAdmins + tx atomicity + email uniqueness NULL-hotel-id + mutual-exclusion CHECK trip)
+
+src/modules/admin/tiers/                            [9 files]
+├── index.ts                              (barrel — export adminTiersRoutes + AdminTiersService + types)
+├── admin-tiers.routes.ts                 (Fastify plugin — 2 GET endpoints; bonus JSDoc §4-D07 header)
+├── admin-tiers.service.ts                (orchestrator: inline assertSuperAdminScope + list + findByName)
+├── admin-tiers.repository.ts             (Prisma direct: listTiers + findTierByName)
+├── admin-tiers.schema.ts                 (zod: TierNameParamSchema (enum) + Tier response shape)
+├── admin-tiers.types.ts                  (Tier domain type per spec §1.4)
+└── __tests__/
+    ├── admin-tiers.service.test.ts       (~7 unit tests — 4-role gate × 2 endpoints + not-found)
+    ├── admin-tiers.routes.test.ts        (~5 unit tests — happy paths + 404 + 403)
+    └── admin-tiers.schema.test.ts        (~5 unit tests — enum-name parse + reject unknown)
+```
+
+**Files to edit (2)**
+
+- `src/entrypoints/api.ts` — additive: import `AdminUsersRepository` + `AdminUsersService` + `adminUsersRoutes` + tier trio; instantiate; extend `fastify.decorate('services', { ..., adminUsers, adminTiers })`; register both route plugins (prefix `/api/admin/users` + `/api/admin/tiers`) after `adminHotelsRoutes`. Estimated ~10-14 added lines.
+- `src/shared/types/fastify-augmentation.ts` — additive: extend `AppServices` with `adminUsers: AdminUsersService` + `adminTiers: AdminTiersService`. Estimated ~4 added lines.
+
+**File count**: **19 CREATE / 2 EDIT** (matches ASSIGNMENT ~20/2 baseline; one consolidation — admin/tiers has 9 files not 10 because no integration test needed for pure read-only tier lookup; T03 seed rows verified via unit-level service tests with mocked repo).
+
+**Approach (1 paragraf)**
+
+Two admin modules mirror T09 `admin/hotels` naming (`src/modules/admin/<domain>/`). Each service uses INLINE `assertSuperAdminScope(session): void` helper (~4 LOC) at the top of each service class per Open Item #2 (a) — avoids new shared-utils file surface; refactor to `src/shared/utils/auth-scope.ts` deferred to 3rd admin module. Admin-users write endpoints reuse T07's proven patterns: `generatePassword(16)` + `argon2` hash + `must_rotate_password: true` on new/reset; last-super_admin guard via `prisma.$transaction` (count active super_admins EXCLUDING target inside tx, throw sentinel `LastSuperAdminError` if 0, else update) mirrors T07 `updateUserWithLastGmGuard`. Email uniqueness: for POST with `role='super_admin'` (or PATCH promoting to super_admin), pre-check `findByEmailForSuperAdminCheck(email)` returns any existing super_admin with that email; return `ConflictError` 409 on hit — this defends against Postgres UNIQUE(hotel_id, email) treating each NULL hotel_id as distinct (spec §4.7 intent = platform-wide uniqueness for super_admins). Non-super_admin writes rely on Prisma `P2002` catch → `ConflictError`. Mutual-exclusion enforced at zod parse via `.refine()` (role='super_admin' ↔ hotel_id null); 400 VALIDATION_ERROR. DB CHECK from T02 is defense-in-depth. Admin-tiers is a thin read-only slice: `listTiers()` + `findTierByName(name)` on the seeded T03 rows; enum-validated name param (`z.enum(['lite',...])`) short-circuits invalid paths at zod. Both modules consume `req.session` from tenant-guard (T11 sets `all-hotels` scope for super_admin per Amendment 2 — bypasses tenant filter naturally, allowing cross-hotel list).
+
+**Cross-slot heritage compliance plan (§4-D07)**
+
+- Impl commits on `feat/slot-c-absorption-b-t08`: footer `Cross-slot execution per §4-D07 (Slot C canonical territory).` on EVERY commit
+- File-level markers (mirror T10 4-file extension precedent):
+  - `admin-users.routes.ts` MANDATORY (per ASSIGNMENT)
+  - `admin-users.service.ts` + `admin-users.repository.ts` + `admin-users.types.ts` BONUS extension
+  - `admin-tiers.routes.ts` BONUS extension (smaller module, single file marker sufficient)
+  - Total: 5 JSDoc §4-D07 markers across the T08 code surface
+- SUBMIT block + VERDICT block header notes carry `cross-slot heritage per §4-D07`
+- Meta-commits on `main` (PLAN/SUBMIT/VERDICT updates to PM-STATUS-B.md): plain msg per §4-D09 precedent
+
+**Test strategy + coverage**
+
+- **Unit** (~48 tests total across 6 test files):
+  - admin-users.schema.test.ts (~14): mutual-exclusion refine happy + 2 rejects (super_admin+hotel_id / non-super_admin+null); strict reject unknowns; role enum coverage; empty patch reject
+  - admin-users.service.test.ts (~22): 4-role gate × 4 write endpoints (16 minimum); mutual-exclusion re-check on PATCH role change; last-super_admin guard demote 422 + happy demote (with 2nd super_admin); reset-password sweep best-effort success + logger.warn on sweep failure; email pre-check happy + 409 on collision
+  - admin-users.routes.test.ts (~14): 4-role gate × 4 endpoints via fastify.inject; error propagation matrix (400/403/404/409/422)
+  - admin-tiers.service.test.ts (~7): 4-role gate × 2 endpoints + not-found path
+  - admin-tiers.routes.test.ts (~5): happy list + happy single + 404 + 403 gates
+  - admin-tiers.schema.test.ts (~5): enum-name parse happy + reject unknown values + strict shape
+- **Integration** (~8 tests in admin-users.repository.integration.test.ts):
+  - `countActiveSuperAdmins(excludingUserId)`: 2 super_admins → count 1 after exclude; 0 super_admins → count 0
+  - `updateUserWithLastSuperAdminGuard`: last-super_admin demote → `LastSuperAdminError` thrown, row unchanged (tx rollback verified via raw read-back)
+  - `updateUserWithLastSuperAdminGuard`: happy demote with 2nd super_admin present → update succeeds, count drops to 1
+  - Mutual-exclusion CHECK trip (defense-in-depth): direct `db.user.create({ role: 'super_admin', hotelId: <uuid> })` → P2002-like DB error (verifies T02 CHECK constraint live)
+  - Email uniqueness NULL-hotel-id behavior: 2 super_admins with same email + hotelId=null → Postgres allows (verifies why handler pre-check needed)
+- **Coverage target**: ≥80% line floor module aggregate; ≥90% on `admin-users.service.ts` + `admin-users.routes.ts` + `admin-tiers.service.ts` + `admin-tiers.routes.ts` (critical super_admin surface per TESTING.md §9); schemas 100%; repos ≥90% via integration
+
+**5 Open items — final stance (per PM B PLAN-prompt list)**
+
+1. **Module structure** — ACCEPT SEPARATE `admin/users/` + `admin/tiers/` per PM B recommendation. Rationale: read-only tier catalog vs write-heavy user CRUD are domain-distinct; separate keeps each focused; matches admin/hotels precedent.
+2. **super_admin role gate helper** — ACCEPT option (a) INLINE `assertSuperAdminScope` in each admin service (~4 LOC each × 2 = 8 LOC total). Deferred shared helper (`src/shared/utils/auth-scope.ts`) to be introduced when 3rd admin module appears (currently only admin/users + admin/tiers + admin/hotels; shared extraction fits cleaner at 4+ callsites).
+3. **Last-super_admin guard atomicity** — ACCEPT `prisma.$transaction` mirror T07 `updateUserWithLastGmGuard` pattern. Repo layer sentinel `LastSuperAdminError` (mirror T07 `LastGmAdminError`); service catches + maps to `BusinessRuleError('Cannot demote or deactivate the last active super_admin', { reason: 'LAST_SUPER_ADMIN_PROTECTED', userId })`. Applies to PATCH role demotion AND PATCH `is_active: false` on current super_admin.
+4. **Mutual-exclusion validation** — ACCEPT zod `.refine()` at PARSE time per PM B recommendation. Returns 400 VALIDATION_ERROR with clear error message. DB CHECK from T02 remains defense-in-depth backstop.
+5. **Email uniqueness for super_admin** — ACCEPT PM B default: handler-level `findByEmailForSuperAdminCheck(email)` pre-check when POST body role='super_admin' OR PATCH would promote to super_admin. Rationale: Postgres UNIQUE(hotel_id, email) with NULL-in-UNIQUE = distinct per SQL standard; without pre-check, 2 super_admins could share email. Spec §4.7 line 73 explicitly says "For super_admin (hotel_id IS NULL), this means platform-wide uniqueness across super_admins" — pre-check is the enforcement mechanism.
+
+**GAPs / questions**
+
+(none)
+
+**Estimate**
+
+~6-8h ACK → SUBMIT (per PARENT §4-D07 ~6h + PM B convention padding for coverage + integration). Distribution: ~30min branch + admin/tiers scaffold (barrel/types/schema/repo/service/routes); ~2-3h admin/users scaffold (heavier — 5 methods on repo, tx guard, email pre-check); ~30min api.ts wire + AppServices extend; ~2-3h tests (~48 unit + ~8 integration); ~30min `make check` + drift scan + commit hygiene + push.
+
+**Drift floor commitment (T08-files-scoped)**
+
+- No `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / `.skip` / hardcoded URLs / `setTimeout()` / wrap-Prisma interface
+- Named exports only; explicit return types on public functions; `import type` for type-only imports
+- AppError subclasses (all existing — no new): `ValidationError` (400) / `ForbiddenError` (403) / `NotFoundError` (404) / `ConflictError` (409) / `BusinessRuleError` (422, T06 reused per T07 precedent)
+- Repo sentinels (module-private): `UniqueConstraintError` (P2002 map) + `LastSuperAdminError` (tx guard) — mirror T07 pattern
+
+**Pre-impl gate (post PM B ACK)**
+
+- `git checkout -b feat/slot-c-absorption-b-t08 main`
+- `make check` baseline re-run on new branch (sanity — expect 225 unit + 1 skipped)
+- Then proceed scaffold: admin/tiers first (smaller warm-up), admin/users second (heavier CRUD + guards), wiring last, tests last
+
+Awaiting PM B ACK T08 PLAN APPROVED → proceed to impl on `feat/slot-c-absorption-b-t08`.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
