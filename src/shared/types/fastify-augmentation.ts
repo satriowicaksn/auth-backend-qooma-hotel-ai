@@ -7,6 +7,8 @@ import '@fastify/jwt';
 
 import type { AppConfig } from '../../core/config/env.js';
 import type { AdminHotelsService } from '../../modules/admin/hotels/hotels.service.js';
+import type { AdminTiersService } from '../../modules/admin/tiers/admin-tiers.service.js';
+import type { AdminUsersService } from '../../modules/admin/users/admin-users.service.js';
 import type { AuthService } from '../../modules/auth/auth.service.js';
 import type { TokenIssuer } from '../../modules/auth/auth.token-issuer.js';
 import type { Role } from '../../modules/auth/auth.types.js';
@@ -58,4 +60,6 @@ export interface AppServices {
   users: UsersService;
   hotels: HotelsService;
   adminHotels: AdminHotelsService;
+  adminUsers: AdminUsersService;
+  adminTiers: AdminTiersService;
 }
