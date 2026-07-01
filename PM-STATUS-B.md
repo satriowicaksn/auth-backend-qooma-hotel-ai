@@ -5452,6 +5452,130 @@ Meta-commits on `main` (PLAN/SUBMIT/VERDICT updates to PM-STATUS-B.md) carry PLA
 
 **PM B state**: **WAIT-MODE for SUBMIT T10 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. HALTING per task closing instruction.
 
+#### SUBMIT T10 — exec-B (Nanak) cycle 8 (2026-07-01) attempt 1. Cross-slot execution per §4-D09 (Slot C canonical territory).
+
+**Task**: Hotel context + settings (GET /api/hotels/me + GET, PUT /api/settings/hotel) — first Slot C absorption task per PARENT §4-D09.
+
+**Branch**: `feat/slot-c-absorption-b` (pushed to `origin/feat/slot-c-absorption-b` @ `a16d5ae`). Diverged from `main@cac8d6e` post PM B ACK 5447873. 8 impl commits on branch, all carry `Cross-slot execution per §4-D09 (Slot C canonical territory).` footer (audit grep exact-match count = 8, matches impl commit count).
+
+**Commit sequence (8 commits, `main..HEAD` newest first)**:
+
+| # | Hash | Type + Subject |
+|---|---|---|
+| 8 | a16d5ae | test(hotels): repository integration coverage (lifts module line floor ≥80%) |
+| 7 | ce75a32 | test(hotels): unit suite (service + routes + schema) |
+| 6 | 4ef7c6a | feat(hotels,api): routes (2 plugins) + entrypoint wiring |
+| 5 | d8282c6 | chore(types): extend AppServices with hotels: HotelsService |
+| 4 | d32e8ce | feat(hotels): service (getHotelContextForSession super_admin branch + scoped lookup; getSettings/updateSettings scope plumbing) |
+| 3 | b719e73 | feat(hotels): repository (Prisma direct — findHotelById + findSettingsByHotelId + updateSettings) |
+| 2 | 0d7a2e0 | feat(hotels): zod schemas (UpdateSettingsRequestSchema strict) |
+| 1 | 35d940d | feat(hotels): module scaffold (barrel + types) |
+
+**Commit sequence deviation vs ACK suggested**: ACK suggested 8-commit sequence (#5 routes, #6 chore(types), #7 api-wire, #8 tests). Executor delivered 8 commits total but re-ordered #5 ↔ #6 and combined ACK #5 (routes) + #7 (api-wire) into one commit (`4ef7c6a`) — reason: `hotels.routes.ts` references `fastify.services.hotels`, and api.ts wiring populates that field; splitting them would leave one commit typecheck-red. `chore(types)` alone (commit 5) also transiently red on api.ts until the routes+wire commit lands; net-zero red-state across the branch on final commit. Additionally added integration test as commit 8 to satisfy the ≥80% line floor after unit-only PLAN left `hotels.repository.ts` at 0% coverage. Total: 8 commits (matches ACK expectation).
+
+**Files changed (12 files, +1231 lines, boundary-verified)**:
+
+```
+ src/entrypoints/api.ts                                           |    8 +
+ src/modules/hotels/__tests__/hotels.repository.integration.test.ts |  130 +++
+ src/modules/hotels/__tests__/hotels.routes.test.ts               |  351 +++
+ src/modules/hotels/__tests__/hotels.schema.test.ts               |   82 +++
+ src/modules/hotels/__tests__/hotels.service.test.ts              |  297 +++
+ src/modules/hotels/hotels.repository.ts                          |   91 +++
+ src/modules/hotels/hotels.routes.ts                              |   53 +++
+ src/modules/hotels/hotels.schema.ts                              |   22 +++
+ src/modules/hotels/hotels.service.ts                             |   98 +++
+ src/modules/hotels/hotels.types.ts                               |   78 +++
+ src/modules/hotels/index.ts                                      |   19 ++
+ src/shared/types/fastify-augmentation.ts                         |    2 ++
+```
+
+**File count**: **10 CREATE / 2 EDIT** (PLAN said 9 CREATE / 2 EDIT — +1 CREATE is the integration test added post-plan for coverage floor).
+
+**DoD self-check (~13 items per ASSIGNMENT)**
+
+- [x] 3 endpoints functional with tenant-guard scoping (GET /api/hotels/me + GET, PUT /api/settings/hotel) — all wired in `src/entrypoints/api.ts` (prefix `/api/hotels` + `/api/settings`)
+- [x] NEW module `src/modules/hotels/` scaffold — 6 source + 4 test files (mirrors T07 users module pattern)
+- [x] GET /api/hotels/me super_admin path returns literal `{ id: null, tier: null }` per spec §5 line 92 option (b) — tested at `hotels.service.test.ts` "should return literal {id:null, tier:null} for super_admin" + `hotels.routes.test.ts` "should return 200 with literal {id:null, tier:null} for super_admin (option (b))"
+- [x] GET /api/hotels/me non-super_admin path returns hotel context scoped to `req.tenantScope.hotelId` — tested for gm_admin / dept_head / staff (3 test cases in service + routes)
+- [x] GET /api/settings/hotel returns `{ timezone, branding, dnd }` for gm_admin (role gate verified) — tested at routes.test.ts + service.test.ts
+- [x] PUT /api/settings/hotel updates whitelisted fields only (timezone/branding/dnd); zod `.strict()` rejects unknown fields — 7 unknown-field rejections in schema.test.ts + 2 in routes.test.ts (400 VALIDATION_ERROR)
+- [x] Server-enforced role: super_admin → `ForbiddenError('Use /api/admin/hotels for platform-level edits')` on PUT — assertion at `service.test.ts` + `routes.test.ts` message-contains check
+- [x] Tenant scoping: every repo query consumes `req.tenantScope.hotelId` (single-hotel scope only for /settings/hotel; super_admin bypass path returns option (b) without repo hit)
+- [x] Cross-slot heritage:
+  - Per-commit footer on 8/8 impl commits (exact-match audit `git log --format='%B' main..HEAD | grep -c '^Cross-slot execution per §4-D09 (Slot C canonical territory).$'` → **8**)
+  - SUBMIT header carries §4-D09 marker (this block)
+  - VERDICT block header will carry §4-D09 marker (PM B action)
+  - JSDoc file marker: **4 files** carry `§4-D09` header — `hotels.routes.ts` (mandatory), `hotels.service.ts` + `hotels.repository.ts` + `hotels.types.ts` (bonus extension for cross-file clarity — matches PLAN line 5328 stance)
+- [x] Unit tests per TESTING.md §4 (mock port + mock repo INSTANCE): 3 unit files + 1 integration file
+  - 4-role coverage on service + routes (super_admin option (b) / gm_admin happy / dept_head 403 / staff 403)
+  - Cross-tenant deny consumed via mocked req.tenantScope (routes.test.ts session+scope forwarding assertion)
+  - PUT field whitelist enforcement: 7 unknown-field rejects via zod strict
+- [x] Coverage: **module aggregate 96.87% lines** (≥80% floor PASSED); **service 95.83%** + **routes 100%** (≥90% target for security-critical PASSED); schema 100%; repo 94.44% (integration coverage post-PLAN addition)
+- [x] `make check` green: lint (0 warnings) + format:check + typecheck + test:unit (225 passed + 1 skipped suite, was 175 baseline pre-T10 → +50)
+- [x] Drift floor zero (T10-scoped): 0 `any` / 0 `console.log` / 0 `@ts-ignore` / 0 `throw new Error('string')` / 0 default export / 0 `.skip` / 0 hardcoded URL / 0 `setTimeout()` / 0 wrap-Prisma interface (verified via targeted grep sweep)
+- [x] Security floor (CLAUDE.md §6 + SECURITY.md):
+  - No plaintext leak in error response envelope (AppError.toJson only surfaces `code`, `message`, `details`)
+  - Email/PII masking N/A — settings are hotel-level (timezone/branding/dnd), no user-identifying data
+  - tenant-guard plugin active (already wired T07); T10 consumes `req.session` + `req.tenantScope` upstream-populated
+  - Role gate at handler-triggered service boundary (gm_admin only for /settings/hotel; super_admin allowed for /hotels/me option (b))
+- [x] APPROVE convention: **FULL APPROVE direct** requested (NOT PARTIAL) — T02 ships ✓ + T11 wired ✓ + T07 base ✓ + T09 admin/hotels merged ✓; no upstream blocker; first FULL APPROVE direct for Slot C absorption work as ACK'd
+
+**Quality gate (self-verified)**
+
+| Check | Result |
+|---|---|
+| `make check` | PASS — lint + format + typecheck + 225 unit tests (+1 skipped suite) |
+| Unit test count | 225 passed (was 175 baseline pre-T10 = +50 new hotels tests: schema 12 + service 17 + routes 21) |
+| Integration test count | 48 passed (was 41 baseline = +7 new hotels.repository.integration) |
+| Coverage (hotels module) | **96.87% lines** (aggregate); routes 100% / schema 100% / service 95.83% / repo 94.44% |
+| Cross-slot footer count | 8 (matches impl commit count) |
+| JSDoc §4-D09 headers | 4 files (routes + service + repo + types) — exceeds ASSIGNMENT minimum of 1 |
+| Schema-diff (`main..HEAD -- prisma/schema.prisma`) | **0 lines** — TRIGGER #3 honored |
+| Boundary verify (`main..HEAD --stat`) | 12 files, all in allowed zones (`src/modules/hotels/*` + `src/entrypoints/api.ts` + `src/shared/types/fastify-augmentation.ts`); NO touches to auth/ users/ admin/hotels/ plugins/ prisma/ package.json |
+| Package/lock touched | NONE (TRIGGER #1 honored) |
+| Planning docs touched | NONE (TRIGGER #4/#7 honored) |
+| CI workflows touched | NONE (TRIGGER #5 honored) |
+
+**Drift scans (T10 territory scoped)**
+
+| Category | Count | Notes |
+|---|---|---|
+| `any` (real usage) | 0 | 1 false positive in JSDoc comment `hotels.service.ts:10` ("any authenticated role" prose) |
+| `console.log` / `console.warn` / `console.error` | 0 | Winston logger via service NOT required per spec (no side-effects to log in T10) |
+| `@ts-ignore` / `@ts-expect-error` | 0 | Prisma JSONB cast uses `as unknown as` per project convention (admin/hotels precedent) |
+| `throw new Error('...')` | 0 | AppError subclasses only |
+| Default export | 0 | Named exports only |
+| `it.skip` / `describe.skip` | 0 | |
+| Hardcoded URL | 0 | Test fixture `cdn.example` URL is a spec-example string, not a code-path URL |
+| `setTimeout()` | 0 | |
+| Wrap-Prisma interface | 0 | Prisma direct per §4 |
+
+**Security check**
+
+- Error envelope `{ error: { code, message, details } }` per AppError contract — no upstream leak
+- Role gate: gm_admin only on /settings/hotel (both GET + PUT) per spec §1.5 line 200 — dept_head/staff/super_admin → 403
+- super_admin redirect message contains `/api/admin/hotels` to steer platform edits to Slot A T09 surface (§4-D09 canonical separation)
+- Tenant scope consumed from `req.tenantScope` (upstream tenant-guard @ T11 §4-D01); NO fallback to session claims → no cross-tenant leak surface added
+- Prisma.DbNull mapping for branding/dnd null: SQL column set to NULL not `'null'` string (verified via raw read-back in integration test)
+
+**Test evidence**
+
+- Unit: **225 passed + 1 skipped** (jest, node 20 via nvm)
+- Integration: **48 passed + 1 skipped** (jest --runInBand)
+- Hotels module (unit + integration combined): **57 passed** (schema 12 + service 17 + routes 21 + repo integration 7)
+
+**Notes**
+
+- **Coverage lift (post-PLAN addition)**: `hotels.repository.integration.test.ts` added in commit 8 because unit-only PLAN (line 5333-5335) left `hotels.repository.ts` at 0% and module aggregate at 72.58% — below the ASSIGNMENT AC #5 + ACK ≥80% floor. Integration test uses shared T02-sub-1 fixture helpers; runs via `pnpm test:integration --runInBand`; no new deps.
+- **ACK #5 ↔ #6 reorder + #5+#7 combined**: `chore(types)` (extend AppServices) committed BEFORE `feat(hotels)` routes because routes references `fastify.services.hotels`; routes + api-wire combined into `4ef7c6a` because splitting leaves either commit typecheck-red. Documented in that commit's body.
+- **Prettier formatter fix on `hotels.service.ts:81`**: formatter collapsed multi-line param signature to single line — folded into test commit (ce75a32) rather than amending commit 4.
+- **Baseline verified GREEN pre-impl**: post owner-resolution 175 unit passed + 1 skipped, exit 0 (documented in RESUMED note at PM-STATUS-B.md HALT block).
+- **Prisma Client typing**: uses `.prisma/client` direct import path (Q-B-02(b) resolved T02 cycle 6); no `@prisma/client` fallback / no `as unknown` cast on the client itself; JSONB read/write use `as unknown as Record<string, unknown>` + `as Prisma.InputJsonValue` per admin/hotels precedent.
+- **All 4 open items closed** verbatim per PM B ACK ruling table (settings storage pre-resolved / super_admin option (b) / 3-field whitelist / simple PUT idempotency).
+
+Requesting PM B **VERDICT — FULL APPROVE direct** (cross-slot heritage per §4-D09). Branch `feat/slot-c-absorption-b` @ `a16d5ae` ready for PM B independent verify per PM-AGENT §3 Steps 1-7.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
