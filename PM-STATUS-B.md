@@ -13,12 +13,12 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **T10 status**: `approved · cycle 8 close (Slot C absorption 1/3 done)` ✓ — VERDICT attempt 1 posted 2026-07-01; 13/13 verifications match; cross-slot 8/8 footer + SUBMIT header + JSDoc §4-D09 on 4 files (over-and-above ASSIGNMENT minimum of 1); 3 ACK-sequence DDs ACCEPT; FULL APPROVE direct convention.
-- **Slot C absorption progress**: 2/3 COMPLETE (T09 already done by Slot A cycle 1·A per §4-D08 merged PR#6; T10 done by Slot B cycle 8 per §4-D09; T08 remaining for Slot B cycle 9 per §4-D07).
-- **Next task**: T08 (admin users CRUD + Tier catalog) cycle 9 — READY-FULL post Slot A T04 ship (PR#4 merged); cross-slot per §4-D07.
-- **Branch**: `feat/slot-c-absorption-b` (8 impl commits) READY for PR merge to `main`. PM B recommend `git merge --no-ff` per BATCH VERDICT cycle 7 pattern (preserve §4-D09 footer evidence).
-- **Slot A COMPLETE**: All 6 PRs merged to main (PR#1-#6); Nathan idle/standby. Slot B carries remaining Slot C absorption work.
-- **Slot B canonical sequence + cycle 8 absorption**: T02 + T05 + T06 + T07 + T11 + T02-sub-1 + **T10** all FULL APPROVE. T08 pending cycle 9.
+- **Active task (cycle 9)**: T08 — Admin users CRUD + Tier catalog · `assigned · READY-FULL (cross-slot per §4-D07, cycle 9 LAST Slot C absorption)`. ASSIGNMENT issued 2026-07-01. **LAST Slot C absorption task (3/3)** per PO ruling 2026-06-30. T04 shipped (PR#4) → dependency SATISFIED → FULL APPROVE convention direct. Branch: NEW `feat/slot-c-absorption-b-t08` from main HEAD `fc4e257` (post PR#7 T10 merge).
+- **T10 done**: `approved · cycle 8 close (Slot C absorption 1/3 done)` ✓ — merged PR#7 `fc4e257` on main.
+- **Slot C absorption progress**: **2/3 COMPLETE** (T09 ✓ Slot A via §4-D08 merged PR#6; T10 ✓ Slot B via §4-D09 merged PR#7). T08 remaining = LAST task.
+- **Cross-slot ceremony for T08**: §4-D07 footer every impl commit + JSDoc §4-D07 header on routes file minimum (mirror T10 §4-D09 4-file JSDoc extension pattern).
+- **Slot A COMPLETE**: All 6 PRs merged to main; Nathan idle/standby. Slot B carries LAST Slot C absorption work.
+- **Slot B full cumulative**: T02 + T05 + T06 + T07 + T11 + T02-sub-1 + T10 all FULL APPROVE. T08 pending cycle 9 = final Slot B item.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -34,7 +34,8 @@
 | --- | ---------------------------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
 | T02-sub-1 | Quartet integration backfill (27 it.todo → 30 real assertions across 3 files) | `approved · cycle 7 close (FULL APPROVE direct)` | PM B — cycle 7 (2026-06-30) batch attempt 1 | BATCH VERDICT cycle 7 (2026-06-30) → FULL APPROVE. 17/17 verifications match. 6 DDs ACCEPT; 4 open items resolved. Cross-slot ceremony 2/6 §4-D01 both T11-file-only ✅. Mixed-scope clean: 4 PLAIN + 2 §4-D01 commits. 30 integration assertions (+3 over 27 plan: 1 happy-demote symmetry T07 + 2 tenant-guard coverage T11 lift 75→88.88%). Critical repo line coverage ALL ≥80% (auth.repo 85.18% / users.repo 82.5% / tenant-guard 88.88%). Quartet upgrade conditions (b)-(e) ALL SATISFIED. |
-| T10 | Hotel context + settings (`GET /api/hotels/me` + `GET/PUT /api/settings/hotel`) | **`approved · cycle 8 close (Slot C absorption 1/3 done · FULL APPROVE direct)`** | PM B — cycle 8 (2026-07-01) attempt 1 | VERDICT cycle 8 (2026-07-01) → **FULL APPROVE direct**. Cross-slot ceremony 8/8 footer + SUBMIT header + JSDoc §4-D09 on **4 files** (routes mandatory + service + repo + types bonus). 13/13 independent verifications match. Coverage: routes 100 / schema 100 / service 95.83 (≥90% target MET) / repo 94.44 (integration). make check 225 unit + 48 integration pass; drift zero (3 comment false-positives); schema-diff EMPTY; boundary clean. 3 DDs ACCEPT (types-before-routes reorder, routes+api-wire combined commit, +1 integration coverage commit). Spec-pinned: super_admin option (b) literal + zod.strict PUT + gm_admin gate service-layer + wiring order preserved. Branch `feat/slot-c-absorption-b` (8 commits) READY for PR merge. |
+| T10 | Hotel context + settings (`GET /api/hotels/me` + `GET/PUT /api/settings/hotel`) | **`approved · cycle 8 close (Slot C absorption 1/3 done · FULL APPROVE direct)`** | PM B — cycle 8 (2026-07-01) attempt 1 | VERDICT cycle 8 (2026-07-01) → **FULL APPROVE direct**. Cross-slot ceremony 8/8 footer + SUBMIT header + JSDoc §4-D09 on **4 files** (routes mandatory + service + repo + types bonus). 13/13 independent verifications match. Coverage: routes 100 / schema 100 / service 95.83 (≥90% target MET) / repo 94.44 (integration). make check 225 unit + 48 integration pass; drift zero (3 comment false-positives); schema-diff EMPTY; boundary clean. 3 DDs ACCEPT (types-before-routes reorder, routes+api-wire combined commit, +1 integration coverage commit). Spec-pinned: super_admin option (b) literal + zod.strict PUT + gm_admin gate service-layer + wiring order preserved. Branch `feat/slot-c-absorption-b` (8 commits) merged via PR#7 (`fc4e257`) into main. |
+| T08 | Cross-hotel admin users CRUD + Tier catalog read (`/api/admin/users` family + `GET /api/admin/tiers[:name]`) | `assigned · READY-FULL (cross-slot per §4-D07, cycle 9 LAST Slot C absorption)` | —              | Cycle 9 task. ASSIGNMENT issued 2026-07-01. **LAST Slot C absorption (3/3)** per §4-D07 (PO 2026-06-30). Ownership of record = Slot C; execution by Slot B this cycle only. Scope: 6 endpoints (admin users CRUD × 4 + tier catalog GET × 2) + new src/modules/admin/users/ + src/modules/admin/tiers/ modules. Last-super_admin guard via prisma.$transaction (mirror T07 last-gm-admin pattern) + mutual-exclusion validation + generatePassword reuse from T07. T04 shipped → dependency SATISFIED → FULL APPROVE direct. ETA ~6-8h. Cross-slot commit ceremony WAJIB §4-D07 footer (mirror §4-D01/§4-D05/§4-D09 pattern). Branch: NEW `feat/slot-c-absorption-b-t08`. |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) via auth.repository.integration.test.ts 16 tests T05+T06 consolidated; repo coverage ≥80% ✓ (c) auth.repository.ts 85.18%; drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 2 unit-scope baseline preserved (98.56% stmt / 100% line / critical 100%). |
 | T06 | Auth current-user + password rotation gate | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) consolidated in auth.repository file — T06 paths (rotation + revokeAllOtherSessions + getMe + updateMeLanguage) covered; repo coverage ≥80% ✓ (c); drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 3 attempt 2 BusinessRuleError 422 fix (spec §1.1) preserved. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | **`approved · cycle 7 close (FULL APPROVE batch, cross-slot per §4-D01 preserved)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) tenant-guard.plugin.integration.test.ts 4 base + 2 coverage = 6 assertions (Commits 4 + 6 both §4-D01 footer); repo coverage ≥80% ✓ (c) tenant-guard.ts 88.88% post-Commit-6 lift; drift zero ✓ (d); VERDICT FULL ✓ (e). **Cross-slot heritage COMPLETE**: 7 §4-D01 footer commits total (5 cycle-4 + 2 cycle-7) + plugin file JSDoc + integration test line-6 marker preserved. Slot A re-takes future tenant-guard amendments. |
@@ -5683,6 +5684,245 @@ Next: cycle 9 = T08 (admin users CRUD + Tier catalog, cross-slot per §4-D07) �
 - `PM-STATUS-PARENT.md §2` short roll-up appended (single line per safety guard #1)
 
 PM B exits to **wait-mode**. Next event: (a) PR#7 created for `feat/slot-c-absorption-b` merge to main (PM B recommend Nanak creates now for cleaner audit trail — see brief), or (b) T08 ASSIGNMENT for cycle 9 setup (needs current main HEAD confirmation post-T10-merge).
+
+### ASSIGNMENT T08 — claimed by exec-B (Nanak) cycle 9 (2026-07-01). CROSS-SLOT execution per PARENT §4-D07 (Slot C canonical ownership of record; Slot B execution one-off per Slot C absorption ruling 2026-06-30). LAST Slot C absorption task (3/3). EVERY commit body MUST reference §4-D07.
+
+- **Spec row pointer**: `docs/spec/MVP-AUTH-FIRST.md §1` rows 5 + 7 + `docs/spec/01-auth-identity.md §1.3` (Cross-hotel Admin Users CRUD — super_admin scope, 4 endpoints; Q-CONTRACT-24) + `§1.4` (Tiers — super_admin catalog read, 2 endpoints; Q-CONTRACT-23) + `§4.4` (mutual-exclusion role/hotel_id CHECK) + `§4.6` (last-super_admin guard 422 BUSINESS_RULE)
+- **Routed from**: PARENT §1 T08 row (previously `READY-PARTIAL (unit-only, full SUBMIT pending T04 ship)`; **now UPGRADEABLE**: PM A confirmed T04 shipped via PR#4 in PARENT §2 cycle 1·A entry `🏁 SLOT A COMPLETE — all 6 PRs merged`) + PARENT §4-D07 deviation entry (PO ratified 2026-06-30) + PARENT §10 absorption coord
+- **Branch**: **new** `feat/slot-c-absorption-b-t08` from CURRENT main HEAD `fc4e257` (post PR#7 T10 merge)
+- **Status flag**: `assigned · READY-FULL (cross-slot per §4-D07, cycle 9 last Slot C absorption)` — **T04 shipped means dependency SATISFIED**; FULL APPROVE convention direct (no PARTIAL holding pattern needed per PARENT §4-D07 note)
+- **Gate target**: G3 (auth admin surface — T08 collectively closes G3 with T09 already done + T10 already done)
+- **LAST Slot C absorption task**: 3/3 milestone marker — after T08 close, Slot C absorption sequence COMPLETE (T09 ✓ Slot A + T10 ✓ Slot B cycle 8 + T08 ✓ Slot B this cycle)
+
+#### Cross-slot heritage (audit trail — WAJIB di setiap commit + SUBMIT/VERDICT) — mirror §4-D09 T10 ceremony
+
+- **Canonical owner of record**: Slot C (Satrio) per `docs/SERVICE-CHARTER.md §3` (Auth admin surface)
+- **Execution this cycle**: Slot B (Nanak) one-off per `PARENT §4-D07` deviation (PO ratified 2026-06-30 — Slot C absorption split 1/3)
+- **Reason for deviation**: Slot C (Satrio) OFFLINE (busy other repo); PO absorption ruling distributes Slot C tasks across Slot A + Slot B. T08 → Slot B because it extends T07 pattern (per-hotel users CRUD → cross-hotel admin users CRUD) — super_admin scope reuses argon2 + generatePassword helper + AppError inventory + tenant-guard scope-bypass; Auth-adjacent skill match.
+- **Commit message pattern (WAJIB for every T08 commit)**:
+  ```
+  <type>(<scope>): <subject — short>
+
+  Cross-slot execution per §4-D07 (Slot C canonical territory).
+  ```
+- **SUBMIT block WAJIB header note**: `Cross-slot execution per §4-D07`
+- **VERDICT block WAJIB header note**: `cross-slot heritage per §4-D07`
+- **Code-file JSDoc header markers** (mirror T10 §4-D09 pattern):
+  - `src/modules/admin/users/admin-users.routes.ts` MANDATORY
+  - Bonus: extend to service + repository + types for consistency with T10 (Executor decide; minimum 1 route file per ASSIGNMENT)
+- **Future amendment audit trail**: this ASSIGNMENT + PLAN + ACK + SUBMIT + VERDICT chain is the canonical handoff record for Slot C re-onboarding; T08 execution stays in historical record under §4-D07 (Slot B one-off). Future admin-users/tiers amendments return to Slot C.
+
+#### PM B notes — Scope this cycle (FULL APPROVE convention direct — T04 shipped)
+
+**In scope this submission** (6 endpoints per spec §1.3 + §1.4):
+
+1. **`GET /api/admin/users`** — super_admin only; list users across ALL hotels; query params `?hotel_id=` + `?role=` (per spec §1.3 line 143). Response: paginated list per T07 pagination pattern (`{ users, total, limit, offset }`).
+2. **`POST /api/admin/users`** — super_admin only; create user of ANY role in ANY hotel per spec §1.3:
+   - Body: `{ email, name, role, hotel_id?, dept_id?, language }` (per spec line 149)
+   - **Mutual-exclusion validation** (spec §4.4 + §1.3 lines 152-154): `role='super_admin'` → `hotel_id` MUST be `null`; other roles → `hotel_id` REQUIRED. Return 400 VALIDATION_ERROR on violation.
+   - Server generates 16-char password via `generatePassword()` helper (T07 addition at `src/shared/utils/crypto.ts`)
+   - Response 201: `{ user, generated_password }` per spec line 156 (same shape as T07 §1.2)
+   - Sets `must_rotate_password: true` on new user row
+3. **`PATCH /api/admin/users/:id`** — super_admin only; update ANY user in ANY hotel per spec §1.3:
+   - Body: partial `{ name?, role?, hotel_id?, dept_id?, is_active?, language? }` (email immutable per T07 precedent + spec §1.2 line 103)
+   - **Last-super_admin guard** (spec §4.6 + §1.3 line 160): if PATCH would demote role from `'super_admin'` to non-super_admin OR set `is_active: false` on last remaining active super_admin → `BusinessRuleError` 422 with `details.reason: 'LAST_SUPER_ADMIN_PROTECTED'` (mirror T07 last-gm-admin pattern using existing `BusinessRuleError` from T06)
+   - **Mutual-exclusion re-validation** on role/hotel_id change (spec §4.4)
+   - Response: `{ user }` shape
+4. **`POST /api/admin/users/:id/reset-password`** — super_admin only; regenerate password + return per spec §1.3 line 147:
+   - Generate 16-char password + hash via argon2 (`PasswordHasherPort`)
+   - Atomic update `password_hash` + `must_rotate_password: true` (single Prisma `update`)
+   - `revokeAllSessions(userId)` best-effort (T07 pattern: try/catch + `logger.warn` on failure)
+   - Response 200: `{ user, generated_password }` (same shape as T07 §1.2 line 127)
+5. **`GET /api/admin/tiers`** — super_admin only; list all 4 tier rows + config per spec §1.4:
+   - Response: `{ tiers: Tier[] }` per spec §1.4 (4 canonical rows: lite/professional/luxury/enterprise from T03 seed)
+6. **`GET /api/admin/tiers/:name`** — super_admin only; single tier detail per spec §1.4:
+   - Path param: `name ∈ 'lite' | 'professional' | 'luxury' | 'enterprise'` (spec-pinned enum; validated via `tiers_name_check` CHECK constraint from T02)
+   - Response: `Tier` shape; `NotFoundError` 404 if name not among 4 canonical values
+
+**Explicitly OUT-of-scope this cycle**:
+- **Hotel admin endpoints** — T09 territory (Slot A done, merged PR#6); DO NOT touch `src/modules/admin/hotels/*`
+- **Tier CREATE/UPDATE** — spec §1.4 shows only GET methods; tiers are seed data, static; T08 = read-only tier catalog
+- **Bulk operations / advanced search** — basic pagination + spec-defined filter params sufficient
+- **`prisma/schema.prisma` changes** — ZERO touches; T02 already ships all needed tables + CHECK constraints
+- **package install** — no new dep; argon2 + zod + Prisma all present
+- **First super_admin bootstrap** — spec §1.3 line 155 says this is via `seed-super-admin` CLI (T04 territory, done); T08 endpoint does NOT bootstrap first super_admin
+- **Q-A-07 (login suspended-hotel check)** — PM A flagged as follow-up for Slot B future scope; NOT T08 territory (auth login = T05 territory)
+
+#### PM B notes — DoD this submission (~17 items)
+
+- [ ] **6 endpoints functional** with super_admin scope gate (verified via 4-role coverage tests)
+- [ ] **NEW module** `src/modules/admin/users/` scaffold (mirror T09's `src/modules/admin/hotels/` naming convention)
+- [ ] **NEW module** `src/modules/admin/tiers/` (separate small module per Open Item #1 recommendation)
+- [ ] **super_admin role gate** at handler entry OR service entry (Executor decide per Open Item #2 — recommend `assertSuperAdminScope` helper mirror T10's `assertGmAdminScope` service-layer pattern)
+- [ ] **Last-super_admin guard** implemented via `prisma.$transaction` wrap (atomic count + update) per Open Item #3; throws `BusinessRuleError('Cannot demote or deactivate the last active super_admin', { reason: 'LAST_SUPER_ADMIN_PROTECTED' })` — REUSE existing T06 `BusinessRuleError` (heavy AppError reuse principle)
+- [ ] **Mutual-exclusion validation** at service layer (Open Item #4): reject role='super_admin' + hotel_id set (400); reject role≠'super_admin' + hotel_id null (400) — service echoes DB CHECK constraint from T02 (defensive; DB CHECK is the safety net)
+- [ ] **Email uniqueness handling** (Open Item #5): catch Prisma `P2002` unique-violation on POST → `ConflictError` 409; Postgres UNIQUE(hotel_id, email) with NULL hotel_id treats each NULL as distinct so super_admin platform-wide uniqueness enforced by separate handler-level check OR by relying on the CHECK constraint's effective behavior (Executor verify at PLAN — flag GAP if ambiguous per spec §4.7)
+- [ ] **generatePassword helper reuse** from `src/shared/utils/crypto.ts` (T07 addition); NO duplication
+- [ ] **`revokeAllSessions(userId)` best-effort** on reset-password (T07 pattern: try/catch + `logger.warn`)
+- [ ] **Argon2 hash** for password via `PasswordHasherPort` (reuse T05 `Argon2Hasher` adapter); NO plaintext storage
+- [ ] **Unit tests** per TESTING.md §4 (mock port + mock repo INSTANCE):
+  - super_admin scope gate: 4-role coverage × 6 endpoints (24 test cases minimum baseline; consolidate via parametric where clean)
+  - POST mutual-exclusion: role='super_admin' + hotel_id set → 400; role='gm_admin' + hotel_id null → 400; happy path all roles + valid hotel_id combos
+  - POST duplicate email → 409 ConflictError
+  - PATCH last-super_admin guard: demote-last → 422 BusinessRuleError with details.reason; happy-demote (with another active super_admin) → 200
+  - PATCH mutual-exclusion re-validation on role change
+  - POST reset-password: generate + hash + must_rotate + revokeAllSessions best-effort
+  - GET tiers list (4 rows) + single tier by name + 404 unknown name
+- [ ] **Integration tests** for critical repo methods (T02 shipped + tiers seeded from T03; integration test scope now feasible):
+  - `countActiveSuperAdmins(excludingUserId?)` for last-super_admin guard atomicity
+  - Mutual-exclusion CHECK trip on invalid role/hotel_id combo (DB defense-in-depth)
+  - Email uniqueness across hotels for super_admin (NULL hotel_id group behavior)
+  - Placeholder ≥5 `it.todo()` if any surfaces are integration-deferred (Executor decide at PLAN)
+- [ ] **Coverage ≥80% line floor**; **≥90% target on service/routes/schema** (critical security surface per TESTING.md §9 auth-critical)
+- [ ] **`make check` green** (lint + format + typecheck + test-unit; test-unit regex excludes `.integration.test.ts` per cycle 7 tighten)
+- [ ] **`pnpm test:integration` green** (integration tests pass against migrated PG per T02)
+- [ ] **Drift floor zero** scoped to T08 files: no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+- [ ] **Cross-slot heritage compliance** (mirror T10 §4-D09 → applied to §4-D07):
+  - Footer on ALL impl commits: `Cross-slot execution per §4-D07 (Slot C canonical territory).`
+  - SUBMIT + VERDICT headers carry §4-D07 marker
+  - `admin-users.routes.ts` JSDoc header §4-D07 reference (minimum 1 file-level marker; bonus extension to service/repo/types accepted per T10 precedent)
+- [ ] **Security floor** (CLAUDE.md §6 + SECURITY.md):
+  - Cleartext password returned ONLY in response body (POST + reset), NEVER logged (no `req.body` log, no error log carrying password)
+  - Email masked via `maskEmail()` at log lines (reuse `src/shared/utils/masking.ts`)
+  - Argon2 timing-safe verify + hash (T05 adapter)
+  - No hardcoded secrets
+  - Last-super_admin guard atomicity via `prisma.$transaction`
+
+#### PM B notes — File ownership
+
+**CREATE** (12 files):
+
+```
+src/modules/admin/users/
+├── index.ts                              (barrel — export adminUsersRoutes + AdminUsersService type)
+├── admin-users.routes.ts                 (Fastify plugin — 4 endpoints; JSDoc §4-D07 reference)
+├── admin-users.service.ts                (orchestrator: super_admin gate + generatePassword + last-super_admin tx guard + revokeAllSessions)
+├── admin-users.repository.ts             (Prisma direct — listUsers + insertUser + updateUser + setPassword + countActiveSuperAdmins + revokeAllSessions)
+├── admin-users.schema.ts                 (zod: ListQuery, CreateUserRequest, UpdateUserRequest, ResetPasswordResponse, AdminUser response shape)
+├── admin-users.types.ts                  (AdminUser domain type; Role re-export from auth.types)
+└── __tests__/
+    ├── admin-users.service.test.ts       (unit — mock port + mock repo class instance)
+    ├── admin-users.routes.test.ts        (unit — Fastify inject)
+    ├── admin-users.schema.test.ts        (unit — zod parse + mutual-exclusion)
+    └── admin-users.repository.integration.test.ts  (integration — countActiveSuperAdmins + email uniqueness + mutual-exclusion CHECK trip)
+
+src/modules/admin/tiers/
+├── index.ts                              (barrel — export adminTiersRoutes + AdminTiersService type)
+├── admin-tiers.routes.ts                 (Fastify plugin — 2 GET endpoints)
+├── admin-tiers.service.ts                (simple: list + find by name)
+├── admin-tiers.repository.ts             (Prisma direct — listTiers + findTierByName)
+├── admin-tiers.schema.ts                 (zod: Tier response shape)
+├── admin-tiers.types.ts                  (Tier domain type)
+└── __tests__/
+    ├── admin-tiers.service.test.ts       (unit)
+    ├── admin-tiers.routes.test.ts        (unit)
+    └── admin-tiers.schema.test.ts        (unit)
+```
+
+Total: **~20 files** — 10 admin-users + 7 admin-tiers module files + 3 more test files if integration coverage split.
+
+**EDIT additive** (2 files):
+- `src/entrypoints/api.ts` — register `adminUsersRoutes` (prefix `/api/admin/users`) + `adminTiersRoutes` (prefix `/api/admin/tiers`); decorate `fastify.services.adminUsers` + `fastify.services.adminTiers`
+- `src/shared/types/fastify-augmentation.ts` — extend `AppServices` with `adminUsers: AdminUsersService` + `adminTiers: AdminTiersService`
+
+**File count**: **~20 CREATE / 2 EDIT** baseline (Executor may consolidate; PLAN will finalize).
+
+**NO TOUCH ZONES**:
+- **`prisma/schema.prisma`** — ABSOLUTE NO-TOUCH per §4-D07/§4-D09 precedent; all needed columns + constraints live from T02 cycle 6
+- `src/modules/auth/*` — boundary (auth domain; reuse `Argon2Hasher` + `AuthRepository.revokeAllSessions`)
+- `src/modules/users/*` — boundary (gm_admin per-hotel scope T07)
+- `src/modules/admin/hotels/*` — Slot A T09 territory (super_admin platform-level hotel CRUD)
+- `src/modules/hotels/*` — T10 territory (authenticated /me + gm_admin /settings)
+- `src/plugins/*` — reuse tenant-guard (T11) as-is via `req.session` (super_admin gets `{type: 'all-hotels'}` scope which allows cross-hotel access per T11 Amendment 2 + spec §6)
+- `src/core/prisma/prisma-client.ts` — T02 singleton reused
+- `src/modules/auth/auth.errors.ts` — no new error subclass needed; reuse `BusinessRuleError` for last-super_admin guard (mirror T07 last-gm-admin discriminator pattern per T07 Ruling #2)
+- `package.json` / `pnpm-lock.yaml` — no new dep
+- `PM-STATUS-A.md` / `PM-STATUS-C.md` / `PM-STATUS-PARENT.md` (PM B writes §2 roll-up only)
+- Q-B-02 workarounds — slot-internal, not T08 scope
+
+#### PM B notes — Parent doc refs (WAJIB baca Executor sebelum PLAN)
+
+- **`docs/spec/MVP-AUTH-FIRST.md §1`** rows 5 + 7 — endpoint list
+- **`docs/spec/01-auth-identity.md §1.3`** — Cross-hotel Admin Users CRUD (4 endpoints, super_admin scope, mutual-exclusion, POST body/response shapes)
+- **`docs/spec/01-auth-identity.md §1.4`** — Tiers catalog (2 GET endpoints, super_admin scope, Tier shape)
+- **`docs/spec/01-auth-identity.md §4.4`** — mutual-exclusion CHECK constraint (already live from T02)
+- **`docs/spec/01-auth-identity.md §4.6`** — last-super_admin guard 422 BUSINESS_RULE
+- **`docs/spec/01-auth-identity.md §4.7`** — email uniqueness UNIQUE(hotel_id, email) — verify NULL hotel_id behavior
+- **`docs/SERVICE-CHARTER.md §3`** — slot ownership matrix (Slot C canonical context for §4-D07)
+- **`PARENT §4-D07`** — deviation entry (cross-slot ceremony mandate)
+- **`PARENT §10`** absorption coord
+- **`docs/MODULE_TEMPLATE.md`** — new module scaffold pattern
+- **`CLAUDE.md §4/§5/§6/§8`** — Hexagonal Disiplin + TS strict + security + testing
+- **`docs/TESTING.md §4/§5/§9`** — unit + integration + coverage
+- **`docs/decisions/0001-hexagonal-disiplin.md`** — Prisma direct in repo
+- **`src/modules/admin/hotels/`** (T09 Slot A) — admin/* naming precedent, super_admin scope pattern
+- **`src/modules/users/`** (T07) — users CRUD pattern (per-hotel scope; T08 mirrors cross-hotel scope)
+- **`src/modules/hotels/`** (T10) — most recent Slot B cross-slot precedent (§4-D09 ceremony pattern)
+- **`src/modules/auth/auth.errors.ts`** — AppError inventory (BusinessRuleError T06 reuse for last-super_admin)
+- **`src/shared/utils/crypto.ts`** — `generatePassword()` helper (T07 addition; reuse verbatim)
+
+#### PM B notes — Acceptance criteria (~8 items)
+
+1. **6 endpoints functional** with super_admin scope gate (401/403 for non-super_admin)
+2. **Last-super_admin guard** enforced (atomic `prisma.$transaction`; 422 BUSINESS_RULE with `reason: 'LAST_SUPER_ADMIN_PROTECTED'` discriminator)
+3. **Mutual-exclusion validation** (service-layer echo of DB CHECK; 400 VALIDATION_ERROR on violation)
+4. **Cross-slot ceremony compliance** (§4-D07 footer on ALL impl commits + SUBMIT/VERDICT headers + JSDoc file marker on routes minimum)
+5. **`make check` green** + **`pnpm test:integration` green** + drift zero + coverage ≥80% line floor (≥90% target service/routes/schema)
+6. **Cleartext password return only in response body** (POST + reset); NEVER logged
+7. **FULL APPROVE convention direct** (T04 shipped + T02 shipped + T11 wired; no PARTIAL holding pattern)
+8. **Slot C absorption 3/3 milestone marker** — this task completes the Slot C absorption sequence (T08 + T09 ✓ Slot A + T10 ✓ Slot B); after VERDICT close, Slot C absorption fully complete
+
+#### PM B notes — Sequence + cycle constraint
+
+- **Cycle 9 = T08** (last Slot C absorption task; ~6-8h ETA per PARENT §4-D07 ~6h + PM B convention padding for coverage adjustment)
+- **After T08 close**: Slot C absorption 3/3 COMPLETE; Slot B has no more mandatory tasks in current PARENT §1 queue
+- **Branch**: NEW `feat/slot-c-absorption-b-t08` from CURRENT main HEAD `fc4e257` (post PR#7 T10 merge)
+- **Branch hygiene per §7**: T08 impl commits on `feat/slot-c-absorption-b-t08`; PM-STATUS commits on `main` (this ASSIGNMENT, ACK, SUBMIT, VERDICT)
+- **PR pattern**: mirror PR#7 (T10) — Nanak creates individual PR post-VERDICT for cleaner audit trail; merge convention `git merge --no-ff` to preserve §4-D07 footer evidence
+
+#### PM B notes — 5 Open items untuk Executor B raise di PLAN
+
+1. **Module structure** — separate `src/modules/admin/tiers/` module OR combine with `admin/users`?
+   - **PM B recommend SEPARATE** — tier catalog (read-only lookup, static seed data from T03) is domain-distinct from user CRUD (write-heavy with mutual-exclusion + guards). Different service/repo shapes. Separate modules keep each focused ≤300 LOC per CLAUDE.md rule of thumb.
+   - Executor confirm at PLAN + justify if combining.
+
+2. **super_admin role gate helper** — reuse T10's `assertGmAdminScope` service-layer pattern (adapted) OR extract shared helper?
+   - **PM B recommend NEW `assertSuperAdminScope`** helper (semantic clarity; different role check). Location: either (a) inline in `admin-users.service.ts` + `admin-tiers.service.ts` (duplication 2 places, ~4 LOC each) OR (b) `src/shared/utils/auth-scope.ts` shared helper.
+   - Recommend **(a) inline** for cycle 9 (avoid new shared file surface); refactor to (b) when 3rd admin/* module exists.
+   - Executor decide.
+
+3. **Last-super_admin guard atomicity** — `prisma.$transaction` wrap (mirror T07 last-gm-admin pattern)?
+   - **PM B recommend YES — mandatory** for race-free check-and-set. Same pattern as T07 `updateUserWithLastGmGuard` (T07 cycle 5 SUBMIT):
+     ```ts
+     await this.db.$transaction(async (tx) => {
+       const count = await tx.user.count({
+         where: { role: 'super_admin', isActive: true, NOT: { id: targetUserId } }
+       });
+       if (count === 0) throw new LastSuperAdminError(...);
+       return tx.user.update({ where: { id: targetUserId }, data: patch });
+     });
+     ```
+   - Repo layer sentinel `LastSuperAdminError extends Error` (mirror T07 `LastGmAdminError`); service catches + maps to `BusinessRuleError('...', { reason: 'LAST_SUPER_ADMIN_PROTECTED' })`.
+   - Executor confirm at PLAN.
+
+4. **Mutual-exclusion validation location** — service layer (return 422 with clear message) OR let DB CHECK trip surface as 500?
+   - **PM B recommend service layer VALIDATE + 400 VALIDATION_ERROR** per spec §1.3 line 154 explicit: "400 VALIDATION_ERROR on the mutual-exclusion violation". DB CHECK from T02 is defensive backstop.
+   - Executor implement zod schema `.refine()` to enforce role/hotel_id combo at parse time OR service layer check post-parse. Recommend `.refine()` for early rejection (cleaner error response).
+   - Executor confirm.
+
+5. **Email uniqueness for super_admin (NULL hotel_id)** — Postgres UNIQUE(hotel_id, email) treats each NULL as distinct; super_admin platform-wide uniqueness NOT enforced by this constraint alone
+   - **PM B recommendation**: add handler-level `findByEmail(email)` check when creating a `role='super_admin'` user (before Prisma insert). If existing super_admin has same email → `ConflictError` 409. This is defensive against the DB constraint's NULL semantics.
+   - Alternative: rely on schema `@@unique([hotelId, email])` composite semantic (which does NOT enforce platform-wide email uniqueness for super_admins). If PO expects strict platform uniqueness across super_admins → recommend handler pre-check.
+   - Executor verify spec §4.7 wording + Postgres NULL-in-UNIQUE behavior; raise GAP if spec ambiguous. **Default PM B position**: implement handler-level pre-check for super_admin email uniqueness (safer; small overhead).
+
+**Notes for Executor B**:
+- **Heavier cycle than T10** (~6-8h vs ~3-5h) — 6 endpoints across 2 modules + last-super_admin tx guard + mutual-exclusion validation + integration tests; more scope than T10's 3 endpoints. Foundation patterns thoroughly established from T07 (users CRUD), T09 (admin/hotels naming), T10 (Slot C absorption ceremony).
+- **Pattern reuse HEAVY** — mirror T07 users module scaffold + T09 admin/hotels naming; last-super_admin guard mirrors T07 last-gm-admin transaction pattern; generatePassword helper reuse from T07 crypto.ts addition; AppError inventory covers all cases (ValidationError/ConflictError/NotFoundError/BusinessRuleError/ForbiddenError) — likely ZERO new error subclasses (per T07 heavy-reuse principle).
+- **Cross-slot ceremony ETA add** — footer discipline + JSDoc marker + branch naming ~15min overhead
+- **T04 shipped confirmation**: PM A entry `🏁 SLOT A COMPLETE — all 6 PRs merged (incl PR#4 T04)` unblocks integration test scope; T08 can target FULL APPROVE direct
+- **Q-A-07 follow-up (login suspended-hotel check)** flagged by PM A is NOT T08 scope; auth.service (T05) territory; defer
+
+Awaiting Executor B PLAN T08 attempt 1.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
