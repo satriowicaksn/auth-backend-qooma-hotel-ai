@@ -13,12 +13,12 @@
 ## 0. Current focus (slot B)
 
 - **Pace model**: criteria-based, no calendar deadlines (PO ruling 2026-06-29) — lihat PARENT §0.
-- **Active task (cycle 9)**: T08 — Admin users CRUD + Tier catalog · `assigned · READY-FULL (cross-slot per §4-D07, cycle 9 LAST Slot C absorption)`. ASSIGNMENT issued 2026-07-01. **LAST Slot C absorption task (3/3)** per PO ruling 2026-06-30. T04 shipped (PR#4) → dependency SATISFIED → FULL APPROVE convention direct. Branch: NEW `feat/slot-c-absorption-b-t08` from main HEAD `fc4e257` (post PR#7 T10 merge).
-- **T10 done**: `approved · cycle 8 close (Slot C absorption 1/3 done)` ✓ — merged PR#7 `fc4e257` on main.
-- **Slot C absorption progress**: **2/3 COMPLETE** (T09 ✓ Slot A via §4-D08 merged PR#6; T10 ✓ Slot B via §4-D09 merged PR#7). T08 remaining = LAST task.
-- **Cross-slot ceremony for T08**: §4-D07 footer every impl commit + JSDoc §4-D07 header on routes file minimum (mirror T10 §4-D09 4-file JSDoc extension pattern).
-- **Slot A COMPLETE**: All 6 PRs merged to main; Nathan idle/standby. Slot B carries LAST Slot C absorption work.
-- **Slot B full cumulative**: T02 + T05 + T06 + T07 + T11 + T02-sub-1 + T10 all FULL APPROVE. T08 pending cycle 9 = final Slot B item.
+- **🏁 SLOT C ABSORPTION 3/3 COMPLETE** — T08 FULL APPROVE cycle 9 close (this VERDICT); T09 ✓ Slot A PR#6; T10 ✓ Slot B PR#7. All 3 cross-slot deviations (§4-D07 + §4-D08 + §4-D09) executed clean.
+- **T08 status**: `approved · cycle 9 close (LAST Slot C absorption; 🏁 3/3 COMPLETE)` ✓ — VERDICT attempt 1 posted 2026-07-01; 17/17 verifications match; cross-slot 16/16 footer + SUBMIT header + JSDoc §4-D07 on 5 files; 3 ACK-sequence DDs ACCEPT; FULL APPROVE direct convention.
+- **Slot B mandatory queue COMPLETE per current PARENT §1**. Slot B canonical work COMPLETE + Slot C absorption COMPLETE.
+- **Branch**: `feat/slot-c-absorption-b-t08` (16 impl commits) READY for PR#8 merge to `main`. PM B recommend `git merge --no-ff` per PR#6/PR#7 established pattern (preserve 16 commits + 16 §4-D07 footers + 5 JSDoc markers).
+- **Optional future scope**: Q-A-07 (login suspended-hotel check flagged by PM A) — Slot B territory (auth.service T05 addition), non-urgent; defer to PO direction.
+- **Slot A COMPLETE** (all 6 PRs merged) + **Slot B full cumulative FULL APPROVE**: T02 + T05 + T06 + T07 + T11 + T02-sub-1 + T10 + T08. Total across cycles: 8 Slot B tasks + Slot A foundation via PR#1-#6.
 - **Branch hygiene rule active** (lihat §7) — PM-STATUS commits direct to main; impl commits on `feat/auth-core` until full APPROVE.
 - **Next gate (global)**: G2 untuk T05 (modul auth) — lihat `PM-STATUS-PARENT.md §5`
 - **Cycle 1 sequence (PO-ratified)**: **T05 → T06 → T11 → T07**. Don't pick T06 sampai T05 APPROVED.
@@ -35,7 +35,7 @@
 | T02 | Initial Prisma migration (cross-slot Slot B execution per §4-D05) | `approved · cycle 6 close (FIRST FULL APPROVE in repo)` | PM B — cycle 6 (2026-06-30) attempt 1 | VERDICT attempt 1 (2026-06-30) → **FIRST FULL APPROVE in repo**. Cross-slot 5/5 mandates + bonus code-header verified. 15/15 verifications match; smoke (c) CHECK trip CONFIRMED Postgres `23514` fires live; schema-diff EMPTY; Q-B-02(b) inline COMPLETE; Q-B-02(d) preserved per scope. 5 DDs ACCEPT (incl DD2 test-setup env loader 3/3 file count revision). Quartet upgrade condition (a) satisfied; (b)-(e) cycle 7 pending. Migration `20260630042913_init` with 150 lines (5 tables + 5 manual CHECK constraints). |
 | T02-sub-1 | Quartet integration backfill (27 it.todo → 30 real assertions across 3 files) | `approved · cycle 7 close (FULL APPROVE direct)` | PM B — cycle 7 (2026-06-30) batch attempt 1 | BATCH VERDICT cycle 7 (2026-06-30) → FULL APPROVE. 17/17 verifications match. 6 DDs ACCEPT; 4 open items resolved. Cross-slot ceremony 2/6 §4-D01 both T11-file-only ✅. Mixed-scope clean: 4 PLAIN + 2 §4-D01 commits. 30 integration assertions (+3 over 27 plan: 1 happy-demote symmetry T07 + 2 tenant-guard coverage T11 lift 75→88.88%). Critical repo line coverage ALL ≥80% (auth.repo 85.18% / users.repo 82.5% / tenant-guard 88.88%). Quartet upgrade conditions (b)-(e) ALL SATISFIED. |
 | T10 | Hotel context + settings (`GET /api/hotels/me` + `GET/PUT /api/settings/hotel`) | **`approved · cycle 8 close (Slot C absorption 1/3 done · FULL APPROVE direct)`** | PM B — cycle 8 (2026-07-01) attempt 1 | VERDICT cycle 8 (2026-07-01) → **FULL APPROVE direct**. Cross-slot ceremony 8/8 footer + SUBMIT header + JSDoc §4-D09 on **4 files** (routes mandatory + service + repo + types bonus). 13/13 independent verifications match. Coverage: routes 100 / schema 100 / service 95.83 (≥90% target MET) / repo 94.44 (integration). make check 225 unit + 48 integration pass; drift zero (3 comment false-positives); schema-diff EMPTY; boundary clean. 3 DDs ACCEPT (types-before-routes reorder, routes+api-wire combined commit, +1 integration coverage commit). Spec-pinned: super_admin option (b) literal + zod.strict PUT + gm_admin gate service-layer + wiring order preserved. Branch `feat/slot-c-absorption-b` (8 commits) merged via PR#7 (`fc4e257`) into main. |
-| T08 | Cross-hotel admin users CRUD + Tier catalog read (`/api/admin/users` family + `GET /api/admin/tiers[:name]`) | `assigned · READY-FULL (cross-slot per §4-D07, cycle 9 LAST Slot C absorption)` | —              | Cycle 9 task. ASSIGNMENT issued 2026-07-01. **LAST Slot C absorption (3/3)** per §4-D07 (PO 2026-06-30). Ownership of record = Slot C; execution by Slot B this cycle only. Scope: 6 endpoints (admin users CRUD × 4 + tier catalog GET × 2) + new src/modules/admin/users/ + src/modules/admin/tiers/ modules. Last-super_admin guard via prisma.$transaction (mirror T07 last-gm-admin pattern) + mutual-exclusion validation + generatePassword reuse from T07. T04 shipped → dependency SATISFIED → FULL APPROVE direct. ETA ~6-8h. Cross-slot commit ceremony WAJIB §4-D07 footer (mirror §4-D01/§4-D05/§4-D09 pattern). Branch: NEW `feat/slot-c-absorption-b-t08`. |
+| T08 | Cross-hotel admin users CRUD + Tier catalog read (`/api/admin/users` family + `GET /api/admin/tiers[:name]`) | **`approved · cycle 9 close (LAST Slot C absorption; 🏁 3/3 COMPLETE)`** | PM B — cycle 9 (2026-07-01) attempt 1 | VERDICT cycle 9 (2026-07-01) → **FULL APPROVE direct**. 🏁 **LAST Slot C absorption task — 3/3 milestone COMPLETE**. Cross-slot ceremony 16/16 footer + SUBMIT header + JSDoc §4-D07 on **5 files** (admin-users.routes/service/repo/types + admin-tiers.routes). 17/17 independent verifications match. Coverage: routes 100 / service 94.02 / schema 100 / repo 86.79 (integration). make check 305 unit + 65 integration pass; drift zero (13 non-attributable comment prose + test-fixture defensive throws per T05/T07/T10 precedent); schema-diff EMPTY; boundary clean. 3 DDs ACCEPT (types+api-wire combined per T10, hasher-mock lint fix per T09, +1 repo integration coverage lift per T10). Spec-pinned: assertSuperAdminScope at all 6 endpoints + $transaction last-super_admin guard + zod.refine mutual-exclusion + handler-level email pre-check per §4.7 NULL uniqueness. Branch `feat/slot-c-absorption-b-t08` (16 commits) READY for PR#8 merge. |
 | T05 | Auth core endpoints (login/logout/refresh) + sessions/JWT/CSRF plumbing | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) via auth.repository.integration.test.ts 16 tests T05+T06 consolidated; repo coverage ≥80% ✓ (c) auth.repository.ts 85.18%; drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 2 unit-scope baseline preserved (98.56% stmt / 100% line / critical 100%). |
 | T06 | Auth current-user + password rotation gate | **`approved · cycle 7 close (FULL APPROVE batch)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) consolidated in auth.repository file — T06 paths (rotation + revokeAllOtherSessions + getMe + updateMeLanguage) covered; repo coverage ≥80% ✓ (c); drift zero ✓ (d); VERDICT FULL ✓ (e). Cycle 3 attempt 2 BusinessRuleError 422 fix (spec §1.1) preserved. |
 | T11 | tenant-guard middleware (cross-slot execution per PARENT §4-D01) | **`approved · cycle 7 close (FULL APPROVE batch, cross-slot per §4-D01 preserved)`** | PM B — cycle 7 (2026-06-30) batch attempt 1 | PARTIAL → FULL via batch VERDICT cycle 7. T02 ships ✓ (a); integration fill ✓ (b) tenant-guard.plugin.integration.test.ts 4 base + 2 coverage = 6 assertions (Commits 4 + 6 both §4-D01 footer); repo coverage ≥80% ✓ (c) tenant-guard.ts 88.88% post-Commit-6 lift; drift zero ✓ (d); VERDICT FULL ✓ (e). **Cross-slot heritage COMPLETE**: 7 §4-D01 footer commits total (5 cycle-4 + 2 cycle-7) + plugin file JSDoc + integration test line-6 marker preserved. Slot A re-takes future tenant-guard amendments. |
@@ -6324,6 +6324,112 @@ All 5 modules coexist cleanly — Executor should NOT touch any except T08's 2 n
 - **🏁 Slot C absorption 3/3 COMPLETE** marker: T09 ✓ Slot A + T10 ✓ Slot B cycle 8 + T08 ✓ Slot B this cycle. All Slot C absorption tasks delivered; Slot B has no more mandatory tasks in current PARENT §1 queue per ASSIGNMENT line 5878.
 
 Requesting PM B **VERDICT — FULL APPROVE direct** (cross-slot heritage per §4-D07). Branch `feat/slot-c-absorption-b-t08` @ `37a2b21` ready for PM B independent verify per PM-AGENT §3 Steps 1-7.
+
+##### VERDICT T08 attempt 1 — FULL APPROVE direct (cycle 9 close; 🏁 SLOT C ABSORPTION 3/3 COMPLETE MILESTONE). CROSS-SLOT execution per §4-D07. by PM B (cycle 9, 2026-07-01)
+
+**Outcome**: ✅ **FULL APPROVE direct — 🏁 SLOT C ABSORPTION 3/3 COMPLETE**. LAST Slot C absorption task closed. Cross-slot ceremony 16/16 commit footers + SUBMIT header + JSDoc §4-D07 on 5 files ✅. 17/17 independent verifications match Executor klaim. 17 DoD items ✓; AC ✓; 3 ACK-sequence deviations ACCEPT. **Slot B has no more mandatory tasks in current PARENT §1 queue.** Branch `feat/slot-c-absorption-b-t08` (16 commits) READY for PR#8 merge to main.
+
+---
+
+**Cross-slot ceremony audit (§4-D07 mandates) — ALL PASS**
+
+| Mandate | Result |
+|---|---|
+| **16/16 per-commit footer** | All 16 commits `c829c4e..37a2b21` carry exact literal `Cross-slot execution per §4-D07 (Slot C canonical territory).` — `grep -c "§4-D07"` on commit bodies returned 19 (over-and-above: some commits reference §4-D07 in body prose beyond footer) |
+| **SUBMIT block header** | Line 6159 carries `CROSS-SLOT execution per §4-D07 (Slot C canonical territory). 🏁 LAST Slot C absorption task — 3/3 milestone COMPLETE.` |
+| **JSDoc §4-D07 marker on 5 files** | ✅ `admin-users.routes.ts` (mandatory) + `admin-users.service.ts` + `admin-users.repository.ts` + `admin-users.types.ts` + `admin-tiers.routes.ts` — all 5 carry the marker in JSDoc block. Mirror T10 §4-D09 4-file precedent extended for 2-module scope. |
+
+Zero ceremony violations. Cross-slot heritage canonical record COMPLETE for Slot C future audit.
+
+---
+
+**Independent verification 17/17 PASS (safety guard #3 no trust-and-stamp)**
+
+| # | Check | Executor klaim | PM B independent | Status |
+|---|---|---|---|---|
+| 1 | `make check` | 305 pass + 1 skipped (+80 delta) | identical | ✅ |
+| 2 | `pnpm test:integration --ci` | 65 pass + 1 skipped (+17 delta) | identical | ✅ |
+| 3 | admin-users.routes.ts 100% line | 100% | 100/100/100/100 | ✅ |
+| 4 | admin-users.service.ts 94% ≥90% target | 94% | 94.02%/90.32%/100%/94.02% | ✅ |
+| 5 | admin-users.schema.ts 100% | 100% | 100/100/100/100 | ✅ |
+| 6 | admin-users.repository.ts 87% via integration | 87% | 84.74%/68%/92.3%/**86.79%** (within tolerance) | ✅ |
+| 7 | admin-tiers modules 100% + repo 0% by PLAN | matches | verified per PLAN read-only acceptance | ✅ |
+| 8 | Drift T08 territory zero | zero | 13 hits ALL non-T08-attributable (2 comment prose + 11 test-fixture defensive throws per T05/T07/T10 precedent) | ✅ |
+| 9 | Schema-diff EMPTY (CRITICAL) | empty | `git diff main..HEAD -- prisma/schema.prisma` → EMPTY | ✅ |
+| 10 | Boundary verify | admin/users + admin/tiers + api.ts + fastify-augmentation only | 21 files: 10 admin/users + 7 admin/tiers + api.ts (+14) + fastify-augmentation (+4); NO touches to auth/users/hotels/admin-hotels/plugins/prisma/package.json | ✅ safety guard #5 |
+| 11 | assertSuperAdminScope gates all 6 endpoints | inline per service | admin-users.service.ts 6 hits + admin-tiers.service.ts 3 hits | ✅ |
+| 12 | $transaction + LastSuperAdminError sentinel | mirror T07 pattern | admin-users.repository.ts:61-63 class + :155-178 tx wrap with throw sentinel inside callback | ✅ |
+| 13 | zod .refine() mutual-exclusion at parse | 400 VALIDATION_ERROR | admin-users.schema.ts:51 `.refine(mutuallyExclusiveRoleAndHotelId, ...)` on CreateSchema + :74 empty patch reject on UpdateSchema | ✅ |
+| 14 | Email pre-check for super_admin (NULL uniqueness) | handler-level findByEmailForSuperAdminCheck | admin-users.service.ts:84-92 POST create + :170-180 PATCH promotion — both call helper + throw ConflictError with maskEmail | ✅ |
+| 15 | Postgres healthy on 5433 | running | `docker ps` → `qooma-postgres Up 10 hours (healthy)` | ✅ |
+| 16 | 16 commits ahead of main | 16 | `git log --oneline main..origin/feat/slot-c-absorption-b-t08` → 16 lines c829c4e→37a2b21 | ✅ |
+| 17 | AppError inventory reuse (0 new subclasses) | pre-existing set | repo sentinels UniqueConstraintError + LastSuperAdminError (module-private, extend Error); service maps to ConflictError 409 + BusinessRuleError 422 with discriminators | ✅ |
+
+**17/17 verification checks PASS independently. Zero discrepancies.**
+
+---
+
+**17 DoD ✓** + **AC ✓** (evidence detailed in verification table above)
+
+Key milestones:
+- 6 endpoints functional with super_admin scope gate
+- 2 NEW modules `admin/users/` (10 files) + `admin/tiers/` (7 files) scaffolded per T09 admin/* naming
+- Last-super_admin `$transaction` guard mirror T07 pattern with `LastSuperAdminError` sentinel → `BusinessRuleError` mapping (LAST_SUPER_ADMIN_PROTECTED discriminator)
+- Mutual-exclusion zod `.refine()` at parse time (400 VALIDATION_ERROR)
+- Email pre-check for super_admin at POST + PATCH promotion (spec §4.7 line 73 platform-wide uniqueness)
+- generatePassword + argon2 + revokeAllSessions best-effort all reused from T07 patterns
+- Cross-slot heritage: 16 footers + SUBMIT header + 5 JSDoc markers
+- Coverage all critical files ≥80% floor + service+routes ≥90% target MET
+- Security floor: cleartext password only in response body, email masked, argon2 timing-safe, atomic tx guard
+
+---
+
+**3 ACK-sequence deviations rulings — ALL ACCEPT**
+
+| DD | Deviation | PM B ruling | Rationale |
+|---|---|---|---|
+| **DD1** | ACK #11+#12 combined into `5731cfb chore(types,api): extend AppServices + wire adminUsers/adminTiers routes` | ✅ ACCEPT | Same T10 typecheck chicken-egg pattern — types + api wiring semantically atomic; single commit reduces bisect noise; footer preserved. Precedent established T10 cycle 8. |
+| **DD2** | Post-plan commit 15 `f215aa8 chore: prettier format + hasher-mock unbound-method fix` | ✅ ACCEPT | Minor cleanup — `PasswordHasherPort` typing triggered `@typescript-eslint/unbound-method` on `expect(hasher.hash)`; `HasherMock` local interface follows T09 admin/hotels precedent. Lint clean; footer preserved. |
+| **DD3** | Post-plan commit 16 `37a2b21 test(admin/users): repo integration coverage lift 58% → 87% lines` | ✅ ACCEPT | Net positive — self-validate revealed repo shortfall at 58%; +integration tests lifting to 86.79% (≥80% floor MET). Mirrors T10 cycle 8 DD3 (+1 integration coverage commit) precedent. Footer preserved. |
+
+**All 3 DDs ACCEPT — sound justifications with clear T09/T10 precedents.**
+
+---
+
+**🏁 SLOT C ABSORPTION 3/3 COMPLETE MILESTONE**
+
+| Task | Slot exec | Cycle close | Cross-slot | PR |
+|---|---|---|---|---|
+| **T09** (admin hotels CRUD + atomic GM-create + suspend cascade) | Slot A (Nathan) | cycle 1·A | **§4-D08** | ✅ PR#6 merged |
+| **T10** (hotel context + settings) | Slot B (Nanak) | cycle 8 | **§4-D09** | ✅ PR#7 merged |
+| **T08** (cross-hotel admin users CRUD + tier catalog read) | Slot B (Nanak) | **cycle 9 (THIS VERDICT)** | **§4-D07** | 🚧 ready for PR#8 |
+
+**All 3 Slot C absorption tasks delivered.** Canonical ownership stays Slot C (Satrio); execution audit trail preserved via §4-D07 + §4-D08 + §4-D09 deviation records + cross-slot commit footers + code-file JSDoc markers. Future Slot C re-onboarding inherits complete audit trail.
+
+**Slot B mandatory queue COMPLETE per current PARENT §1**. Optional future scope: Q-A-07 (login suspended-hotel check flagged by PM A) — non-urgent, Slot B territory (auth.service T05 addition), defer to PO direction.
+
+---
+
+**Merge readiness**
+
+Branch `feat/slot-c-absorption-b-t08` (16 commits) READY for PR merge to `main`. All 16 commits carry §4-D07 footer for canonical audit trail; JSDoc §4-D07 on 5 files for source-code grep-able heritage.
+
+**PM B recommend `git merge --no-ff` (option b)** — mirror PR#6 T09 + PR#7 T10 established pattern. Preserves 16-commit granularity + 16 §4-D07 footers in main history. **PR#8** next.
+
+---
+
+**Cycle 9 close — LAST Slot C absorption complete**
+
+Absorption sequence closed atomically across 3 tasks + 3 cross-slot deviations (§4-D07 + §4-D08 + §4-D09). Slot B canonical work COMPLETE + Slot C absorption COMPLETE.
+
+---
+
+**Roll-up + cross-references**:
+- §1 T08 row → status `approved · cycle 9 close (LAST Slot C absorption; 🏁 3/3 COMPLETE)`; verified-by = `PM B — cycle 9 (2026-07-01) attempt 1`
+- §0 current focus → T08 done + Slot C absorption 3/3 COMPLETE; Slot B ALL MANDATORY TASKS DONE per PARENT §1 queue
+- `PM-STATUS-PARENT.md §2` short roll-up appended (single line per safety guard #1 — significant milestone marker)
+
+PM B exits to **wait-mode**. Next event: (a) PR#8 created for `feat/slot-c-absorption-b-t08` merge (PM B recommend Nanak creates immediately per PR#6/PR#7 established convention), or (b) PO direction on Q-A-07 optional follow-up OR next Slot B scope.
 
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
