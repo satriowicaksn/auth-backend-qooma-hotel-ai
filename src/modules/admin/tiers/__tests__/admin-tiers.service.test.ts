@@ -41,8 +41,7 @@ function buildRepoMock(overrides: Partial<RepoMock> = {}): {
 } {
   const mock: RepoMock = {
     listTiers: overrides.listTiers ?? jest.fn<AdminTiersRepository['listTiers']>(),
-    findTierByName:
-      overrides.findTierByName ?? jest.fn<AdminTiersRepository['findTierByName']>(),
+    findTierByName: overrides.findTierByName ?? jest.fn<AdminTiersRepository['findTierByName']>(),
   };
   return { repo: mock as unknown as AdminTiersRepository, mock };
 }

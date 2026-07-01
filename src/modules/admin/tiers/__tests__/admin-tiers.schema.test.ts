@@ -1,6 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { AdminTierSchema, ListTiersResponseSchema, TierNameParamSchema } from '../admin-tiers.schema.js';
+import {
+  AdminTierSchema,
+  ListTiersResponseSchema,
+  TierNameParamSchema,
+} from '../admin-tiers.schema.js';
 
 describe('TierNameParamSchema', () => {
   it.each(['lite', 'professional', 'luxury', 'enterprise'])(

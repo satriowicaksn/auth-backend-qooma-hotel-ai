@@ -4,7 +4,11 @@
 
 export { AdminTiersRepository } from './admin-tiers.repository.js';
 export { adminTiersRoutes } from './admin-tiers.routes.js';
-export { AdminTierSchema, ListTiersResponseSchema, TierNameParamSchema } from './admin-tiers.schema.js';
+export {
+  AdminTierSchema,
+  ListTiersResponseSchema,
+  TierNameParamSchema,
+} from './admin-tiers.schema.js';
 export { AdminTiersService } from './admin-tiers.service.js';
 export type { ListTiersResponseDto, TierNameParamDto } from './admin-tiers.schema.js';
 export type { AdminTier, TierName } from './admin-tiers.types.js';

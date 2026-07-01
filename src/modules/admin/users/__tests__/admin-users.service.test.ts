@@ -57,7 +57,12 @@ interface RepoMock {
   readonly revokeAllSessions: jest.Mock<AdminUsersRepository['revokeAllSessions']>;
 }
 
-function buildDeps(): { svc: AdminUsersService; repo: RepoMock; hasher: PasswordHasherPort } {
+interface HasherMock {
+  readonly hash: jest.Mock<(plain: string) => Promise<string>>;
+  readonly verify: jest.Mock<(hash: string, plain: string) => Promise<boolean>>;
+}
+
+function buildDeps(): { svc: AdminUsersService; repo: RepoMock; hasher: HasherMock } {
   const repo: RepoMock = {
     listUsersFiltered: jest.fn<AdminUsersRepository['listUsersFiltered']>(),
     findUserById: jest.fn<AdminUsersRepository['findUserById']>(),
@@ -68,15 +73,14 @@ function buildDeps(): { svc: AdminUsersService; repo: RepoMock; hasher: Password
       .mockResolvedValue(null),
     insertUser: jest.fn<AdminUsersRepository['insertUser']>(),
     updateUser: jest.fn<AdminUsersRepository['updateUser']>(),
-    updateUserWithLastSuperAdminGuard: jest.fn<
-      AdminUsersRepository['updateUserWithLastSuperAdminGuard']
-    >(),
+    updateUserWithLastSuperAdminGuard:
+      jest.fn<AdminUsersRepository['updateUserWithLastSuperAdminGuard']>(),
     setPassword: jest.fn<AdminUsersRepository['setPassword']>(),
     revokeAllSessions: jest.fn<AdminUsersRepository['revokeAllSessions']>(),
   };
-  const hasher: PasswordHasherPort = {
-    hash: jest.fn<PasswordHasherPort['hash']>().mockResolvedValue('argon2$stub'),
-    verify: jest.fn<PasswordHasherPort['verify']>().mockResolvedValue(true),
+  const hasher: HasherMock = {
+    hash: jest.fn<(plain: string) => Promise<string>>().mockResolvedValue('argon2$stub'),
+    verify: jest.fn<(hash: string, plain: string) => Promise<boolean>>().mockResolvedValue(true),
   };
   const logger = {
     info: jest.fn(),
@@ -84,7 +88,11 @@ function buildDeps(): { svc: AdminUsersService; repo: RepoMock; hasher: Password
     error: jest.fn(),
     debug: jest.fn(),
   } as unknown as Logger;
-  const svc = new AdminUsersService(repo as unknown as AdminUsersRepository, hasher, logger);
+  const svc = new AdminUsersService(
+    repo as unknown as AdminUsersRepository,
+    hasher as unknown as PasswordHasherPort,
+    logger,
+  );
   return { svc, repo, hasher };
 }
 
@@ -121,10 +129,7 @@ describe('AdminUsersService.listUsers', () => {
   ])('should throw ForbiddenError for role="%s"', async (_label, role, hotelId) => {
     const { svc } = buildDeps();
     await expect(
-      svc.listUsers(
-        { userId: ACTOR_ID, role, hotelId, deptId: null },
-        { limit: 50, offset: 0 },
-      ),
+      svc.listUsers({ userId: ACTOR_ID, role, hotelId, deptId: null }, { limit: 50, offset: 0 }),
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
@@ -157,13 +162,19 @@ describe('AdminUsersService.createUser', () => {
     expect(result.generated_password.length).toBeGreaterThanOrEqual(16);
     expect(hasher.hash).toHaveBeenCalledWith(result.generated_password);
     expect(repo.insertUser).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'new-gm@hotel.example', role: 'gm_admin', hotelId: HOTEL_ID }),
+      expect.objectContaining({
+        email: 'new-gm@hotel.example',
+        role: 'gm_admin',
+        hotelId: HOTEL_ID,
+      }),
     );
   });
 
   it('should PRE-CHECK super_admin email uniqueness before insert', async () => {
     const { svc, repo } = buildDeps();
-    repo.findSuperAdminByEmail.mockResolvedValue(anAdminUser({ role: 'super_admin', hotel_id: null }));
+    repo.findSuperAdminByEmail.mockResolvedValue(
+      anAdminUser({ role: 'super_admin', hotel_id: null }),
+    );
 
     await expect(
       svc.createUser(aSuperAdminSession(), {
@@ -344,7 +355,12 @@ describe('AdminUsersService.updateUser', () => {
       anAdminUser({ role: 'gm_admin', hotel_id: HOTEL_ID, email: 'shared@x.example' }),
     );
     repo.findSuperAdminByEmail.mockResolvedValue(
-      anAdminUser({ id: 'other-sa', role: 'super_admin', hotel_id: null, email: 'shared@x.example' }),
+      anAdminUser({
+        id: 'other-sa',
+        role: 'super_admin',
+        hotel_id: null,
+        email: 'shared@x.example',
+      }),
     );
 
     await expect(

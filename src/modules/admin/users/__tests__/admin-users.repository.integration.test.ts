@@ -67,7 +67,9 @@ describe('AdminUsersRepository (integration — real Postgres at localhost:5433)
     hotelId = hotel.id;
   }
 
-  async function seedSuperAdmin(overrides: { email?: string; isActive?: boolean } = {}): Promise<string> {
+  async function seedSuperAdmin(
+    overrides: { email?: string; isActive?: boolean } = {},
+  ): Promise<string> {
     const user = await createTestUser({
       hotelId: null,
       role: 'super_admin',

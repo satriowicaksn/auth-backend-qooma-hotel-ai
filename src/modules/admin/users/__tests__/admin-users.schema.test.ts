@@ -87,17 +87,14 @@ describe('CreateAdminUserRequestSchema — mutual-exclusion .refine', () => {
     ['gm_admin', 'gm@hotel.example'],
     ['dept_head', 'dh@hotel.example'],
     ['staff', 'staff@hotel.example'],
-  ])(
-    'should REJECT role="%s" without hotel_id (mutual-exclusion)',
-    (role, email) => {
-      const result = CreateAdminUserRequestSchema.safeParse({
-        email,
-        name: 'Person',
-        role,
-      });
-      expect(result.success).toBe(false);
-    },
-  );
+  ])('should REJECT role="%s" without hotel_id (mutual-exclusion)', (role, email) => {
+    const result = CreateAdminUserRequestSchema.safeParse({
+      email,
+      name: 'Person',
+      role,
+    });
+    expect(result.success).toBe(false);
+  });
 
   it('should REJECT role="dept_head" with hotel_id=null explicitly', () => {
     const result = CreateAdminUserRequestSchema.safeParse({

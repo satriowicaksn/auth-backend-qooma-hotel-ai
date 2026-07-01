@@ -197,8 +197,7 @@ export class AdminUsersService {
     //   (b) is_active: false on a current super_admin
     const wouldReduceSuperAdmins =
       current.role === 'super_admin' &&
-      ((patch.role !== undefined && patch.role !== 'super_admin') ||
-        patch.is_active === false);
+      ((patch.role !== undefined && patch.role !== 'super_admin') || patch.is_active === false);
 
     let updated: AdminUser;
     try {
@@ -207,10 +206,10 @@ export class AdminUsersService {
         : await this.repo.updateUser(userId, repoPatch);
     } catch (err) {
       if (err instanceof LastSuperAdminError) {
-        throw new BusinessRuleError(
-          'Cannot demote or deactivate the last active super_admin',
-          { reason: 'LAST_SUPER_ADMIN_PROTECTED', userId },
-        );
+        throw new BusinessRuleError('Cannot demote or deactivate the last active super_admin', {
+          reason: 'LAST_SUPER_ADMIN_PROTECTED',
+          userId,
+        });
       }
       if (err instanceof UniqueConstraintError) {
         throw new ConflictError('Email would conflict with an existing user', {

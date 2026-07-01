@@ -63,10 +63,7 @@ export const adminUsersRoutes: FastifyPluginCallback = (fastify, _opts, done) =>
   });
 
   fastify.post<{ Params: { id: string } }>('/:id/reset-password', async (req, reply) => {
-    const result = await fastify.services.adminUsers.resetUserPassword(
-      req.session,
-      req.params.id,
-    );
+    const result = await fastify.services.adminUsers.resetUserPassword(req.session, req.params.id);
     return reply.code(200).send(result);
   });
 

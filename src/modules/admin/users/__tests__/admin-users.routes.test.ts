@@ -321,12 +321,10 @@ describe('PATCH /api/admin/users/:id', () => {
 
 describe('POST /api/admin/users/:id/reset-password', () => {
   it('should return 200 with { user, generated_password }', async () => {
-    const resetUserPassword = jest
-      .fn<AdminUsersService['resetUserPassword']>()
-      .mockResolvedValue({
-        user: anAdminUser({ must_rotate_password: true }),
-        generated_password: 'Reset-Pw-1!',
-      });
+    const resetUserPassword = jest.fn<AdminUsersService['resetUserPassword']>().mockResolvedValue({
+      user: anAdminUser({ must_rotate_password: true }),
+      generated_password: 'Reset-Pw-1!',
+    });
     const app = await buildTestApp({ resetUserPassword });
 
     const res = await app.inject({
