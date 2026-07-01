@@ -2,6 +2,7 @@
 // (src/entrypoints/api.ts) import from here; internal files use relative
 // paths. Schemas/repo/service/routes land in subsequent commits.
 
+export { AdminUsersRepository } from './admin-users.repository.js';
 export {
   CreateAdminUserRequestSchema,
   ListAdminUsersQuerySchema,
