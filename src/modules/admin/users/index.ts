@@ -3,6 +3,7 @@
 // paths. Schemas/repo/service/routes land in subsequent commits.
 
 export { AdminUsersRepository } from './admin-users.repository.js';
+export { adminUsersRoutes } from './admin-users.routes.js';
 export {
   CreateAdminUserRequestSchema,
   ListAdminUsersQuerySchema,
