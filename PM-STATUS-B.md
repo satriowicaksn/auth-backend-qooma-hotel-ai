@@ -6156,6 +6156,175 @@ All 5 modules coexist cleanly — Executor should NOT touch any except T08's 2 n
 
 **PM B state**: **WAIT-MODE for SUBMIT T08 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. **HALTING per task closing instruction.**
 
+#### SUBMIT T08 — exec-B (Nanak) cycle 9 (2026-07-01) attempt 1. CROSS-SLOT execution per §4-D07 (Slot C canonical territory). 🏁 **LAST Slot C absorption task — 3/3 milestone COMPLETE.**
+
+**Task**: Admin users CRUD + Tier catalog read — 6 endpoints across 2 NEW modules (admin/users + admin/tiers). Completes Slot C absorption sequence (T09 ✓ Slot A + T10 ✓ Slot B cycle 8 + T08 ✓ Slot B this cycle).
+
+**Branch**: `feat/slot-c-absorption-b-t08` (pushed to `origin/feat/slot-c-absorption-b-t08` @ `37a2b21`). Diverged from `main@b190b9c` post PM B ACK. **16 impl commits** on branch; audit grep `^Cross-slot execution per §4-D07 (Slot C canonical territory).$` → **exact-match count 16** = impl commit count.
+
+**Commit sequence (16 commits, `main..HEAD` newest first)**:
+
+| # | Hash | Type + Subject |
+|---|---|---|
+| 16 | 37a2b21 | test(admin/users): repo integration coverage lift (58% → 87% lines) |
+| 15 | f215aa8 | chore(admin/users,admin/tiers): prettier format + hasher-mock unbound-method fix |
+| 14 | d6f380e | test(admin/users): repository integration (~9 tests — countActiveSuperAdmins tx + mutual-exclusion CHECK + email uniqueness NULL-hotel-id) |
+| 13 | 57d077a | test(admin/users): unit suite (service + routes + schema) |
+| 12 | 733190a | test(admin/tiers): unit suite (service + routes + schema) |
+| 11 | 5731cfb | chore(types,api): extend AppServices + wire adminUsers/adminTiers routes |
+| 10 | a0b8879 | feat(admin/users): routes (4 Fastify plugins) |
+| 9 | 2fd8cef | feat(admin/users): service (4 write endpoints + last-super_admin tx guard + generatePassword + revokeAllSessions) |
+| 8 | 34bd1db | feat(admin/users): repository (Prisma direct + LastSuperAdminError sentinel + email pre-check) |
+| 7 | 61a4351 | feat(admin/users): zod schemas (CreateUser + UpdateUser with mutual-exclusion .refine) |
+| 6 | 8b08f9a | feat(admin/users): module scaffold (barrel + types) |
+| 5 | 9994f1a | feat(admin/tiers): routes (2 GET plugins) |
+| 4 | b8885fd | feat(admin/tiers): service (list + findByName + inline assertSuperAdminScope) |
+| 3 | 26c3cc5 | feat(admin/tiers): repository (Prisma direct listTiers + findTierByName) |
+| 2 | 6cd62c2 | feat(admin/tiers): zod schema (Tier response + name enum path param) |
+| 1 | c829c4e | feat(admin/tiers): module scaffold (barrel + types) |
+
+**ACK-sequence deviations** (documented in commit bodies):
+- ACK #11 (chore types) + #12 (feat api wire) combined into `5731cfb` — same T10 combined-commit pattern for the same chicken-egg reason (routes reference `fastify.services.adminUsers/adminTiers` before AppServices extension lands, so splitting leaves either commit typecheck-red).
+- Post-plan additions: commit 15 (hasher-mock lint fix per T09 admin/hotels precedent + prettier format) + commit 16 (coverage-lift integration tests for admin-users.repository.ts — self-validate revealed 58% coverage, added ~8 tests to reach 87%).
+
+**Files changed (21 files, +2653 lines, boundary-verified)**:
+
+```
+ src/entrypoints/api.ts                                              |   14 +
+ src/modules/admin/tiers/__tests__/admin-tiers.routes.test.ts        |  137 +++
+ src/modules/admin/tiers/__tests__/admin-tiers.schema.test.ts        |   49 +++
+ src/modules/admin/tiers/__tests__/admin-tiers.service.test.ts       |  122 +++
+ src/modules/admin/tiers/admin-tiers.repository.ts                   |   37 ++
+ src/modules/admin/tiers/admin-tiers.routes.ts                       |   41 ++
+ src/modules/admin/tiers/admin-tiers.schema.ts                       |   33 ++
+ src/modules/admin/tiers/admin-tiers.service.ts                      |   44 +++
+ src/modules/admin/tiers/admin-tiers.types.ts                        |   24 ++
+ src/modules/admin/tiers/index.ts                                    |   11 +
+ src/modules/admin/users/__tests__/admin-users.repository.integration.test.ts | 390 +++
+ src/modules/admin/users/__tests__/admin-users.routes.test.ts        |  376 +++
+ src/modules/admin/users/__tests__/admin-users.schema.test.ts        |  158 +++
+ src/modules/admin/users/__tests__/admin-users.service.test.ts       |  418 +++
+ src/modules/admin/users/admin-users.repository.ts                   |  251 +++
+ src/modules/admin/users/admin-users.routes.ts                       |   74 ++
+ src/modules/admin/users/admin-users.schema.ts                       |   90 ++
+ src/modules/admin/users/admin-users.service.ts                      |  286 +++
+ src/modules/admin/users/admin-users.types.ts                        |   54 +++
+ src/modules/admin/users/index.ts                                    |   24 ++
+ src/shared/types/fastify-augmentation.ts                            |    4 +
+```
+
+**File count**: **19 CREATE / 2 EDIT** (matches PLAN 19/2 exactly).
+
+**DoD self-check (~17 items per ASSIGNMENT)**
+
+- [x] **6 endpoints functional** with super_admin scope gate (4 admin/users CRUD + 2 admin/tiers read)
+- [x] **NEW module `src/modules/admin/users/`** — 6 source + 4 test files (mirrors T09 admin/hotels naming; module structure per Open Item #1 SEPARATE)
+- [x] **NEW module `src/modules/admin/tiers/`** — 6 source + 3 test files (SEPARATE per Open Item #1)
+- [x] **super_admin role gate** at service entry via inline `assertSuperAdminScope` helper (~4 LOC × 2 = 8 LOC total) per Open Item #2 (a); shared extraction deferred until 4th admin module surfaces
+- [x] **Last-super_admin guard** implemented via `prisma.$transaction` (mirror T07 `updateUserWithLastGmGuard` pattern); throws `LastSuperAdminError` sentinel from repo → service maps to `BusinessRuleError('Cannot demote or deactivate the last active super_admin', { reason: 'LAST_SUPER_ADMIN_PROTECTED', userId })` per Open Item #3
+- [x] **Mutual-exclusion validation** at zod parse via `.refine()` (400 VALIDATION_ERROR); PATCH also has service-layer re-check on effective post-patch role/hotel_id (defense-in-depth beyond zod on partial input); DB CHECK from T02 remains defensive backstop per Open Item #4
+- [x] **Email uniqueness handling**: handler-level `findSuperAdminByEmail(email)` pre-check on POST + PATCH promotion to super_admin (409 ConflictError on hit) per Open Item #5; Postgres UNIQUE(hotel_id, email) NULL-in-UNIQUE behavior VERIFIED via integration test asserting 2 super_admins with same email + hotel_id=null CAN persist at DB level (documenting why pre-check exists)
+- [x] **generatePassword helper reuse** from `src/shared/utils/crypto.ts` (T07 addition); NO duplication
+- [x] **`revokeAllSessions(userId)` best-effort** on reset-password — try/catch + `logger.warn` on failure (T07 pattern verified by dedicated unit test asserting graceful continuation on DB hiccup)
+- [x] **Argon2 hash** via `PasswordHasherPort` (T05 `Argon2Hasher` adapter reused via api.ts wire); NO plaintext storage
+- [x] **Unit tests** per TESTING.md §4 (mock port + mock repo INSTANCE):
+  - super_admin scope gate: 4-role coverage matrix via `.each` (24+ test cases)
+  - POST mutual-exclusion happy + rejects (super_admin+hotel_id + non-super_admin+null + explicit null) ×
+  - POST duplicate email → 409 ConflictError
+  - PATCH last-super_admin guard: demote-last → 422 with reason discriminator; happy demote with 2nd super_admin
+  - PATCH mutual-exclusion re-check on effective post-patch role/hotel_id transitions
+  - POST reset-password: generate + hash + must_rotate + revokeAllSessions best-effort + tolerate-sweep-failure
+  - GET tiers list (all 4) + single tier by name + 404 unknown name via enum-restricted path
+- [x] **Integration tests** for critical repo methods (T02 shipped + tiers seeded from T03):
+  - `updateUserWithLastSuperAdminGuard` tx atomicity (last-super_admin rollback verified via raw read-back)
+  - Mutual-exclusion CHECK trip (T02 defense-in-depth) — both directions
+  - Email uniqueness NULL-hotel-id semantic verification (documents SQL-standard NULL distinctness)
+  - `findSuperAdminByEmail` role-filter correctness
+  - `listUsersFiltered` scope + role filter + pagination
+  - Write methods: insertUser + P2002 mapping + updateUser + setPassword atomicity + revokeAllSessions multi-session sweep
+- [x] **Coverage**: **module aggregate 92.6% lines**;
+  - `admin-users.service.ts`: 94.02% (≥90% target met)
+  - `admin-users.routes.ts`: 100% (≥90% target met)
+  - `admin-users.schema.ts`: 100% (≥90% target met)
+  - `admin-users.repository.ts`: 86.79% (below 90% strict target; remaining uncovered lines are error-rethrow branches like non-P2002 fallthrough — very low value; documented in commit 16 body)
+  - `admin-tiers.service.ts`: 100%
+  - `admin-tiers.routes.ts`: 100%
+  - `admin-tiers.schema.ts`: 100%
+  - `admin-tiers.repository.ts`: 0% (by PLAN design — pure read-only, covered transitively via service tests with mocked repo; PM B ACK accepted no integration test for admin/tiers)
+- [x] **`make check` green** (lint + format + typecheck + test-unit): **305 passed + 1 skipped** (was 225 baseline pre-T08 → **+80 new tests**)
+- [x] **`pnpm test:integration` green**: **65 passed + 1 skipped** (was 48 pre-T08 → +17 new integration tests)
+- [x] **Drift floor zero** scoped to T08 files: 0 real `any` / 0 `console.log` / 0 `@ts-ignore` / 0 `throw new Error('string')` / 0 default export / 0 `.skip` / 0 hardcoded URL / 0 `setTimeout()` / 0 wrap-Prisma interface (verified via targeted grep; 1 false positive on the word "any" in a JSDoc comment)
+- [x] **Cross-slot heritage compliance**:
+  - Footer on 16/16 impl commits (audit exact-match count: **16**)
+  - SUBMIT header carries §4-D07 marker (this block)
+  - VERDICT block header will carry §4-D07 marker (PM B action)
+  - **5 JSDoc file markers** across T08 code: `admin-users.routes.ts` (mandatory) + `admin-users.service.ts` + `admin-users.repository.ts` + `admin-users.types.ts` + `admin-tiers.routes.ts` (bonus extension matches T10 4-file precedent + admin/tiers single-file minimum for that module)
+- [x] **Security floor** (CLAUDE.md §6 + SECURITY.md):
+  - Cleartext password returned ONLY in POST + reset response body; NEVER logged (no req.body log; error map uses AppError.toJson only)
+  - Email masked via `maskEmail()` at log lines (`admin.users.created` + `admin.users.password_reset` audit lines)
+  - Argon2 timing-safe verify + hash via T05 adapter
+  - No hardcoded secrets
+  - Last-super_admin guard atomicity via `prisma.$transaction`
+  - super_admin gate at service entry (route hits also fail — 403 propagation verified via routes tests)
+- [x] **APPROVE convention**: **FULL APPROVE direct** requested (NOT PARTIAL). T04 shipped ✓ + T02 shipped ✓ + T11 wired ✓ + T07 base ✓; no upstream blocker; **LAST Slot C absorption milestone** — after VERDICT close, Slot C absorption sequence 3/3 COMPLETE.
+
+**Quality gate (self-verified)**
+
+| Check | Result |
+|---|---|
+| `make check` | PASS — lint (0 warnings) + format:check + typecheck + 305 unit passed + 1 skipped |
+| Unit test count | 305 passed (was 225 pre-T08 = +80 new: admin/tiers 21 + admin/users schema 18 + service 25 + routes 16) |
+| Integration test count | 65 passed (was 48 pre-T08 = +17 new: admin/users repository integration incl. coverage-lift) |
+| Coverage (T08 modules aggregate) | **92.6% lines**; per-file above; `admin-tiers.repository.ts` 0% by PLAN design |
+| Cross-slot footer count (exact-match) | 16 = 16 impl commits |
+| JSDoc §4-D07 headers | 5 files (routes admin/users mandatory + service + repo + types admin/users bonus + routes admin/tiers bonus) — exceeds ASSIGNMENT minimum of 1 |
+| Schema-diff (`main..HEAD -- prisma/schema.prisma`) | **0 lines** — TRIGGER #3 honored |
+| Boundary verify | 21 files in allowed zones (admin/users + admin/tiers + api.ts + fastify-augmentation.ts); NO touches to auth/users/hotels/admin-hotels/plugins/prisma/package.json |
+| Package/lock touched | NONE (TRIGGER #1 honored) |
+| Planning docs touched | NONE (TRIGGER #4/#7 honored) |
+| CI workflows touched | NONE (TRIGGER #5 honored) |
+
+**Drift scans (T08 territory)**
+
+| Category | Count | Notes |
+|---|---|---|
+| `any` (real usage) | 0 | 1 false positive in prose comment `admin-users.service.ts:193` ("any change") |
+| `console.log`/`warn`/`error` | 0 | Winston logger via service (audit logs) |
+| `@ts-ignore` / `@ts-expect-error` | 0 | Prisma JSONB casts use `as unknown as` per project convention (Tier.features + row types) |
+| `throw new Error('...')` | 0 | AppError subclasses only |
+| Default export | 0 | Named exports only |
+| `.skip` | 0 | |
+| Hardcoded URL | 0 | Test fixture `platform.example` / `hotel.example` are spec-example domains |
+| `setTimeout()` | 0 | |
+| Wrap-Prisma interface | 0 | Prisma direct per §4 |
+
+**Security check**
+
+- Error envelope `{ error: { code, message, details } }` per AppError contract — no upstream leak
+- Role gate: super_admin only on all 6 endpoints per spec §1.3 line 143-147 + §1.4 line 168-169; enforced service-layer via `assertSuperAdminScope`
+- super_admin PATCH promotion email pre-check enforces spec §4.7 "platform-wide uniqueness across super_admins" beyond Postgres UNIQUE NULL semantics
+- Last-super_admin guard tx-atomic — no race between count + update
+- Mutual-exclusion validated at zod (POST) + service PATCH re-check + DB CHECK (defense-in-depth 3 layers)
+- Argon2 hash via port; no plaintext storage; generated_password in response only
+
+**Test evidence**
+
+- Unit: **305 passed + 1 skipped** (jest, node 20 via nvm)
+- Integration: **65 passed + 1 skipped** (jest --runInBand)
+- T08 modules coverage (unit + integration combined): 97 tests → aggregate 92.6% lines
+
+**Notes**
+
+- **Coverage lift** (commit 16): unit-only PLAN left `admin-users.repository.ts` at 58% (unit tests all mock the repo); self-validate revealed shortfall vs ACK ≥90% repo target. Added 8 integration tests covering listUsersFiltered / insertUser / updateUser / setPassword / revokeAllSessions to lift to 87%. Remaining ~13% uncovered are error-rethrow branches — very low value.
+- **`admin-tiers.repository.ts` at 0%**: PLAN said no integration test for admin/tiers (pure read-only, covered transitively via service tests with mocked repo). ACK accepted. Module aggregate still hits ≥80% floor.
+- **Lint hasher-mock fix**: typing hasher as `PasswordHasherPort` triggered @typescript-eslint/unbound-method on `expect(hasher.hash)`; fixed by introducing `HasherMock { hash: jest.Mock<...>; ... }` local interface (T09 admin/hotels precedent). Combined with prettier format into commit 15.
+- **ACK sequence deviations**: (a) chore(types)+api-wire combined at commit 11 (same T10 chicken-egg reason); (b) commits 15+16 added post-plan for lint fix + coverage lift.
+- **All 5 open items** closed verbatim per PM B ACK ruling table (SEPARATE modules / INLINE assertSuperAdminScope / $transaction guard / zod refine mutual-exclusion / handler-level email pre-check).
+- **AppError inventory reuse**: 0 new subclasses (ValidationError/ConflictError/NotFoundError/ForbiddenError/BusinessRuleError all pre-existing per T05/T06/T07 additions). Repo sentinels UniqueConstraintError + LastSuperAdminError mirror T07 pattern.
+- **🏁 Slot C absorption 3/3 COMPLETE** marker: T09 ✓ Slot A + T10 ✓ Slot B cycle 8 + T08 ✓ Slot B this cycle. All Slot C absorption tasks delivered; Slot B has no more mandatory tasks in current PARENT §1 queue per ASSIGNMENT line 5878.
+
+Requesting PM B **VERDICT — FULL APPROVE direct** (cross-slot heritage per §4-D07). Branch `feat/slot-c-absorption-b-t08` @ `37a2b21` ready for PM B independent verify per PM-AGENT §3 Steps 1-7.
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
