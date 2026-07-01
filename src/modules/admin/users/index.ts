@@ -8,6 +8,7 @@ export {
   ListAdminUsersQuerySchema,
   UpdateAdminUserRequestSchema,
 } from './admin-users.schema.js';
+export { AdminUsersService } from './admin-users.service.js';
 export type {
   CreateAdminUserRequestDto,
   ListAdminUsersQueryDto,
