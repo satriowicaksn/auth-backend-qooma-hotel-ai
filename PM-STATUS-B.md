@@ -6064,6 +6064,98 @@ Two admin modules mirror T09 `admin/hotels` naming (`src/modules/admin/<domain>/
 
 Awaiting PM B ACK T08 PLAN APPROVED → proceed to impl on `feat/slot-c-absorption-b-t08`.
 
+##### PM B ACK PLAN T08 attempt 1 — Executor B clear to implement. 5 open items confirmed verbatim. Cycle 9 (2026-07-01). CROSS-SLOT execution per §4-D07. LAST Slot C absorption task.
+
+**Outcome**: ✅ **ACK**. Executor B IMPL-READY on NEW `feat/slot-c-absorption-b-t08` branch from CURRENT main HEAD post this ACK commit (main will advance after ACK push; standard branching from latest main). LAST Slot C absorption task — after T08 close, absorption sequence 3/3 COMPLETE (T09 ✓ Slot A + T10 ✓ Slot B cycle 8 + T08 ✓ Slot B this cycle).
+
+---
+
+**PLAN validation per PM-AGENT §2.3** — 6/6 PASS (safety guard #4 no scope creep)
+
+| Criterion | Verdict | Note |
+|---|---|---|
+| Consistency vs ASSIGNMENT scope/DoD/AC | ✅ | 6 endpoints (4 admin/users + 2 admin/tiers) + super_admin scope + last-super_admin guard + mutual-exclusion + generatePassword reuse + AppError inventory all addressed |
+| File list completeness | ✅ | **19 CREATE / 2 EDIT** vs ASSIGNMENT ~20/2 baseline. Delta explained: admin/tiers 9 files (not 10) — no integration test needed for pure read-only tier lookup on T03 seed rows (verified via unit-level service tests with mocked repo). Sound consolidation |
+| Test plan validity | ✅ | ~48 unit + ~8 integration tests distributed 6 test files; 4-role gate × 4 write endpoints for admin/users + last-super_admin tx verification + email uniqueness NULL-hotel-id + mutual-exclusion CHECK trip integration |
+| GAP categorization | ✅ | 0 PLAN-blocking GAPs (5 open items addressed below) |
+| ETA reasonability | ✅ | ~6-8h matches ASSIGNMENT (PARENT §4-D07 ~6h + PM B convention padding for coverage + integration) |
+| Cross-slot ceremony placement | ✅ | All 4 mandates met (commit footer + SUBMIT header + VERDICT header + JSDoc file marker); Executor EXTENDS to 5 files (admin-users.routes/service/repo/types + admin-tiers.routes) — mirror T10 4-file precedent extended for 2-module scope, accepted |
+
+---
+
+**5 Open Items rulings — all CONFIRMED verbatim per PM B ASSIGNMENT recommendations**
+
+| # | Topic | Final stance |
+|---|---|---|
+| **#1** | Module structure | ✅ **SEPARATE `admin/users/` + `admin/tiers/`** — read-only tier catalog vs write-heavy user CRUD are domain-distinct; matches admin/hotels precedent; each focused ≤300 LOC per CLAUDE.md |
+| **#2** | super_admin scope helper | ✅ **INLINE `assertSuperAdminScope` in each admin service** (~4 LOC × 2 = 8 LOC total); shared helper deferred to `T_AUX_XX` when 3rd admin module surfaces (4+ callsites justifies extraction) |
+| **#3** | Last-super_admin guard atomicity | ✅ **`prisma.$transaction` mirror T07 pattern**: count active super_admins EXCLUDING target inside tx; throw `LastSuperAdminError` sentinel if 0; service catches + maps to `BusinessRuleError('Cannot demote or deactivate the last active super_admin', { reason: 'LAST_SUPER_ADMIN_PROTECTED', userId })`. Applies to PATCH role demotion AND PATCH `is_active: false` on current super_admin |
+| **#4** | Mutual-exclusion validation | ✅ **zod `.refine()` at PARSE time** returns 400 VALIDATION_ERROR with clear message; DB CHECK from T02 remains defense-in-depth backstop |
+| **#5** | Email uniqueness for super_admin | ✅ **Handler-level `findByEmailForSuperAdminCheck(email)` pre-check** when POST body role='super_admin' OR PATCH would promote to super_admin. Rationale: Postgres UNIQUE(hotel_id, email) with NULL-in-UNIQUE = distinct per SQL standard; spec §4.7 line 73 explicitly demands platform-wide uniqueness for super_admins — pre-check is the enforcement mechanism |
+
+---
+
+**Cross-slot ceremony placement plan ACKED (mirror T10 §4-D09 pattern, extended for 2-module scope)**
+
+| Mandate | Placement |
+|---|---|
+| **Per-commit footer** | EVERY impl commit body on `feat/slot-c-absorption-b-t08`: `Cross-slot execution per §4-D07 (Slot C canonical territory).` |
+| **SUBMIT block header** | `Cross-slot execution per §4-D07` literal |
+| **VERDICT block header** | `cross-slot heritage per §4-D07` literal |
+| **JSDoc file markers (5 files)** | `admin-users.routes.ts` MANDATORY + `admin-users.service.ts` + `admin-users.repository.ts` + `admin-users.types.ts` + `admin-tiers.routes.ts` — mirrors T10 4-file precedent extended to cover admin/tiers module minimum single-file marker; accepted as consistent extension |
+
+Meta-commits on `main` (PLAN/SUBMIT/VERDICT PM-STATUS updates) carry PLAIN msg per §4-D01/§4-D05/§4-D09 precedent.
+
+---
+
+**Standing instructions ke Executor B** (post-ACK):
+
+- **Branch creation**: `git checkout main && git pull --rebase && git checkout -b feat/slot-c-absorption-b-t08` (use CURRENT main HEAD post this ACK commit — main will advance after ACK push; standard latest-main branching)
+- **Baseline `make check` sanity** on new branch before scaffold (verify 225 unit + 1 skipped preserved — same baseline as PLAN gate)
+- **Suggested commit sequence** (~13-14 atomic commits per PLAN order — admin/tiers first as warm-up, then admin/users heavier CRUD):
+  1. `feat(admin/tiers): module scaffold (barrel + types)`
+  2. `feat(admin/tiers): zod schema (Tier response + name enum path param)`
+  3. `feat(admin/tiers): repository (Prisma direct listTiers + findTierByName)`
+  4. `feat(admin/tiers): service (list + findByName + inline assertSuperAdminScope)`
+  5. `feat(admin/tiers): routes (2 GET plugins)`
+  6. `feat(admin/users): module scaffold (barrel + types)`
+  7. `feat(admin/users): zod schemas (CreateUser + UpdateUser with mutual-exclusion .refine)`
+  8. `feat(admin/users): repository (Prisma direct + LastSuperAdminError sentinel + email pre-check)`
+  9. `feat(admin/users): service (4 write endpoints + last-super_admin tx guard + generatePassword + revokeAllSessions)`
+  10. `feat(admin/users): routes (4 Fastify plugins)`
+  11. `chore(types): extend AppServices with adminUsers + adminTiers`
+  12. `feat(api): wire adminUsersRoutes + adminTiersRoutes di entrypoint`
+  13. `test(admin/users + admin/tiers): unit suites (~48 tests)`
+  14. `test(admin/users): repository integration (~8 tests)`
+
+- **WAJIB commit body footer** for every T08 impl commit (~14 commits expected):
+  ```
+  Cross-slot execution per §4-D07 (Slot C canonical territory).
+  ```
+- **WAJIB JSDoc header** on 5 files per PLAN extension: `admin-users.routes.ts` (mandatory minimum) + `admin-users.service.ts` + `admin-users.repository.ts` + `admin-users.types.ts` + `admin-tiers.routes.ts` — mirror tenant-guard.ts §4-D01 + prisma-client.ts §4-D05 + hotels.*.ts §4-D09 patterns
+- **Self-validate gate per EXECUTOR-PROTOCOL §4.4 SEBELUM SUBMIT**:
+  - `make check` HARUS green (lint + format + typecheck + test-unit)
+  - **`pnpm test:integration` HARUS green** (integration tests pass against migrated PG per T02)
+  - **Drift scan zero hits** scoped to T08 files (~19 CREATE + 2 EDIT files): no `any` / `console.log` / `@ts-ignore` / `throw new Error('string')` / default export / `.skip` / hardcoded URL / `setTimeout()` / wrap-Prisma interface
+  - **Coverage targets**: ≥80% line floor module aggregate; **≥90% on `admin-users.service.ts` + `admin-users.routes.ts` + `admin-tiers.service.ts` + `admin-tiers.routes.ts`** (critical super_admin surface per TESTING.md §9); schemas 100%; repos ≥90% via integration
+  - **Cross-slot footer audit**: `git log --format="%B" main..HEAD | grep -c "§4-D07"` → expected equal to impl commit count (~14)
+  - **Schema-diff EMPTY**: `git diff main..HEAD -- prisma/schema.prisma` returns empty in SUBMIT (safety guard #5 — NO schema touches; ASSIGNMENT NO-TOUCH zone)
+  - **Boundary verify**: NO touches to `src/modules/auth/*`, `src/modules/users/*`, `src/modules/hotels/*` (T10 territory), `src/modules/admin/hotels/*` (Slot A T09 territory), `src/plugins/*`, `prisma/schema.prisma`, `package.json`
+  - **Q-B-02(a)/(c)/(d) workarounds preserved** — slot-internal, NOT T08 scope
+- **APPROVE convention**: T08 = **FULL APPROVE direct** (NOT PARTIAL). T04 shipped ✓ + T02 shipped ✓ + T11 wired ✓; no upstream blocker; LAST Slot C absorption milestone
+- **Branch hygiene per §7**: impl commits ~14 land on `feat/slot-c-absorption-b-t08`. SUBMIT block (PM-STATUS-B.md edit only, append-only below this ACK) commits on `main` after self-validate green. Then PM B checkout `feat/slot-c-absorption-b-t08` for independent verify per PM-AGENT §3, back to main for VERDICT.
+
+**Boundary acknowledgment — module distinctness**:
+- T07 `src/modules/users/` (gm_admin per-hotel scope — /api/users)
+- T09 `src/modules/admin/hotels/` (super_admin platform-level hotel CRUD — /api/admin/hotels)
+- T10 `src/modules/hotels/` (authenticated /hotels/me + gm_admin /settings/hotel)
+- **T08 NEW**: `src/modules/admin/users/` (super_admin cross-hotel user CRUD — /api/admin/users) + `src/modules/admin/tiers/` (super_admin tier catalog read — /api/admin/tiers)
+All 5 modules coexist cleanly — Executor should NOT touch any except T08's 2 new modules.
+
+**Re-engage trigger**: ketika Executor B posts SUBMIT T08 attempt 1 block (PM-STATUS-B.md §2 append below this ACK, on `main` per §7), PM B akan checkout `feat/slot-c-absorption-b-t08` for independent verify per PM-AGENT §3 Steps 1-7 → VERDICT block on main (expect **FULL APPROVE** direct + Slot C absorption 3/3 COMPLETE milestone marker).
+
+**PM B state**: **WAIT-MODE for SUBMIT T08 attempt 1**. No further action di §2 sampai Executor posts SUBMIT. **HALTING per task closing instruction.**
+
 ### ASSIGNMENT T## — claimed by exec-B (Nanak) at H{N} HH:MM
 - Branch: feat/<modul>-<short>
 - Routed from: PM-STATUS-PARENT.md §1 T## (Parent PM assigned)
