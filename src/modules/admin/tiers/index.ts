@@ -4,6 +4,7 @@
 
 export { AdminTiersRepository } from './admin-tiers.repository.js';
 export { AdminTierSchema, ListTiersResponseSchema, TierNameParamSchema } from './admin-tiers.schema.js';
+export { AdminTiersService } from './admin-tiers.service.js';
 export type { ListTiersResponseDto, TierNameParamDto } from './admin-tiers.schema.js';
 export type { AdminTier, TierName } from './admin-tiers.types.js';
 export { TIER_NAMES } from './admin-tiers.types.js';
