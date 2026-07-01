@@ -223,4 +223,170 @@ describe('AdminUsersRepository (integration — real Postgres at localhost:5433)
       expect(rows.some((r) => r.id === secondId)).toBe(true);
     });
   });
+
+  // --- listUsersFiltered ------------------------------------------------
+
+  describe('listUsersFiltered', () => {
+    it('should scope by hotel_id when filter provided', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      await createTestUser({ hotelId, role: 'staff' });
+      await createTestUser({ hotelId, role: 'gm_admin' });
+
+      const result = await repo.listUsersFiltered({ hotelId }, { limit: 50, offset: 0 });
+
+      expect(result.rows ?? result.users).toBeDefined();
+      expect(result.users.length).toBeGreaterThanOrEqual(2);
+      expect(result.total).toBeGreaterThanOrEqual(2);
+      for (const u of result.users) {
+        expect(u.hotel_id).toBe(hotelId);
+      }
+    });
+
+    it('should filter by role', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      await createTestUser({ hotelId, role: 'staff' });
+      await createTestUser({ hotelId, role: 'gm_admin' });
+
+      const result = await repo.listUsersFiltered(
+        { hotelId, role: 'gm_admin' },
+        { limit: 50, offset: 0 },
+      );
+
+      expect(result.users.every((u) => u.role === 'gm_admin')).toBe(true);
+    });
+
+    it('should honor pagination (limit + offset)', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      await createTestUser({ hotelId, role: 'staff' });
+      await createTestUser({ hotelId, role: 'staff' });
+      await createTestUser({ hotelId, role: 'staff' });
+
+      const page1 = await repo.listUsersFiltered({ hotelId }, { limit: 2, offset: 0 });
+      const page2 = await repo.listUsersFiltered({ hotelId }, { limit: 2, offset: 2 });
+
+      expect(page1.users.length).toBeLessThanOrEqual(2);
+      expect(page1.limit).toBe(2);
+      expect(page2.offset).toBe(2);
+      expect(page1.total).toBe(page2.total);
+    });
+  });
+
+  // --- insertUser + updateUser + setPassword + revokeAllSessions ------
+
+  describe('write methods', () => {
+    it('insertUser should persist a new user and mark must_rotate_password=true', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      const email = `new-${uuidSuffix()}@hotel.example`;
+
+      const created = await repo.insertUser({
+        email,
+        name: 'Fresh',
+        role: 'staff',
+        hotelId,
+        deptId: null,
+        passwordHash: 'argon2$stub',
+        language: 'id',
+      });
+
+      expect(created.email).toBe(email);
+      expect(created.must_rotate_password).toBe(true);
+      expect(created.hotel_id).toBe(hotelId);
+    });
+
+    it('insertUser should throw UniqueConstraintError on duplicate (hotel_id, email)', async () => {
+      const { UniqueConstraintError } = await import('../admin-users.repository.js');
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      const email = `dup-${uuidSuffix()}@hotel.example`;
+
+      await repo.insertUser({
+        email,
+        name: 'First',
+        role: 'staff',
+        hotelId,
+        deptId: null,
+        passwordHash: 'argon2$stub',
+        language: 'id',
+      });
+
+      let caught: unknown;
+      try {
+        await repo.insertUser({
+          email,
+          name: 'Dup',
+          role: 'staff',
+          hotelId,
+          deptId: null,
+          passwordHash: 'argon2$stub',
+          language: 'id',
+        });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(UniqueConstraintError);
+    });
+
+    it('updateUser should update fields on a non-super_admin row without touching the guard path', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      const target = await createTestUser({ hotelId, role: 'staff' });
+
+      const updated = await repo.updateUser(target.id, { name: 'Renamed', language: 'en' });
+
+      expect(updated.name).toBe('Renamed');
+      expect(updated.language).toBe('en');
+    });
+
+    it('setPassword should atomically update passwordHash + mustRotatePassword and return the row', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      const target = await createTestUser({
+        hotelId,
+        mustRotatePassword: false,
+        passwordHash: 'argon2$old',
+      });
+
+      const updated = await repo.setPassword(target.id, 'argon2$new', true);
+
+      expect(updated.must_rotate_password).toBe(true);
+      const raw = await db.user.findUnique({ where: { id: target.id } });
+      expect(raw?.passwordHash).toBe('argon2$new');
+    });
+
+    it('revokeAllSessions should revoke every active session for the target user (no except filter)', async () => {
+      await seedHotel();
+      if (hotelId === undefined) throw new Error('hotelId not seeded');
+      const target = await createTestUser({ hotelId });
+
+      const futureExpiry = new Date(Date.now() + 86_400_000);
+      const sessionA = await db.session.create({
+        data: {
+          userId: target.id,
+          refreshToken: `hash-${uuidSuffix()}`,
+          csrfToken: `csrf-${uuidSuffix()}`,
+          expiresAt: futureExpiry,
+        },
+      });
+      const sessionB = await db.session.create({
+        data: {
+          userId: target.id,
+          refreshToken: `hash-${uuidSuffix()}`,
+          csrfToken: `csrf-${uuidSuffix()}`,
+          expiresAt: futureExpiry,
+        },
+      });
+
+      const result = await repo.revokeAllSessions(target.id);
+
+      expect(result.revokedCount).toBe(2);
+      const rowA = await db.session.findUnique({ where: { id: sessionA.id } });
+      const rowB = await db.session.findUnique({ where: { id: sessionB.id } });
+      expect(rowA?.revokedAt).not.toBeNull();
+      expect(rowB?.revokedAt).not.toBeNull();
+    });
+  });
 });
