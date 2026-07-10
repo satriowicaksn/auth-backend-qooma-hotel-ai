@@ -9,7 +9,9 @@
  */
 
 import cookiePlugin from '@fastify/cookie';
+import corsPlugin from '@fastify/cors';
 import jwtPlugin from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { createLogger, format, transports } from 'winston';
 
@@ -38,6 +40,7 @@ import { HotelsService } from '@modules/hotels/hotels.service.js';
 import { UsersRepository } from '@modules/users/users.repository.js';
 import { usersRoutes } from '@modules/users/users.routes.js';
 import { UsersService } from '@modules/users/users.service.js';
+import { registerCsrfGuard } from '@plugins/csrf-guard.plugin.js';
 import { registerMustRotatePasswordGate } from '@plugins/must-rotate-password.plugin.js';
 import { registerTenantGuard } from '@plugins/tenant-guard.js';
 
@@ -80,6 +83,25 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     secret: config.JWT_ACCESS_SECRET,
     sign: { expiresIn: config.JWT_ACCESS_TTL },
     cookie: { cookieName: 'token', signed: false },
+  });
+
+  // CORS (T82 D.2): consumes CORS_ORIGIN (never '*' with credentials:true).
+  // Harmless under the dev proxy (same-origin); required for staging/prod
+  // cross-origin. X-CSRF-Token must be allowed so the double-submit header
+  // survives a cross-origin preflight.
+  await fastify.register(corsPlugin, {
+    origin: config.CORS_ORIGIN.split(',').map((s) => s.trim()),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+  });
+
+  // Global rate limit (T82 D.4). In-memory store — single-instance MVP. A
+  // tighter per-route cap on POST /api/auth/login lives in auth.routes.ts.
+  await fastify.register(rateLimit, {
+    global: true,
+    max: config.RATE_LIMIT_GLOBAL_PER_MIN,
+    timeWindow: '1 minute',
   });
 
   const logger = createLogger({
@@ -127,6 +149,15 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // to every route registered after this point.
   registerTenantGuard(fastify, { allowlist: TENANT_GUARD_ALLOWLIST });
   registerMustRotatePasswordGate(fastify, { repo: authRepo });
+
+  // CSRF double-submit guard (T82 D.3) — SHIPS OFF (config.CSRF_ENFORCE=false).
+  // When disabled, registers no hook. Login/refresh/logout stay allowlisted so
+  // the pre-session endpoints are never csrf-gated.
+  registerCsrfGuard(fastify, {
+    repo: authRepo,
+    enabled: config.CSRF_ENFORCE,
+    allowlist: TENANT_GUARD_ALLOWLIST,
+  });
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(usersRoutes, { prefix: '/api/users' });

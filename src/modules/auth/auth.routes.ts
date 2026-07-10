@@ -34,17 +34,30 @@ function claimsFromRequest(req: FastifyRequest): JwtClaims {
 }
 
 export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
-  fastify.post('/login', async (req, reply) => {
-    const parsed = LoginRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      throw new ValidationError('Invalid login payload', { issues: parsed.error.issues });
-    }
-    const ctx = sessionContextFromRequest(req.headers, req.ip);
-    const result = await fastify.services.auth.login(parsed.data, ctx);
-    setAccessCookie(reply, result.accessToken, fastify.appConfig);
-    setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
-    return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
-  });
+  // Tighter per-route rate limit on login for brute-force protection (T82 D.4).
+  // Inert unless @fastify/rate-limit is registered (it is, in buildApp).
+  fastify.post(
+    '/login',
+    {
+      config: {
+        rateLimit: {
+          max: fastify.appConfig.RATE_LIMIT_LOGIN_PER_MIN,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (req, reply) => {
+      const parsed = LoginRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid login payload', { issues: parsed.error.issues });
+      }
+      const ctx = sessionContextFromRequest(req.headers, req.ip);
+      const result = await fastify.services.auth.login(parsed.data, ctx);
+      setAccessCookie(reply, result.accessToken, fastify.appConfig);
+      setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
+      return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken });
+    },
+  );
 
   fastify.post('/logout', async (req, reply) => {
     const accessToken = req.cookies[ACCESS_COOKIE_NAME] ?? null;

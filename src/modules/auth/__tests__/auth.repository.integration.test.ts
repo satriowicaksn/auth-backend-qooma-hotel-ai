@@ -150,6 +150,47 @@ describe('AuthRepository (integration — real Postgres at localhost:5433)', () 
     });
   });
 
+  // --- T82 D.3 csrf lookup (csrf-guard double-submit source) ------------
+
+  describe('findCsrfTokenBySessionId', () => {
+    it('should return the csrf token for an active session', async () => {
+      await seedHotel();
+      const user = await createTestUser({ hotelId });
+      const csrfToken = `csrf-${uuidSuffix(16)}`;
+      const session = await repo.createSession({
+        userId: user.id,
+        refreshTokenHash: hashToken(`raw-${uuidSuffix()}`),
+        csrfToken,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        userAgent: null,
+        ipAddress: null,
+      });
+
+      expect(await repo.findCsrfTokenBySessionId(session.id)).toBe(csrfToken);
+    });
+
+    it('should return null for a revoked session', async () => {
+      await seedHotel();
+      const user = await createTestUser({ hotelId });
+      const session = await repo.createSession({
+        userId: user.id,
+        refreshTokenHash: hashToken(`raw-${uuidSuffix()}`),
+        csrfToken: `csrf-${uuidSuffix()}`,
+        expiresAt: new Date(Date.now() + 86_400_000),
+        userAgent: null,
+        ipAddress: null,
+      });
+      await repo.revokeSession(session.id);
+
+      expect(await repo.findCsrfTokenBySessionId(session.id)).toBeNull();
+    });
+
+    it('should return null for an unknown session id', async () => {
+      await seedHotel();
+      expect(await repo.findCsrfTokenBySessionId(randomUUID())).toBeNull();
+    });
+  });
+
   // --- T05 revoke / rotate ----------------------------------------------
 
   describe('revokeSession', () => {

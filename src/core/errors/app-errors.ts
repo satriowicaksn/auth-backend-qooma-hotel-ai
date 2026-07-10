@@ -55,7 +55,9 @@ export class ConflictError extends AppError {
 
 export class RateLimitError extends AppError {
   readonly statusCode = 429;
-  readonly code = 'RATE_LIMIT_EXCEEDED';
+  // 'RATE_LIMIT' (not 'RATE_LIMIT_EXCEEDED') to match the FE error map +
+  // API-CONTRACT §1.5 (T82 Q-INT-AUTH-03 / ENV-07).
+  readonly code = 'RATE_LIMIT';
 }
 
 export class ExternalServiceError extends AppError {
