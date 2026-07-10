@@ -19,7 +19,8 @@
 
 - **httpOnly cookie** set by backend on login. Frontend never reads the JWT directly.
 - Every request from frontend sends `credentials: 'include'`.
-- Mutating verbs (POST, PUT, PATCH, DELETE) require a `X-CSRF-Token` header. The token is returned in the login response body and held in memory (NOT localStorage).
+- Mutating verbs (POST, PUT, PATCH, DELETE) require a `X-CSRF-Token` header. The token is returned in the login response body and held in memory (NOT localStorage). **CSRF enforcement ships OFF this wave** (T82 Q-INT-AUTH-02): a double-submit `preHandler` (`src/plugins/csrf-guard.plugin.ts`) compares the header against the session's stored `csrf_token` (timing-safe), gated behind the `CSRF_ENFORCE` env flag (default `false`). Enable only after the FE cold-boot csrf-seeding is verified on staging.
+- **CORS + rate-limit** are registered in `buildApp()` (T82 D.2/D.4): `@fastify/cors` (credentials, origins from `CORS_ORIGIN`, allows `X-CSRF-Token`), a global `@fastify/rate-limit` (`RATE_LIMIT_GLOBAL_PER_MIN`), and a tighter per-route cap on `POST /api/auth/login` (`RATE_LIMIT_LOGIN_PER_MIN`). The rate-limit 429 error uses code `RATE_LIMIT` (not `RATE_LIMIT_EXCEEDED`).
 - 401 from any endpoint → axios interceptor calls `POST /api/auth/refresh` once. If refresh also returns 401, the user is redirected to `/login`. After successful login, redirect always lands on `/dashboard` (no deep-link restoration).
 - Hotel context is encoded in the JWT (`hotel_id`). Backend uses it to scope every query. Frontend does NOT pass `hotel_id` as a query param.
 
@@ -167,7 +168,9 @@ Response 200:
 { "id": "uuid", "tier": "luxury" }
 ```
 
-`tier` is one of `'lite' | 'professional' | 'luxury' | 'enterprise'` (the `tiers.name` string). Returns the hotel for the authenticated user (1:1 via `user.hotel_id`). This is the tier source for the `/analytics` route guard (§2.4). Replaces the pre-H10 ASSUMED `hotel` sibling on `AuthMeResponse`. **Implementing service: Auth.** Backed by Auth's `hotels` + `tiers` tables (per H11 service-split ruling — see §2.1 ownership note).
+`tier` is one of `'lite' | 'professional' | 'luxury' | 'enterprise'` (the `tiers.name` string, returned FLAT — the scoped context exposes `tier.name` directly, not a `{id,name}` object; T82 D.1 reconciled the repository to this shape). Returns the hotel for the authenticated user (1:1 via `user.hotel_id`). This is the tier source for the `/analytics` route guard (§2.4). Replaces the pre-H10 ASSUMED `hotel` sibling on `AuthMeResponse`. **Implementing service: Auth.** Backed by Auth's `hotels` + `tiers` tables (per H11 service-split ruling — see §2.1 ownership note).
+
+> **super_admin (T82 / Q-INT-AUTH-01):** platform-level admins have no single-hotel scope, so `GET /api/hotels/me` returns `{ "id": null, "tier": null }` for `super_admin` (`HotelsService` short-circuits on the `all-hotels` scope). The FE treats a null tier as all-access, never down-gated to `'lite'`.
 
 ---
 

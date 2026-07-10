@@ -151,6 +151,19 @@ export class AuthRepository {
   }
 
   /**
+   * Read the active session's CSRF token (T82 D.3) for the csrf-guard plugin's
+   * double-submit compare. Returns null for a missing / revoked / expired
+   * session so the guard fails closed.
+   */
+  async findCsrfTokenBySessionId(sessionId: string): Promise<string | null> {
+    const row = await this.db.session.findFirst({
+      where: { id: sessionId, revokedAt: null, expiresAt: { gt: new Date() } },
+      select: { csrfToken: true },
+    });
+    return row?.csrfToken ?? null;
+  }
+
+  /**
    * Best-effort sweep: revoke every active session for the user EXCEPT the
    * `exceptSessionId` (the current request's session). Caller logs + ignores
    * failures — password rotation must not fail because the sweep hit a hiccup

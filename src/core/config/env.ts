@@ -21,6 +21,8 @@ const EnvSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(3000),
   API_HOST: z.string().default('0.0.0.0'),
   API_BASE_URL: z.string().url(),
+  // Comma-separated CORS allowlist consumed by @fastify/cors (T82 D.2 —
+  // previously dead). Never '*' — credentials:true forbids a wildcard origin.
   CORS_ORIGIN: z.string(),
 
   // Database
@@ -40,9 +42,16 @@ const EnvSchema = z.object({
   ENCRYPTION_KEY: z.string().length(64),
   ENCRYPTION_KEY_VERSION: z.string().default('v1'),
 
+  // CSRF double-submit enforcement. Ships OFF this wave (T82 Q-INT-AUTH-02) —
+  // the guard is wired but disabled; enable only after the FE cold-boot
+  // csrf-seeding is verified on staging, else every mutation 403s after a reload.
+  CSRF_ENFORCE: z.coerce.boolean().default(false),
+
   // Rate limit
   RATE_LIMIT_GLOBAL_PER_MIN: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WEBHOOK_PER_MIN: z.coerce.number().int().positive().default(300),
+  // Tighter per-route cap on POST /api/auth/login — brute-force protection (T82 D.4).
+  RATE_LIMIT_LOGIN_PER_MIN: z.coerce.number().int().positive().default(10),
 
   // Observability
   SENTRY_DSN: z.string().optional().default(''),
