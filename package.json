@@ -1,6 +1,6 @@
 {
   "name": "@qooma/auth-backend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Auth & Identity service untuk ekosistem Qooma (microservices). Owns: users (semua role), sessions, hotels (tenant), tiers (catalog), RBAC, super_admin all-access. 1 service = 1 database = 1 Prisma schema. Scope canonical: docs/spec/MVP-AUTH-FIRST.md.",
   "license": "UNLICENSED",
