@@ -52,6 +52,7 @@ const TENANT_GUARD_ALLOWLIST: readonly string[] = [
   '/api/auth/logout',
   '/api/auth/refresh',
   '/health',
+  '/healthz',
 ];
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
@@ -158,6 +159,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     enabled: config.CSRF_ENFORCE,
     allowlist: TENANT_GUARD_ALLOWLIST,
   });
+
+  fastify.get('/healthz', async () => ({ status: 'ok' }));
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(usersRoutes, { prefix: '/api/users' });
