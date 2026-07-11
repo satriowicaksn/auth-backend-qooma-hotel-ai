@@ -160,7 +160,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     allowlist: TENANT_GUARD_ALLOWLIST,
   });
 
-  fastify.get('/healthz', async () => ({ status: 'ok' }));
+  fastify.get('/healthz', async () => ({ status: 'ok qooma ready' }));
 
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(usersRoutes, { prefix: '/api/users' });
