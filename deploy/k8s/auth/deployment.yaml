@@ -68,7 +68,9 @@ metadata:
     app: auth-worker
     component: worker
 spec:
-  replicas: 1
+  # Stub entrypoint (src/entrypoints/worker.ts) exits immediately → CrashLoop
+  # under a Deployment. Scale up to 1 once a real Bull processor is wired.
+  replicas: 0
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
