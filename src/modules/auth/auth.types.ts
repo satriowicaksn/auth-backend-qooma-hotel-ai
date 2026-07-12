@@ -9,6 +9,8 @@ export interface AuthUser {
   readonly hotel_id: string | null;
   readonly dept_id: string | null;
   readonly language: Language;
+  // FE reads this to force the rotate-password flow (API-CONTRACT §2.1).
+  readonly must_rotate_password: boolean;
 }
 
 export interface JwtClaims {

@@ -258,6 +258,7 @@ export class AuthService {
       hotel_id: user.hotelId,
       dept_id: user.deptId,
       language: user.language,
+      must_rotate_password: user.mustRotatePassword,
     };
   }
 }
