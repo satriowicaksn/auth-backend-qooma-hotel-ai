@@ -1,5 +1,16 @@
 # PM-STATUS-PARENT — Qooma Backend (cross-dev roll-up)
 
+## 🔄 INTEGRATION HANDOVER — 2026-07-13 (Dev A) — full cross-repo board: FE `docs/INTEGRATION-STATUS.md`
+
+**Auth ↔ FE integration: ✅ COMPLETE (Dev A).** Branch `fix/auth-cookie-cross-subdomain` (2 commits, locally green — **318 unit tests** — NOT pushed; PO pushes):
+
+- **`COOKIE_DOMAIN`** (configurable) added to the `token`/`refresh` cookies. Auth already had SameSite=None + CORS for cross-origin staging, but the **host-only cookie never reached core/integration/ai-staging → core 401**. This unblocks cross-origin auth once the env is set.
+- **`must_rotate_password`** added to the `AuthUser` response (login/me/refresh) — the FE reads it to force the rotate-password flow.
+
+**🔧 Dev C (Satrio) — staging env BLOCKER:** set `COOKIE_DOMAIN=.sharedisini.com` + ensure `CORS_ORIGIN` includes `https://frontend-qooma-hotel-ai.vercel.app`, then deploy. Without this, core stays 401 even though it is wired. **No open Dev B tasks in this repo.**
+
+---
+
 > **Parent PM tracker.** Read-only buat Executor & PM A/B/C kecuali bagian roll-up yang explicit dipost oleh PM A/B/C. Parent PM authority untuk section §1, §3, §4, §5, §6, §7, §8. PM A/B/C append baris short ke §2 setelah tiap APPROVE (per `PM-AGENT.md §0.8`).
 >
 > Detail per-dev assignment (ASSIGNMENT → PLAN → SUBMIT → VERDICT) tinggal di **`PM-STATUS-A.md`** (Nathan), **`PM-STATUS-B.md`** (Nanak), **`PM-STATUS-C.md`** (Satrio).
