@@ -38,6 +38,14 @@ interface CookieFlags {
   readonly sameSite: 'lax' | 'none';
   readonly path: string;
   readonly maxAge: number;
+  readonly domain?: string;
+}
+
+// Shared parent domain (e.g. `.sharedisini.com`) so the cookie reaches sibling
+// backends (core/integration/ai) cross-subdomain. Omitted when unset → host-only
+// (dev/localhost). Must be applied to set AND clear so the browser matches them.
+function domainOpt(config: AppConfig): { domain?: string } {
+  return config.COOKIE_DOMAIN ? { domain: config.COOKIE_DOMAIN } : {};
 }
 
 function accessCookieFlags(config: AppConfig): CookieFlags {
@@ -50,6 +58,7 @@ function accessCookieFlags(config: AppConfig): CookieFlags {
     sameSite: secure ? 'none' : 'lax',
     path: '/',
     maxAge: ttlToSeconds(config.JWT_ACCESS_TTL, ACCESS_TTL_FALLBACK_SECONDS),
+    ...domainOpt(config),
   };
 }
 
@@ -61,6 +70,7 @@ function refreshCookieFlags(config: AppConfig): CookieFlags {
     sameSite: secure ? 'none' : 'lax',
     path: REFRESH_COOKIE_PATH,
     maxAge: ttlToSeconds(config.JWT_REFRESH_TTL, REFRESH_TTL_FALLBACK_SECONDS),
+    ...domainOpt(config),
   };
 }
 
@@ -81,6 +91,7 @@ export function clearAccessCookie(reply: FastifyReply, config: AppConfig): void 
     httpOnly: true,
     secure,
     sameSite: secure ? 'none' : 'lax',
+    ...domainOpt(config),
   });
 }
 
@@ -91,5 +102,6 @@ export function clearRefreshCookie(reply: FastifyReply, config: AppConfig): void
     httpOnly: true,
     secure,
     sameSite: secure ? 'none' : 'lax',
+    ...domainOpt(config),
   });
 }
