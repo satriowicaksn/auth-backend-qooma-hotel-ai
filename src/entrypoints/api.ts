@@ -94,7 +94,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     origin: config.CORS_ORIGIN.split(',').map((s) => s.trim()),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Correlation-Id'],
   });
 
   // Global rate limit (T82 D.4). In-memory store — single-instance MVP. A

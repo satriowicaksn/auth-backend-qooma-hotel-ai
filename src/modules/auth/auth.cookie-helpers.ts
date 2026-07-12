@@ -35,26 +35,30 @@ function isSecureEnv(config: AppConfig): boolean {
 interface CookieFlags {
   readonly httpOnly: true;
   readonly secure: boolean;
-  readonly sameSite: 'lax';
+  readonly sameSite: 'lax' | 'none';
   readonly path: string;
   readonly maxAge: number;
 }
 
 function accessCookieFlags(config: AppConfig): CookieFlags {
+  const secure = isSecureEnv(config);
   return {
     httpOnly: true,
-    secure: isSecureEnv(config),
-    sameSite: 'lax',
+    secure,
+    // SameSite=None required for cross-origin withCredentials requests (staging/prod).
+    // Dev uses Lax because the Vite proxy makes requests same-origin.
+    sameSite: secure ? 'none' : 'lax',
     path: '/',
     maxAge: ttlToSeconds(config.JWT_ACCESS_TTL, ACCESS_TTL_FALLBACK_SECONDS),
   };
 }
 
 function refreshCookieFlags(config: AppConfig): CookieFlags {
+  const secure = isSecureEnv(config);
   return {
     httpOnly: true,
-    secure: isSecureEnv(config),
-    sameSite: 'lax',
+    secure,
+    sameSite: secure ? 'none' : 'lax',
     path: REFRESH_COOKIE_PATH,
     maxAge: ttlToSeconds(config.JWT_REFRESH_TTL, REFRESH_TTL_FALLBACK_SECONDS),
   };
@@ -71,19 +75,21 @@ export function setRefreshCookie(reply: FastifyReply, token: string, config: App
 }
 
 export function clearAccessCookie(reply: FastifyReply, config: AppConfig): void {
+  const secure = isSecureEnv(config);
   void reply.clearCookie(ACCESS_COOKIE_NAME, {
     path: '/',
     httpOnly: true,
-    secure: isSecureEnv(config),
-    sameSite: 'lax',
+    secure,
+    sameSite: secure ? 'none' : 'lax',
   });
 }
 
 export function clearRefreshCookie(reply: FastifyReply, config: AppConfig): void {
+  const secure = isSecureEnv(config);
   void reply.clearCookie(REFRESH_COOKIE_NAME, {
     path: REFRESH_COOKIE_PATH,
     httpOnly: true,
-    secure: isSecureEnv(config),
-    sameSite: 'lax',
+    secure,
+    sameSite: secure ? 'none' : 'lax',
   });
 }
