@@ -153,6 +153,7 @@ describe('AuthService.login', () => {
       hotel_id: user.hotelId,
       dept_id: user.deptId,
       language: user.language,
+      must_rotate_password: user.mustRotatePassword,
     });
     expect(result.accessToken).toBe('signed.jwt.value');
     expect(result.refreshToken).toHaveLength(64);
@@ -316,6 +317,7 @@ describe('AuthService.getMe', () => {
       hotel_id: user.hotelId,
       dept_id: user.deptId,
       language: user.language,
+      must_rotate_password: user.mustRotatePassword,
     });
     expect(result.csrfToken).toHaveLength(64);
     expect(m.rotateCsrfToken).toHaveBeenCalledWith(SAMPLE_CLAIMS.sid, result.csrfToken);

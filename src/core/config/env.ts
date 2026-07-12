@@ -25,6 +25,13 @@ const EnvSchema = z.object({
   // previously dead). Never '*' — credentials:true forbids a wildcard origin.
   CORS_ORIGIN: z.string(),
 
+  // Session cookie domain. Leave EMPTY in dev (host-only localhost). In staging/
+  // prod set to the shared parent (e.g. `.sharedisini.com`) so the httpOnly
+  // `token`/`refresh` cookies are sent cross-subdomain — the FE calls
+  // core-staging / integration-staging / ai-staging directly (withCredentials),
+  // and a host-only cookie would never reach them → 401. Requires SameSite=None.
+  COOKIE_DOMAIN: z.string().optional(),
+
   // Database
   DATABASE_URL: z.string().min(1),
 
