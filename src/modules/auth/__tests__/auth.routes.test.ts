@@ -84,9 +84,10 @@ describe('POST /api/auth/login', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body) as { csrfToken: string; user: Record<string, unknown> };
+    const body = JSON.parse(res.body) as { csrfToken: string; user: Record<string, unknown>; accessToken: string };
     expect(body.csrfToken).toBe('csrf-here');
     expect(body.user).toEqual(SUCCESS_LOGIN_PAYLOAD.user);
+    expect(body.accessToken).toBe('jwt-here');
 
     const setCookieHeader = res.headers['set-cookie'];
     const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader ?? ''];
@@ -190,8 +191,9 @@ describe('POST /api/auth/refresh', () => {
 
     expect(res.statusCode).toBe(200);
     expect(refresh).toHaveBeenCalledWith('old-refresh', expect.objectContaining({}));
-    const body = JSON.parse(res.body) as { csrfToken: string };
+    const body = JSON.parse(res.body) as { csrfToken: string; accessToken: string };
     expect(body.csrfToken).toBe('rotated.csrf');
+    expect(body.accessToken).toBe('rotated.jwt');
     const cookies = res.headers['set-cookie'];
     const list = Array.isArray(cookies) ? cookies : [cookies ?? ''];
     expect(list.some((c) => c.startsWith('token=rotated.jwt'))).toBe(true);
