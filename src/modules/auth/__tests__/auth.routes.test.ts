@@ -84,7 +84,11 @@ describe('POST /api/auth/login', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body) as { csrfToken: string; user: Record<string, unknown>; accessToken: string };
+    const body = JSON.parse(res.body) as {
+      csrfToken: string;
+      user: Record<string, unknown>;
+      accessToken: string;
+    };
     expect(body.csrfToken).toBe('csrf-here');
     expect(body.user).toEqual(SUCCESS_LOGIN_PAYLOAD.user);
     expect(body.accessToken).toBe('jwt-here');

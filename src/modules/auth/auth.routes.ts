@@ -55,7 +55,9 @@ export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
       const result = await fastify.services.auth.login(parsed.data, ctx);
       setAccessCookie(reply, result.accessToken, fastify.appConfig);
       setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
-      return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken, accessToken: result.accessToken });
+      return reply
+        .code(200)
+        .send({ user: result.user, csrfToken: result.csrfToken, accessToken: result.accessToken });
     },
   );
 
@@ -73,7 +75,9 @@ export const authRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     const result = await fastify.services.auth.refresh(refreshToken, ctx);
     setAccessCookie(reply, result.accessToken, fastify.appConfig);
     setRefreshCookie(reply, result.refreshToken, fastify.appConfig);
-    return reply.code(200).send({ user: result.user, csrfToken: result.csrfToken, accessToken: result.accessToken });
+    return reply
+      .code(200)
+      .send({ user: result.user, csrfToken: result.csrfToken, accessToken: result.accessToken });
   });
 
   fastify.get('/me', async (req, reply) => {
