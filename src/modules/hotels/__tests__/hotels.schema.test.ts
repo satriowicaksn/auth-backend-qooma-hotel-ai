@@ -36,7 +36,6 @@ describe('UpdateSettingsRequestSchema', () => {
 
   describe('strict reject — unknown fields (per spec §1.5 line 198+205 whitelist)', () => {
     it.each([
-      ['name', 'Renamed Hotel'],
       ['code', 'NEW-001'],
       ['tierId', '00000000-0000-0000-0000-000000000000'],
       ['status', 'suspended'],
@@ -45,6 +44,35 @@ describe('UpdateSettingsRequestSchema', () => {
       ['updatedAt', '2026-01-01T00:00:00Z'],
     ])('should reject unknown field "%s"', (field, value) => {
       const result = UpdateSettingsRequestSchema.safeParse({ [field]: value });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('name and welcome_message fields', () => {
+    it('should accept name as a valid field', () => {
+      const result = UpdateSettingsRequestSchema.safeParse({ name: 'Renamed Hotel' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept welcome_message as a valid field', () => {
+      const result = UpdateSettingsRequestSchema.safeParse({
+        welcome_message: 'Welcome to our hotel!',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept null welcome_message (clear semantic)', () => {
+      const result = UpdateSettingsRequestSchema.safeParse({ welcome_message: null });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject name that is empty string', () => {
+      const result = UpdateSettingsRequestSchema.safeParse({ name: '' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject welcome_message longer than 280 chars', () => {
+      const result = UpdateSettingsRequestSchema.safeParse({ welcome_message: 'a'.repeat(281) });
       expect(result.success).toBe(false);
     });
   });

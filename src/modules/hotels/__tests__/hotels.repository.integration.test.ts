@@ -79,8 +79,15 @@ describe('HotelsRepository (integration — real Postgres at localhost:5433)', (
       const settings = await repo.findSettingsByHotelId(hotelId);
 
       expect(settings).not.toBeNull();
-      expect(Object.keys(settings ?? {}).sort()).toEqual(['branding', 'dnd', 'timezone']);
+      expect(Object.keys(settings ?? {}).sort()).toEqual([
+        'branding',
+        'dnd',
+        'name',
+        'timezone',
+        'welcome_message',
+      ]);
       expect(settings?.timezone).toBe('Asia/Jakarta');
+      expect(settings?.welcome_message).toBeNull();
     });
 
     it('should return null when no hotel matches the id', async () => {

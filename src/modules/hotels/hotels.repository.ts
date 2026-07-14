@@ -22,7 +22,9 @@ import type {
 
 type HotelWithTier = Prisma.HotelGetPayload<{ include: { tier: true } }>;
 type HotelSettingsRow = {
+  readonly name: string;
   readonly timezone: string;
+  readonly welcomeMessage: string | null;
   readonly branding: Prisma.JsonValue | null;
   readonly dnd: Prisma.JsonValue | null;
 };
@@ -41,7 +43,7 @@ export class HotelsRepository {
   async findSettingsByHotelId(id: string): Promise<HotelSettings | null> {
     const row = await this.db.hotel.findUnique({
       where: { id },
-      select: { timezone: true, branding: true, dnd: true },
+      select: { name: true, timezone: true, welcomeMessage: true, branding: true, dnd: true },
     });
     return row === null ? null : toHotelSettings(row);
   }
@@ -61,10 +63,16 @@ export class HotelsRepository {
     if (patch.dnd !== undefined) {
       data.dnd = patch.dnd === null ? Prisma.DbNull : (patch.dnd as Prisma.InputJsonValue);
     }
+    if (patch.name !== undefined) {
+      data.name = patch.name;
+    }
+    if (patch.welcome_message !== undefined) {
+      data.welcomeMessage = patch.welcome_message === null ? null : patch.welcome_message;
+    }
     const row = await this.db.hotel.update({
       where: { id },
       data,
-      select: { timezone: true, branding: true, dnd: true },
+      select: { name: true, timezone: true, welcomeMessage: true, branding: true, dnd: true },
     });
     return toHotelSettings(row);
   }
@@ -84,7 +92,9 @@ function toHotelContextScoped(row: HotelWithTier): HotelContextScoped {
 
 function toHotelSettings(row: HotelSettingsRow): HotelSettings {
   return {
+    name: row.name,
     timezone: row.timezone,
+    welcome_message: row.welcomeMessage ?? null,
     branding: row.branding as unknown as Record<string, unknown> | null,
     dnd: row.dnd as unknown as Record<string, unknown> | null,
   };

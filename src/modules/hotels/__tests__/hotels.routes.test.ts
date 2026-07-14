@@ -247,8 +247,9 @@ describe('PUT /api/settings/hotel', () => {
     await app.close();
   });
 
-  it('should return 400 VALIDATION_ERROR for unknown field "name" (strict reject)', async () => {
-    const updateSettings = jest.fn<HotelsService['updateSettings']>();
+  it('should return 200 when name is provided (now a valid field)', async () => {
+    const updated = aSettings({ name: 'Renamed Hotel' });
+    const updateSettings = jest.fn<HotelsService['updateSettings']>().mockResolvedValue(updated);
     const app = await buildTestApp({ updateSettings });
 
     const res = await app.inject({
@@ -257,8 +258,8 @@ describe('PUT /api/settings/hotel', () => {
       payload: { name: 'Renamed Hotel' },
     });
 
-    expect(res.statusCode).toBe(400);
-    expect(updateSettings).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(updateSettings).toHaveBeenCalled();
     await app.close();
   });
 

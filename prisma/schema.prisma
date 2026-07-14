@@ -58,6 +58,7 @@ model Hotel {
   timezone    String   @default("Asia/Jakarta") @db.VarChar(50)
   branding    Json?    // logo url, primary color (Q-CONTRACT-10)
   dnd         Json?    // DND windows + exceptions (Q-CONTRACT-10)
+  welcomeMessage String? @map("welcome_message") @db.VarChar(280)
   gmContact   Json     @map("gm_contact")               // { name, email, phone } informational; real FK = users.hotel_id
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
