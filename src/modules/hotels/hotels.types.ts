@@ -56,7 +56,9 @@ export type HotelContext = HotelContextSuperAdmin | HotelContextScoped;
  * per spec §1.5 line 198+205.
  */
 export interface HotelSettings {
+  readonly name?: string | undefined;
   readonly timezone: string;
+  readonly welcome_message?: string | null | undefined;
   readonly branding: Record<string, unknown> | null;
   readonly dnd: Record<string, unknown> | null;
 }
@@ -72,7 +74,9 @@ export interface HotelSettings {
  * accept that shape to flow through the service → repo layer.
  */
 export interface HotelSettingsPatch {
+  readonly name?: string | undefined;
   readonly timezone?: string | undefined;
+  readonly welcome_message?: string | null | undefined;
   readonly branding?: Record<string, unknown> | null | undefined;
   readonly dnd?: Record<string, unknown> | null | undefined;
 }
