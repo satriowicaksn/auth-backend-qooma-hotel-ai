@@ -59,6 +59,10 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const fastify = Fastify({
     logger: false,
     trustProxy: true,
+    // Traefik ingress normalises paths to have a trailing slash before forwarding
+    // to Fastify; without this flag GET /api/settings/hotel/ would 404 against
+    // the /hotel route.
+    ignoreTrailingSlash: true,
   });
 
   fastify.decorate('appConfig', config);
