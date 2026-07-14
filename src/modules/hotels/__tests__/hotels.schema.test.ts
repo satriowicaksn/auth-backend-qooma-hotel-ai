@@ -55,7 +55,9 @@ describe('UpdateSettingsRequestSchema', () => {
     });
 
     it('should accept welcome_message as a valid field', () => {
-      const result = UpdateSettingsRequestSchema.safeParse({ welcome_message: 'Welcome to our hotel!' });
+      const result = UpdateSettingsRequestSchema.safeParse({
+        welcome_message: 'Welcome to our hotel!',
+      });
       expect(result.success).toBe(true);
     });
 

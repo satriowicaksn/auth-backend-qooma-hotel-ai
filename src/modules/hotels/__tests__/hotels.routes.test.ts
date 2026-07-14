@@ -249,9 +249,7 @@ describe('PUT /api/settings/hotel', () => {
 
   it('should return 200 when name is provided (now a valid field)', async () => {
     const updated = aSettings({ name: 'Renamed Hotel' });
-    const updateSettings = jest
-      .fn<HotelsService['updateSettings']>()
-      .mockResolvedValue(updated);
+    const updateSettings = jest.fn<HotelsService['updateSettings']>().mockResolvedValue(updated);
     const app = await buildTestApp({ updateSettings });
 
     const res = await app.inject({
