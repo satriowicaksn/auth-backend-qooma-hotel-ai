@@ -7,7 +7,7 @@
 > - Per-hotel users: `/api/users` (gm_admin creates dept_head/staff for own hotel; generate-and-return password pattern).
 > - Cross-hotel users: `/api/admin/users` (super_admin creates ANY role across ANY hotel; resolves Q-OPS-01).
 > - Tenancy: `hotels` table (tenant identity + DND + branding + status + gm_contact + tier FK). `/api/hotels/me` (read), `/api/settings/hotel` (gm_admin per-hotel write), `/api/admin/hotels` (super_admin platform-level CRUD).
-> - Tier catalog: `tiers` lookup table (lite/pro/luxury/enterprise + per-tier quota + agent/user caps + feature matrix). `/api/admin/tiers`.
+> - Tier catalog: `tiers` lookup table (lite/pro/luxury/enterprise + per-tier agent/user caps + feature matrix). Outbound messaging is prepaid top-up (tier-independent) — tiers carry no monthly quota and no minimum-agent floor. `/api/admin/tiers`.
 > - RBAC enforcement: tenant-guard middleware + super_admin all-access bypass + PII masking semantic.
 >
 > **Does NOT own**: per-hotel operational config (departments, tickets, guests, visits, menu, KB, WA templates, feature flags, billing, integrations) — all in Hotel Core. AI agent prompts — in AI service. Channel adapters — in Integration.
@@ -161,7 +161,7 @@ The only way to create a `super_admin` user, or to create users in a hotel other
 
 ### 1.4 Tiers (API-CONTRACT §2.1b — NEW H11, Q-CONTRACT-23)
 
-Tier lookup table. Normalizes the per-tier config (outbound quota, agent cap, user cap, feature matrix) that was previously inline in CLAUDE.md §1 + scattered through MSW fixtures. `hotels.tier_id` is an FK into this table.
+Tier lookup table. Normalizes the per-tier config (agent cap, user cap, feature matrix) that was previously inline in CLAUDE.md §1 + scattered through MSW fixtures. `hotels.tier_id` is an FK into this table. Outbound messaging is **prepaid top-up** (tier-independent — see billing top-up in API-CONTRACT §2.12); tiers carry **no** monthly outbound allotment and **no** minimum-agent floor.
 
 | Method | Path                       | Purpose                              | Roles         |
 | ------ | -------------------------- | ------------------------------------ | ------------- |
@@ -175,9 +175,7 @@ Tier lookup table. Normalizes the per-tier config (outbound quota, agent cap, us
   id: string                       // UUID
   name: 'lite' | 'professional' | 'luxury' | 'enterprise'  // unique
   display_name: string
-  outbound_quota_monthly: number   // 2000 / 4000 / 8000 / -1 (custom)
-  agent_cap: number                // 1 / 3 / 5 / -1
-  agent_minimum: number            // 3 (all tiers — server-enforced floor)
+  agent_cap: number                // 2 / 4 / 6 / -1  — TOTAL agents incl the Receptionist AI (enterprise -1 = custom)
   user_cap: number                 // 2 / 4 / 6 / -1  (1 GM + N dept_heads)
   department_cap: number           // 1 / 3 / 5 / -1
   features: Record<string, boolean>  // JSONB; per-feature unlock map
@@ -186,7 +184,7 @@ Tier lookup table. Normalizes the per-tier config (outbound quota, agent cap, us
 ```
 
 - 4 rows seeded via migration; never deleted at runtime.
-- `outbound_quota_monthly: -1` (or `null`, your call) = "unlimited / custom" (enterprise).
+- `agent_cap: -1` = "custom / unlimited" (enterprise only). All tiers include **zero** outbound messages — outbound is prepaid top-up (see API-CONTRACT §2.12). There is **no** `agent_minimum` floor; only the per-tier upper `agent_cap` is enforced (agents beyond the cap bill as a +Agent add-on).
 - `features` JSONB keys mirror feature-flag names in `src/mocks/fixtures/feature-flags.ts` — 19 keys at last count, evolves as flags are added.
 - **PATCH `/api/admin/tiers/:name` is OUT OF SCOPE for Phase 2.8** — tier config is migration-managed in MVP. Add write UI in a later wave when product needs per-tier config edits without redeploy.
 
@@ -269,9 +267,7 @@ tiers (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name                     VARCHAR NOT NULL UNIQUE,        -- 'lite' | 'professional' | 'luxury' | 'enterprise'
   display_name             VARCHAR NOT NULL,
-  outbound_quota_monthly   INTEGER NOT NULL,               -- 2000 / 4000 / 8000 / -1 (custom)
-  agent_cap                INTEGER NOT NULL,               -- 1 / 3 / 5 / -1
-  agent_minimum            INTEGER NOT NULL DEFAULT 3,     -- floor; same all tiers per techspec §19.2
+  agent_cap                INTEGER NOT NULL,               -- 2 / 4 / 6 / -1  (TOTAL agents incl Receptionist; -1 = enterprise custom)
   user_cap                 INTEGER NOT NULL,               -- 2 / 4 / 6 / -1
   department_cap           INTEGER NOT NULL,               -- 1 / 3 / 5 / -1
   features                 JSONB   NOT NULL DEFAULT '{}'::jsonb,  -- per-feature unlock map

@@ -31,9 +31,9 @@ model Tier {
   id                     String   @id @default(uuid()) @db.Uuid
   name                   String   @unique @db.VarChar(20) // 'lite' | 'professional' | 'luxury' | 'enterprise'
   displayName            String   @map("display_name") @db.VarChar(50)
-  outboundQuotaMonthly   Int      @map("outbound_quota_monthly") // 2000 / 4000 / 8000 / -1
-  agentCap               Int      @map("agent_cap")              // 1 / 3 / 5 / -1
-  agentMinimum           Int      @default(3) @map("agent_minimum")
+  // ADD-25: no per-tier outbound allotment (prepaid top-up only) and no
+  // minimum-agent floor. agentCap = TOTAL agents incl Receptionist AI.
+  agentCap               Int      @map("agent_cap")              // 2 / 4 / 6 / -1
   userCap                Int      @map("user_cap")               // 2 / 4 / 6 / -1
   departmentCap          Int      @map("department_cap")         // 1 / 3 / 5 / -1
   features               Json     @default("{}")                 // per-feature unlock map (JSONB)

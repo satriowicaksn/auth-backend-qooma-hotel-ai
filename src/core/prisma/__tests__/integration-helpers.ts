@@ -48,7 +48,6 @@ export interface TierFixtureInput {
   readonly id?: string;
   readonly name?: 'lite' | 'professional' | 'luxury' | 'enterprise';
   readonly displayName?: string;
-  readonly outboundQuotaMonthly?: number;
   readonly agentCap?: number;
   readonly userCap?: number;
   readonly departmentCap?: number;
@@ -67,8 +66,7 @@ export async function createTestTier(overrides: TierFixtureInput = {}): Promise<
       id,
       name,
       displayName: overrides.displayName ?? `Test ${name}`,
-      outboundQuotaMonthly: overrides.outboundQuotaMonthly ?? 1000,
-      agentCap: overrides.agentCap ?? 1,
+      agentCap: overrides.agentCap ?? 2,
       userCap: overrides.userCap ?? 2,
       departmentCap: overrides.departmentCap ?? 1,
     },

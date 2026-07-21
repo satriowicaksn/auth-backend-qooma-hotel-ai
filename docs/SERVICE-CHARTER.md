@@ -14,7 +14,7 @@ Repo ini = service **Auth & Identity**. Pattern boilerplate (`_template/`, `MODU
 - **Identity**: login, logout, refresh, sessions (httpOnly cookie + CSRF), current-user profile, language preference, password change, forced-rotation enforcement (`must_rotate_password`).
 - **Per-hotel users CRUD** (gm_admin scope): `/api/users` — gm_admin creates dept_head/staff for own hotel; generate-and-return password.
 - **Cross-hotel admin users CRUD** (super_admin scope, NEW H11): `/api/admin/users` — only path untuk create `super_admin` atau create users across hotels. Resolves Q-OPS-01.
-- **Tier catalog** (NEW H11): `tiers` lookup table + `/api/admin/tiers` read endpoint. Per-tier config (outbound quota, agent/user/dept caps, feature matrix). 4 rows seeded via migration; PATCH write surface OUT OF MVP.
+- **Tier catalog** (NEW H11): `tiers` lookup table + `/api/admin/tiers` read endpoint. Per-tier config (agent/user/dept caps + feature matrix; `agent_cap` = 2/4/6/-1 TOTAL agents incl Receptionist). Outbound messaging is prepaid top-up (tier-independent) — no per-tier quota, no minimum-agent floor. 4 rows seeded via migration; PATCH write surface OUT OF MVP.
 - **Hotels (tenant entity)** (MOVED H11): `hotels` table + 3 endpoint groups: `GET /api/hotels/me` (single-tenant read, all auth roles), `GET/PUT /api/settings/hotel` (gm_admin per-hotel write — DND/branding/timezone), `/api/admin/hotels` (super_admin platform-level CRUD with atomic GM-user creation + generated password).
 - **RBAC enforcement**: tenant-guard middleware + super_admin all-access bypass + PII masking helper (Q-CONTRACT-16 semantic — masking applied at serialization; helper consumed by sibling services).
 - **First super_admin bootstrap**: `seed-super-admin` migration / CLI reading from env vars.
@@ -68,6 +68,6 @@ Full register: `docs/spec/open-questions.md`. PM A/B/C mirror actionable rows ke
 - Socket.io gateway — wired after Hotel Core ships (it's the consumer of socket events).
 - SMTP-based password reset — generate-and-return password is the MVP UX; SMTP wave 2.
 - `PATCH /api/admin/tiers/:name` write UI / endpoint — migration-managed in MVP.
-- Per-tenant tier overrides (`hotels.outbound_quota_override`) — enterprise customization, not MVP.
+- Per-tenant tier overrides (`hotels.agent_cap_override`) — enterprise customization, not MVP.
 - OAuth / SSO providers — out of scope per CLAUDE.md §11.5.
 - Cross-service DB JOIN beyond shared Auth↔Hotel-Core DB — sibling services use opaque UUIDs.

@@ -7,9 +7,7 @@ import { connectPrisma, db, disconnectPrisma } from './integration-helpers.js';
 interface ExpectedTier {
   readonly name: string;
   readonly displayName: string;
-  readonly outboundQuotaMonthly: number;
   readonly agentCap: number;
-  readonly agentMinimum: number;
   readonly userCap: number;
   readonly departmentCap: number;
   readonly isCustom: boolean;
@@ -19,9 +17,7 @@ const EXPECTED: readonly ExpectedTier[] = [
   {
     name: 'lite',
     displayName: 'Lite',
-    outboundQuotaMonthly: 2000,
-    agentCap: 1,
-    agentMinimum: 3,
+    agentCap: 2,
     userCap: 2,
     departmentCap: 1,
     isCustom: false,
@@ -29,9 +25,7 @@ const EXPECTED: readonly ExpectedTier[] = [
   {
     name: 'professional',
     displayName: 'Professional',
-    outboundQuotaMonthly: 4000,
-    agentCap: 3,
-    agentMinimum: 3,
+    agentCap: 4,
     userCap: 4,
     departmentCap: 3,
     isCustom: false,
@@ -39,9 +33,7 @@ const EXPECTED: readonly ExpectedTier[] = [
   {
     name: 'luxury',
     displayName: 'Luxury',
-    outboundQuotaMonthly: 8000,
-    agentCap: 5,
-    agentMinimum: 3,
+    agentCap: 6,
     userCap: 6,
     departmentCap: 5,
     isCustom: false,
@@ -49,9 +41,7 @@ const EXPECTED: readonly ExpectedTier[] = [
   {
     name: 'enterprise',
     displayName: 'Enterprise',
-    outboundQuotaMonthly: -1,
     agentCap: -1,
-    agentMinimum: 3,
     userCap: -1,
     departmentCap: -1,
     isCustom: true,
@@ -83,9 +73,7 @@ describe('seedTiers (T03 — real Postgres at localhost:5433)', () => {
       const row = await db.tier.findUnique({ where: { name: expected.name } });
       expect(row).not.toBeNull();
       expect(row?.displayName).toBe(expected.displayName);
-      expect(row?.outboundQuotaMonthly).toBe(expected.outboundQuotaMonthly);
       expect(row?.agentCap).toBe(expected.agentCap);
-      expect(row?.agentMinimum).toBe(expected.agentMinimum);
       expect(row?.userCap).toBe(expected.userCap);
       expect(row?.departmentCap).toBe(expected.departmentCap);
       expect(row?.isCustom).toBe(expected.isCustom);

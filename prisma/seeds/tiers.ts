@@ -1,11 +1,12 @@
 import type { PrismaClient } from '.prisma/client';
 
+// ADD-25: subscription tiers include 0 outbound (prepaid top-up only) and there
+// is no minimum-agent floor. `agentCap` = TOTAL agents incl the Receptionist AI
+// (Lite 2 / Professional 4 / Luxury 6; Enterprise custom = -1).
 interface TierSeed {
   readonly name: 'lite' | 'professional' | 'luxury' | 'enterprise';
   readonly displayName: string;
-  readonly outboundQuotaMonthly: number;
   readonly agentCap: number;
-  readonly agentMinimum: number;
   readonly userCap: number;
   readonly departmentCap: number;
   readonly isCustom: boolean;
@@ -15,9 +16,7 @@ const TIER_SEEDS: readonly TierSeed[] = [
   {
     name: 'lite',
     displayName: 'Lite',
-    outboundQuotaMonthly: 2000,
-    agentCap: 1,
-    agentMinimum: 3,
+    agentCap: 2,
     userCap: 2,
     departmentCap: 1,
     isCustom: false,
@@ -25,9 +24,7 @@ const TIER_SEEDS: readonly TierSeed[] = [
   {
     name: 'professional',
     displayName: 'Professional',
-    outboundQuotaMonthly: 4000,
-    agentCap: 3,
-    agentMinimum: 3,
+    agentCap: 4,
     userCap: 4,
     departmentCap: 3,
     isCustom: false,
@@ -35,9 +32,7 @@ const TIER_SEEDS: readonly TierSeed[] = [
   {
     name: 'luxury',
     displayName: 'Luxury',
-    outboundQuotaMonthly: 8000,
-    agentCap: 5,
-    agentMinimum: 3,
+    agentCap: 6,
     userCap: 6,
     departmentCap: 5,
     isCustom: false,
@@ -45,9 +40,7 @@ const TIER_SEEDS: readonly TierSeed[] = [
   {
     name: 'enterprise',
     displayName: 'Enterprise',
-    outboundQuotaMonthly: -1,
     agentCap: -1,
-    agentMinimum: 3,
     userCap: -1,
     departmentCap: -1,
     isCustom: true,
@@ -60,9 +53,7 @@ export async function seedTiers(db: PrismaClient): Promise<void> {
   for (const tier of TIER_SEEDS) {
     const data = {
       displayName: tier.displayName,
-      outboundQuotaMonthly: tier.outboundQuotaMonthly,
       agentCap: tier.agentCap,
-      agentMinimum: tier.agentMinimum,
       userCap: tier.userCap,
       departmentCap: tier.departmentCap,
       isCustom: tier.isCustom,

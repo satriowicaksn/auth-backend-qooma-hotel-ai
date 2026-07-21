@@ -36,7 +36,7 @@
 - Email-based password reset (`POST /api/users/:id/reset-password` returns generated password, NOT an email link). Add SMTP/SES integration in a later wave.
 - `PATCH /api/admin/tiers/:name` write endpoint — tier config is migration-managed in MVP.
 - `super_admin` UI for tier-config editing.
-- Per-tenant tier overrides (`hotels.outbound_quota_override` etc.) — enterprise customization, not MVP.
+- Per-tenant tier overrides (`hotels.agent_cap_override` etc.) — enterprise customization, not MVP.
 - Last-super_admin lockout recovery UI (use the seed CLI if you ever lock yourself out).
 
 ---

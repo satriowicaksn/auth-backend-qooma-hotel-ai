@@ -78,7 +78,7 @@ Standard codes the frontend MUST handle:
 | 403  | `FORBIDDEN`        | Route-level: show `/403` page. Action-level: toast "Anda tidak memiliki akses untuk aksi ini." |
 | 404  | `NOT_FOUND`        | Route-level: show `/404` page. Resource-level: toast "Data tidak ditemukan."                   |
 | 409  | `CONFLICT`         | Toast "Data sudah berubah, silakan refresh." Re-fetch query.                                   |
-| 422  | `BUSINESS_RULE`    | Toast with `message` field — server rule violation (e.g. "Minimum 3 agent aktif required").    |
+| 422  | `BUSINESS_RULE`    | Toast with `message` field — server rule violation (e.g. "Jumlah agent melebihi batas paket").  |
 | 429  | `RATE_LIMIT`       | Toast "Terlalu banyak permintaan, coba lagi nanti."                                            |
 | 500  | `INTERNAL`         | Toast generic, send to Sentry.                                                                 |
 
@@ -176,7 +176,7 @@ Response 200:
 
 ### 2.1b Tiers (BARU — H11 service-split ruling, ASSUMED CONTRACT Q-CONTRACT-23)
 
-Tier lookup table. Normalizes the per-tier config (outbound quota, agent cap, feature set) that was previously inline in CLAUDE.md §1. Owned by Auth.
+Tier lookup table. Normalizes the per-tier config (agent cap, feature set) that was previously inline in CLAUDE.md §1. Owned by Auth. Outbound messaging is prepaid top-up (tier-independent — see §2.12); tiers carry no monthly quota and no minimum-agent floor.
 
 | Method | Path                  | Purpose                              | Roles         |
 | ------ | --------------------- | ------------------------------------ | ------------- |
@@ -190,9 +190,7 @@ Tier lookup table. Normalizes the per-tier config (outbound quota, agent cap, fe
   "id": "uuid",
   "name": "luxury",
   "display_name": "Luxury",
-  "outbound_quota_monthly": 8000,
-  "agent_cap": 5,
-  "agent_minimum": 3,
+  "agent_cap": 6,
   "user_cap": 6,
   "department_cap": 5,
   "features": {
@@ -419,7 +417,7 @@ Frontend checks `tier === 'luxury'` from `hotels.tier` before exposing `/analyti
 | GET           | `/api/settings/promos`                        | List promos (stub)                                              |
 | GET           | `/api/settings/upsells`                       | List upsells (stub)                                             |
 | GET           | `/api/settings/agents`                        | List AI agents                                                  |
-| PUT           | `/api/settings/agents`                        | Bulk update agents (toggle + min-3, tier-validated server-side) |
+| PUT           | `/api/settings/agents`                        | Bulk update agents (toggle; upper agent_cap tier-validated server-side) |
 | PATCH         | `/api/settings/agents/:id`                    | Update one AI agent                                             |
 | GET           | `/api/settings/billing`                       | Billing overview, quota, invoices (Q-CONTRACT-05)               |
 | GET           | `/api/settings/billing/invoices/:id/download` | Download invoice                                                |
@@ -714,15 +712,14 @@ Replaces stub `/api/settings/billing` with full ADD-13 shape:
   "tier": "professional",
   "tier_started_at": "2026-01-01",
   "outbound_quota": {
-    "used": 2400,
-    "limit": 3000,
-    "month": "2026-06",
-    "percent": 80,
-    "threshold_alerts": [{ "at": 80, "alerted_at": "2026-06-15T10:00:00Z" }]
+    "balance_total": 7000,
+    "balance_remaining": 1400,
+    "percent_remaining": 20,
+    "threshold_alerts": [{ "at": 20, "alerted_at": "2026-06-15T10:00:00Z" }]
   },
   "active_agents": ["receptionist", "request_complaint", "fnb"],
   "active_users_count": 4,
-  "extra_addons": [{ "type": "outbound_package", "package": "M", "added_messages": 8000 }],
+  "extra_addons": [{ "type": "outbound_topup", "package": "M", "added_messages": 7000 }],
   "invoices": [
     {
       "id": "uuid",
@@ -737,7 +734,11 @@ Replaces stub `/api/settings/billing` with full ADD-13 shape:
 }
 ```
 
-`POST /api/billing/upgrade-package { package: 'S'|'M'|'L' }` → backend confirms via tim Qooma; returns `pending_confirmation` status. `POST /api/billing/invoices/:id/download` streams PDF.
+**Outbound is prepaid, not tier-included.** `outbound_quota` is a **prepaid balance** (`balance_total` purchased, `balance_remaining` left, `percent_remaining` derived) — there is NO monthly allotment and NO monthly reset; the balance only refills when a top-up is purchased. `threshold_alerts[].at` is a **remaining** percentage; low-balance alerts fire at **20%** and **5%** remaining.
+
+`POST /api/billing/outbound-topup { package: 'S'|'M'|'L' }` — tier-independent prepaid top-up (S=3000, M=7000, L=14000 messages). Backend confirms via tim Qooma; returns `pending_confirmation` status. `POST /api/billing/invoices/:id/download` streams PDF.
+
+> **Mandatory invoice/offer clause** — every top-up invoice/offer MUST display: "Harga kuota pesan dapat berubah sewaktu-waktu mengikuti perubahan tarif dari Meta."
 
 ---
 
@@ -923,7 +924,7 @@ Backend joins the socket to the room `hotel:${hotelId}` based on the cookie. Fro
 | `conversation:handover_start` | `{ conversation_id, staff_name, mode: 'human_handover' }` | Update conversation mode in cache; show banner if on ticket detail viewing this conv                               |
 | `conversation:handover_end`   | `{ conversation_id, mode: 'ai' }`                         | Update conversation mode in cache; dismiss banner                                                                  |
 | `integration:health_changed`  | `{ provider: 'claude'\|'wa'\|'telegram', status }`        | Update integrations health cache; toast destructive if `status === 'down'`                                         |
-| `billing:threshold_reached`   | `{ percent: 80 \| 100, type: 'outbound' }`                | Update billing cache; toast warning at 80%, destructive at 100%                                                    |
+| `billing:low_balance`         | `{ remaining_percent: 20 \| 5 }`                          | Update billing cache; toast warning at 20% remaining, destructive at 5% remaining                                  |
 
 Cache invalidation strategy: use `queryClient.setQueryData` for in-place updates rather than `invalidateQueries` for these 4 events — saves a round-trip and provides instant feel.
 
@@ -960,8 +961,8 @@ src/services/
 │                            + hooks
 ├── users.api.ts           ← BARU: getUsers, createUser, updateUser, resetPassword (top-level, ≠ settings.api.ts)
 │                            + useUsers, useCreateUser, useUpdateUser, useResetPassword
-├── billing.api.ts         ← BARU: getBilling, getInvoices, downloadInvoice, upgradePackage
-│                            + useBilling, useDownloadInvoice, useUpgradePackage
+├── billing.api.ts         ← BARU: getBilling, getInvoices, downloadInvoice, requestOutboundTopup
+│                            + useBilling, useDownloadInvoice, useOutboundTopup
 ├── conversations.api.ts   ← BARU: getConversation, startHandover, endHandover
 │                            + useConversation, useStartHandover, useEndHandover
 ├── admin.api.ts           ← BARU (Phase 2.7 T75): getAdminHotels, getAdminHotel, createAdminHotel,
