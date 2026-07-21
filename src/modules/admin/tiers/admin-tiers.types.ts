@@ -10,13 +10,13 @@ export type TierName = (typeof TIER_NAMES)[number];
  * Tier response shape per spec §1.4 (lines 173-183). snake_case field
  * names match spec/FE convention.
  */
+// ADD-25: no `outbound_quota_monthly` (prepaid top-up only) and no
+// `agent_minimum` (min-agent gate revoked). `agent_cap` = total incl Receptionist.
 export interface AdminTier {
   readonly id: string;
   readonly name: TierName;
   readonly display_name: string;
-  readonly outbound_quota_monthly: number;
   readonly agent_cap: number;
-  readonly agent_minimum: number;
   readonly user_cap: number;
   readonly department_cap: number;
   readonly features: Record<string, boolean>;

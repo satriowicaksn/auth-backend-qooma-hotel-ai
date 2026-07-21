@@ -95,7 +95,7 @@ tiers (Auth) ───< (N) hotels (Auth)
                       ├───< (N) knowledge_entries                     (Hotel Core)
                       ├───< (N) wa_templates                          (Hotel Core)
                       ├───< (N) feature_flags                         (Hotel Core; per-hotel state rows)
-                      ├───< (1) billing_quotas                        (Hotel Core; per-month rows)
+                      ├───< (1) billing_quotas                        (Hotel Core; one prepaid-balance row per hotel)
                       ├───< (N) billing_invoices                      (Hotel Core)
                       └───< (N) notifications                         (Hotel Core; ──> (1) users recipient)
 ```
@@ -111,7 +111,7 @@ Use real FKs. `users.hotel_id → hotels.id` is intra-Auth (both moved to Auth p
 **Tier-gating for Hotel Core**: when a Hotel Core endpoint needs the tier, JOIN — don't RPC to Auth:
 
 ```sql
-SELECT t.name AS tier_name, t.features, t.outbound_quota_monthly
+SELECT t.name AS tier_name, t.features, t.agent_cap
 FROM hotels h JOIN tiers t ON h.tier_id = t.id
 WHERE h.id = $session.hotel_id;
 ```
