@@ -28,6 +28,7 @@ const svc = {
   getHotel: jest.fn(),
   updateHotel: jest.fn(),
   setHotelStatus: jest.fn(),
+  deleteHotel: jest.fn(),
 };
 
 let app: FastifyInstance;
@@ -157,5 +158,13 @@ describe('adminHotels routes', () => {
       payload: { status: 'deleted' },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('DELETE /:id → 204 with empty body', async () => {
+    svc.deleteHotel.mockResolvedValue(undefined as never);
+    const res = await app.inject({ method: 'DELETE', url: `/api/admin/hotels/${HOTEL.id}` });
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe('');
+    expect(svc.deleteHotel).toHaveBeenCalledWith(SUPER_ADMIN, HOTEL.id);
   });
 });

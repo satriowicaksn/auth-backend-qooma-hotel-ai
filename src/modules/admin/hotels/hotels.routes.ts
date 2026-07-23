@@ -60,5 +60,13 @@ export const adminHotelsRoutes: FastifyPluginCallback = (fastify, _opts, done) =
     return reply.code(200).send(result);
   });
 
+  // Hard-delete — platform-level (super_admin) only. The CRM UI intentionally
+  // exposes only suspend/reactivate; this removes the hotel and its auth-owned
+  // records permanently. 204 No Content on success.
+  fastify.delete<{ Params: { id: string } }>('/:id', async (req, reply) => {
+    await fastify.services.adminHotels.deleteHotel(req.session, req.params.id);
+    return reply.code(204).send();
+  });
+
   done();
 };

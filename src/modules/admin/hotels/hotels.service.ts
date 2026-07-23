@@ -164,6 +164,24 @@ export class AdminHotelsService {
     return updated;
   }
 
+  /**
+   * Hard-delete a hotel (super_admin only). The CRM surfaces only suspend/
+   * reactivate; this platform-level endpoint permanently removes the hotel and
+   * its auth-owned records. Irreversible — see the repository note on
+   * cross-service data that is intentionally left untouched.
+   */
+  async deleteHotel(session: Session | undefined, id: string): Promise<void> {
+    this.assertSuperAdmin(session);
+
+    const existing = await this.repo.findById(id);
+    if (existing === null) {
+      throw new NotFoundError('Hotel', id);
+    }
+
+    await this.repo.deleteHotel(id);
+    this.logger.info('admin.hotels.deleted', { hotelId: id, code: existing.code });
+  }
+
   private assertSuperAdmin(session: Session | undefined): void {
     if (session === undefined || session.role !== 'super_admin') {
       throw new ForbiddenError('This endpoint requires super_admin scope', {
