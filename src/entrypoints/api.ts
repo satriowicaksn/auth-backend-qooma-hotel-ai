@@ -25,6 +25,7 @@ import { AdminHotelsService } from '@modules/admin/hotels/hotels.service.js';
 import { AdminTiersRepository } from '@modules/admin/tiers/admin-tiers.repository.js';
 import { adminTiersRoutes } from '@modules/admin/tiers/admin-tiers.routes.js';
 import { AdminTiersService } from '@modules/admin/tiers/admin-tiers.service.js';
+import { ensureTierCatalog } from '@modules/admin/tiers/tier-catalog.js';
 import { AdminUsersRepository } from '@modules/admin/users/admin-users.repository.js';
 import { adminUsersRoutes } from '@modules/admin/users/admin-users.routes.js';
 import { AdminUsersService } from '@modules/admin/users/admin-users.service.js';
@@ -180,6 +181,19 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 async function main(): Promise<void> {
   const config = loadConfig();
   const app = await buildApp(config);
+
+  // Guarantee the canonical subscription-tier catalog exists before serving
+  // traffic. Idempotent (native upsert on the unique `name`), so it self-heals a
+  // DB that was migrated but never seeded — the root cause of "Unknown tier" on
+  // hotel create/update. Non-fatal: a failure here (e.g. migrations not yet
+  // applied) is logged but must not block the server from booting.
+  try {
+    await ensureTierCatalog(db);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Tier catalog bootstrap failed (continuing):', err);
+  }
+
   await app.listen({ port: config.API_PORT, host: config.API_HOST });
 }
 

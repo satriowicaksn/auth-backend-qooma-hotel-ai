@@ -59,6 +59,7 @@ function build(): {
     updateHotel: jest.Mock<() => Promise<AdminHotel>>;
     suspendWithSessionCascade: jest.Mock<(id: string) => Promise<AdminHotel>>;
     reactivate: jest.Mock<(id: string) => Promise<AdminHotel>>;
+    deleteHotel: jest.Mock<(id: string) => Promise<void>>;
   };
   hasher: { hash: jest.Mock<(plain: string) => Promise<string>> };
 } {
@@ -70,6 +71,7 @@ function build(): {
     updateHotel: jest.fn<() => Promise<AdminHotel>>(),
     suspendWithSessionCascade: jest.fn<(id: string) => Promise<AdminHotel>>(),
     reactivate: jest.fn<(id: string) => Promise<AdminHotel>>(),
+    deleteHotel: jest.fn<(id: string) => Promise<void>>(),
   };
   const hasher = { hash: jest.fn<(plain: string) => Promise<string>>() };
   const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() };
@@ -101,6 +103,9 @@ describe('AdminHotelsService', () => {
         ForbiddenError,
       );
       await expect(m.service.createHotel(aGmAdmin(), VALID_CREATE)).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+      await expect(m.service.deleteHotel(aGmAdmin(), 'hotel-1')).rejects.toBeInstanceOf(
         ForbiddenError,
       );
     });
@@ -219,6 +224,23 @@ describe('AdminHotelsService', () => {
       await expect(
         m.service.setHotelStatus(aSuperAdmin(), 'nope', { status: 'suspended' }),
       ).rejects.toBeInstanceOf(NotFoundError);
+    });
+  });
+
+  describe('deleteHotel', () => {
+    it('should hard-delete via the repo when the hotel exists', async () => {
+      m.repo.findById.mockResolvedValue(anAdminHotel());
+      m.repo.deleteHotel.mockResolvedValue(undefined);
+      await expect(m.service.deleteHotel(aSuperAdmin(), 'hotel-1')).resolves.toBeUndefined();
+      expect(m.repo.deleteHotel).toHaveBeenCalledWith('hotel-1');
+    });
+
+    it('should throw NotFoundError and not touch the repo when hotel absent', async () => {
+      m.repo.findById.mockResolvedValue(null);
+      await expect(m.service.deleteHotel(aSuperAdmin(), 'nope')).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      expect(m.repo.deleteHotel).not.toHaveBeenCalled();
     });
   });
 });

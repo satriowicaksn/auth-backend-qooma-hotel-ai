@@ -153,6 +153,25 @@ export class AdminHotelsRepository {
     });
     return toAdminHotel(row);
   }
+
+  /**
+   * Hard-delete a hotel and everything the auth DB owns for it. The
+   * Hotel→User FK is `onDelete: Restrict`, so the hotel cannot be removed while
+   * users reference it — its users are deleted first, which cascades their
+   * sessions + password-reset tokens (`onDelete: Cascade`). Wrapped in one
+   * transaction so a hotel is never left with a partially-purged user set.
+   *
+   * NOTE (cross-service): auth owns only hotels/users/sessions here. Data in
+   * other services keyed by this hotel id (core: tickets/guests/departments,
+   * integration, ai) is NOT touched — there is no cross-database FK. Purge those
+   * separately if a full tenant wipe is required.
+   */
+  async deleteHotel(id: string): Promise<void> {
+    await this.db.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.user.deleteMany({ where: { hotelId: id } });
+      await tx.hotel.delete({ where: { id } });
+    });
+  }
 }
 
 function isPrismaUniqueViolation(err: unknown): boolean {

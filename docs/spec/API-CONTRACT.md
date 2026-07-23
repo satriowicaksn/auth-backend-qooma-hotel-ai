@@ -785,6 +785,9 @@ Super-admin-only platform endpoints for managing hotel tenants across the platfo
 | GET    | `/api/admin/hotels/:id`        | Hotel tenant detail                        | `super_admin` |
 | PATCH  | `/api/admin/hotels/:id`        | Update tenant metadata + plan (NOT status) | `super_admin` |
 | PATCH  | `/api/admin/hotels/:id/status` | Suspend / reactivate hotel tenant          | `super_admin` |
+| DELETE | `/api/admin/hotels/:id`        | Hard-delete tenant (platform-only)         | `super_admin` |
+
+> **DELETE `/api/admin/hotels/:id`** — platform-level hard delete → `204 No Content` (`404` if the hotel does not exist). The CRM UI intentionally exposes only suspend/reactivate (`:id/status`); day-to-day deactivation stays soft (`status: 'suspended'`). This DELETE permanently removes the hotel and its **auth-owned** records — its users, and (via `onDelete: Cascade`) their sessions + password-reset tokens — in one transaction. It does **NOT** touch data owned by other services keyed by the same hotel id (core: tickets/guests/departments, integration, ai); there is no cross-database FK, so a full tenant wipe must purge those separately. Irreversible — no audit-trail preservation, unlike the `is_active: false` soft-delete used for users (§2.5c).
 
 #### `AdminHotel` shape
 
