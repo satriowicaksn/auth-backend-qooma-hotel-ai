@@ -23,6 +23,7 @@ import type {
   UpdateStatusRequestDto,
 } from './hotels.schema.js';
 import type { AdminHotel, GmUserSummary } from './hotels.types.js';
+import type { HotelBootstrapNotifierPort } from './ports/hotel-bootstrap-notifier.port.js';
 
 const GENERATED_PASSWORD_LENGTH = 16;
 
@@ -42,6 +43,7 @@ export class AdminHotelsService {
     private readonly repo: AdminHotelsRepository,
     private readonly hasher: PasswordHasherPort,
     private readonly logger: Logger,
+    private readonly bootstrapNotifier?: HotelBootstrapNotifierPort,
   ) {}
 
   async listHotels(session: Session | undefined): Promise<ListHotelsResult> {
@@ -107,6 +109,17 @@ export class AdminHotelsService {
       tier: created.hotel.tier,
       gmEmail: maskEmail(created.gmUser.email),
     });
+
+    if (this.bootstrapNotifier !== undefined) {
+      try {
+        await this.bootstrapNotifier.notify(created.hotel.id);
+      } catch (err) {
+        this.logger.warn('admin.hotels.bootstrap_notify_failed', {
+          hotelId: created.hotel.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
 
     return { hotel: created.hotel, gm_user: created.gmUser, generated_password: generated };
   }
