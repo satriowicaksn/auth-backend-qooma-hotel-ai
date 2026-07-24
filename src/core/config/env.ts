@@ -68,6 +68,15 @@ const EnvSchema = z.object({
   // Worker
   WORKER_CONCURRENCY_DEFAULT: z.coerce.number().int().positive().default(5),
 
+  // Hotel bootstrap fan-out — best-effort HTTP calls to sibling services
+  // after `createHotelWithGm` succeeds. All optional: an unset URL disables
+  // that leg (logged as warning, hotel create still succeeds).
+  AI_SERVICE_BASE_URL: z.string().url().optional(),
+  INTEGRATION_BASE_URL: z.string().url().optional(),
+  CORE_BASE_URL: z.string().url().optional(),
+  AUTH_TO_AI_HMAC_SECRET: z.string().min(32).optional(),
+  INTERNAL_RPC_SECRET: z.string().min(32).optional(),
+
   // ====================================================================
   // Service-specific (tambah field service di sini, contoh):
   // ====================================================================

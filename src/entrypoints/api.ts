@@ -19,6 +19,7 @@ import { loadConfig, type AppConfig } from '@core/config/env.js';
 import { AppError } from '@core/errors/app-errors.js';
 import { db } from '@core/prisma/prisma-client.js';
 
+import { HttpHotelBootstrapNotifier } from '@modules/admin/hotels/adapters/http-hotel-bootstrap-notifier.adapter.js';
 import { AdminHotelsRepository } from '@modules/admin/hotels/hotels.repository.js';
 import { adminHotelsRoutes } from '@modules/admin/hotels/hotels.routes.js';
 import { AdminHotelsService } from '@modules/admin/hotels/hotels.service.js';
@@ -129,7 +130,22 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const authService = new AuthService(authRepo, hasher, tokenIssuer, config, logger);
   const usersService = new UsersService(usersRepo, hasher, logger);
   const hotelsService = new HotelsService(hotelsRepo);
-  const adminHotelsService = new AdminHotelsService(adminHotelsRepo, hasher, logger);
+  const hotelBootstrapNotifier = new HttpHotelBootstrapNotifier(
+    {
+      aiServiceBaseUrl: config.AI_SERVICE_BASE_URL,
+      integrationBaseUrl: config.INTEGRATION_BASE_URL,
+      coreBaseUrl: config.CORE_BASE_URL,
+      authToAiHmacSecret: config.AUTH_TO_AI_HMAC_SECRET,
+      internalRpcSecret: config.INTERNAL_RPC_SECRET,
+    },
+    logger,
+  );
+  const adminHotelsService = new AdminHotelsService(
+    adminHotelsRepo,
+    hasher,
+    logger,
+    hotelBootstrapNotifier,
+  );
   const adminUsersService = new AdminUsersService(adminUsersRepo, hasher, logger);
   const adminTiersService = new AdminTiersService(adminTiersRepo);
 
