@@ -17,13 +17,13 @@ import {
   UniqueConstraintError,
   type UpdateHotelPatch,
 } from './hotels.repository.js';
-import type { HotelBootstrapNotifierPort } from './ports/hotel-bootstrap-notifier.port.js';
 import type {
   CreateHotelRequestDto,
   UpdateHotelRequestDto,
   UpdateStatusRequestDto,
 } from './hotels.schema.js';
 import type { AdminHotel, GmUserSummary } from './hotels.types.js';
+import type { HotelBootstrapNotifierPort } from './ports/hotel-bootstrap-notifier.port.js';
 
 const GENERATED_PASSWORD_LENGTH = 16;
 

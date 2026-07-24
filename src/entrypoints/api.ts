@@ -19,6 +19,7 @@ import { loadConfig, type AppConfig } from '@core/config/env.js';
 import { AppError } from '@core/errors/app-errors.js';
 import { db } from '@core/prisma/prisma-client.js';
 
+// eslint-disable-next-line no-restricted-imports -- entrypoint is the wiring boundary that instantiates adapters per CLAUDE.md §4 + ADR-0001 (services consume the port).
 import { HttpHotelBootstrapNotifier } from '@modules/admin/hotels/adapters/http-hotel-bootstrap-notifier.adapter.js';
 import { AdminHotelsRepository } from '@modules/admin/hotels/hotels.repository.js';
 import { adminHotelsRoutes } from '@modules/admin/hotels/hotels.routes.js';
