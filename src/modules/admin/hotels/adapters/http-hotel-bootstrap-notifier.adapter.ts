@@ -30,9 +30,7 @@ export class HttpHotelBootstrapNotifier implements HotelBootstrapNotifierPort {
     const body = JSON.stringify({ hotel_id: hotelId });
     const targets = this.buildTargets(body);
 
-    const results = await Promise.allSettled(
-      targets.map((t) => this.call(t, body, hotelId)),
-    );
+    const results = await Promise.allSettled(targets.map((t) => this.call(t, body, hotelId)));
 
     for (const [i, r] of results.entries()) {
       const target = targets[i];
